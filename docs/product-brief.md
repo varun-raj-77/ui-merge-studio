@@ -6,5 +6,4 @@ The exact Phase 0 claim is: **A developer can select two preferred features dire
 
 Initial scope is one trusted local developer, local Git repositories and worktrees, React, TypeScript, Vite, and npm/pnpm/yarn. The controlled fixture provides trustworthy inputs and a component-boundary selection contract: selection identifies a rendered component boundary, then a future system must establish source identity and derive changed symbols/hunks plus static dependencies relative to the common ancestor.
 
-This work does not prove source mapping, dependency slicing, branch combination, or the Phase 0 claim. Multi-framework support, cloud execution, collaboration, authentication, containers, LLM integration, and production deployment are non-goals.
-
+The controlled Prompt 002 experiment now provides evidence for development-time rendered component-definition mapping within the fixture's conventional React patterns. It does not prove dependency slicing, branch combination, or the Phase 0 claim. Multi-framework support, cloud execution, collaboration, authentication, containers, LLM integration, and production deployment are non-goals.
