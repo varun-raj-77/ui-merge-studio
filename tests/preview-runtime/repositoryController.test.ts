@@ -7,7 +7,8 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { RepositoryController } from '../../packages/repository-controller/src/repositoryController';
 import { allocatePort, PreviewController } from '../../packages/preview-runtime/src/previewController';
 const paths: string[] = [];
-function repo() { const path = mkdtempSync(resolve(tmpdir(), 'ums-repo-')); paths.push(path); execFileSync('git', ['init', '-b', 'main'], { cwd: path }); writeFileSync(resolve(path, 'README.md'), 'fixture'); execFileSync('git', ['add', '.'], { cwd: path }); execFileSync('git', ['-c','user.name=Test','-c','user.email=test@example.invalid','commit','-m','base'], { cwd: path }); execFileSync('git', ['update-ref', 'refs/heads/candidate', 'HEAD'], { cwd: path }); return path; }
+function tempGit(path: string, args: string[]) { return execFileSync('git', ['--git-dir', resolve(path, '.git'), '--work-tree', path, ...args], { cwd: path }); }
+function repo() { const path = mkdtempSync(resolve(tmpdir(), 'ums-repo-')); paths.push(path); execFileSync('git', ['init', '-b', 'main', path]); writeFileSync(resolve(path, 'README.md'), 'fixture'); tempGit(path, ['add', '.']); tempGit(path, ['-c','user.name=Test','-c','user.email=test@example.invalid','commit','-m','base']); tempGit(path, ['update-ref', 'refs/heads/candidate', 'HEAD']); return path; }
 afterEach(() => paths.splice(0).forEach(path => rmSync(path, { recursive: true, force: true })));
 describe('preview repository control', () => {
   test('inspects explicit branches and creates/removes an isolated worktree', async () => { const controller = new RepositoryController(repo()); expect((await controller.inspect()).branches).toEqual(['candidate','main']); const path = await controller.createWorktree('candidate'); expect(path).toContain('ui-merge-studio-preview-'); await controller.removeWorktree(path); });
