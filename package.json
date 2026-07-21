@@ -4,17 +4,40 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "dev": "tsx apps/studio/server.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:instrumentation": "vitest run tests/source-instrumentation",
+    "test:preview-runtime": "vitest run tests/preview-runtime",
+    "test:studio": "vitest run tests/bridge tests/studio",
+    "test:e2e": "playwright test -c apps/studio/playwright.config.ts",
+    "build": "vite build -c apps/studio/vite.config.ts",
     "fixture:create": "tsx scripts/create-phase0-fixture.ts",
     "fixture:verify": "tsx scripts/verify-phase0-fixture.ts",
     "fixture:test": "tsx scripts/run-fixture-branches.ts test",
     "fixture:build-all": "tsx scripts/run-fixture-branches.ts build-all"
   },
   "devDependencies": {
+    "@babel/generator": "7.28.0",
+    "@babel/parser": "7.28.0",
+    "@babel/traverse": "7.28.0",
+    "@babel/types": "7.28.1",
+    "@playwright/test": "1.53.1",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@types/babel__generator": "7.27.0",
+    "@types/babel__traverse": "7.20.7",
+    "@types/node": "24.0.13",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "@vitejs/plugin-react": "4.5.2",
+    "jsdom": "26.1.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "tsx": "4.20.3",
     "typescript": "5.8.3",
+    "vite": "6.3.5",
     "vitest": "3.2.4"
   },
   "engines": { "node": ">=20" }
 }
-
