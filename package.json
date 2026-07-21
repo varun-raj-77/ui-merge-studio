@@ -1,0 +1,20 @@
+{
+  "name": "ui-merge-studio-phase0",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "fixture:create": "tsx scripts/create-phase0-fixture.ts",
+    "fixture:verify": "tsx scripts/verify-phase0-fixture.ts",
+    "fixture:test": "tsx scripts/run-fixture-branches.ts test",
+    "fixture:build-all": "tsx scripts/run-fixture-branches.ts build-all"
+  },
+  "devDependencies": {
+    "tsx": "4.20.3",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4"
+  },
+  "engines": { "node": ">=20" }
+}
+
