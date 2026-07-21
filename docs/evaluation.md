@@ -15,3 +15,11 @@ MODIFY applies if the mechanism remains viable but only single-root components a
 ABANDON applies if correct mapping requires fixture maps, branch semantics, React private internals, frequent guessing, behavior-changing wrappers, or identities that do not survive ordinary Vite development transforms.
 
 Current automated evidence meets PASS for the controlled fixture. This is a prerequisite result, not proof of dependency slicing or the product claim.
+
+## Multi-preview synchronization experiment
+
+PASS requires two simultaneous detached-worktree previews, isolated session/window/origin identity, bidirectional compatible ticket synchronization, deterministic loop prevention, equivalent viewport presets, two coexisting source selections, restart invalidation, stale-envelope rejection, independent failure state, and explicit refusal for the incompatible path contract. Capability decisions must come from runtime contract evidence rather than branch semantics.
+
+Current evidence meets PASS for the controlled React/Vite fixture. Unit and component tests cover protocol schemas, capability compatibility, central state, selection isolation, restart invalidation, failure isolation, and viewport UI. Playwright covers compatible synchronization in both directions, all three viewport presets, `AppSidebar` plus `ActivityFilters` selection, restart/stale-session handling, invalid message rejection, and independently interactive incompatible previews. The prior source-mapping Playwright scenarios remain green.
+
+This result proves a comparison-workspace prerequisite only. It does not prove arbitrary application-state equivalence, router generality, source dependency ownership, candidate generation, source integration, or a functioning combined branch.

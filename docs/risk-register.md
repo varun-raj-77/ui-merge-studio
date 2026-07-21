@@ -13,3 +13,8 @@
 | Fragment spans disjoint host regions | Misleading single rectangle | Mark each direct host sibling with shared definition identity and `partial` confidence |
 | Runtime metadata is stale or malformed | Incorrect mapping | Validate version, branch, shape, origin, and refuse rather than guess |
 | Windows child process survives parent | Leaked worktree/server | Stop process trees and force-remove only positively identified controller temp worktrees |
+| Preview event impersonates another runtime | Cross-branch state corruption | Bind protocol v2 envelopes to registered origin, iframe window, preview ID, session UUID, generation, and branch |
+| Reflected navigation creates a ping-pong loop | Unbounded history/message churn | Emit local navigation separately from operation-ID acknowledgements and never propagate an acknowledgement |
+| Fixture route contracts diverge | Incorrect guessed navigation | Negotiate adapter-declared contracts and retain interactivity while explicitly refusing synchronization |
+| Restart preserves a dead runtime selection | Misleading source evidence | Clear the restarted slot before launch and reject every envelope from the prior session/generation |
+| Dynamic localhost origin weakens browser trust boundary | Malicious same-machine page attempts messages | Use exact per-session origins plus iframe-window and identity validation; do not use wildcard targets |

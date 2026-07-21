@@ -1,6 +1,6 @@
 # UI Merge Studio — Phase 0 fixture
 
-This repository builds a controlled Support Operations Dashboard Git fixture for the first falsification experiment. It does **not** implement UI Merge Studio's preview, mapping, dependency-slicing, or merge pipeline.
+This repository contains the controlled Support Operations Dashboard fixture and the first two UI Merge Studio falsification experiments: rendered React element-to-source mapping and a two-preview comparison workspace. It does **not** implement dependency slicing or a merge pipeline.
 
 ## Commands
 
@@ -15,6 +15,7 @@ npm run typecheck
 npm run test:instrumentation
 npm run test:preview-runtime
 npm run test:studio
+npm run test:multi-preview
 npm run test:e2e
 npm run build
 ```
@@ -25,4 +26,6 @@ Commit timestamps and therefore commit SHAs may vary between runs; branch trees 
 
 ## Rendered source-mapping experiment
 
-Run `npm run dev` and open `http://127.0.0.1:4310`. The Studio shell inspects the generated repository, creates a detached temporary worktree for the chosen branch, starts an AST-instrumented development-only Vite preview, and removes the worktree when stopped. Instrumentation is absent from production builds.
+Run `npm run dev` and open `http://127.0.0.1:4310`. The Studio can launch two independently managed detached-worktree previews. Compatible fixture checkouts synchronize the `/tickets?ticket=…` comparison context in either direction; incompatible path-contract previews remain interactive and show an explicit refusal. Desktop, tablet, and mobile frame dimensions are applied to both previews. Source selections retain branch, controller slot, session UUID, generation, runtime instance, and stable definition identity. Instrumentation is absent from production builds.
+
+Only the controlled ticket route/entity adapter is supported. Local sidebar state and arbitrary React, Redux, Zustand, or server state remain independent.
