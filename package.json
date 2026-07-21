@@ -10,6 +10,7 @@
     "test:instrumentation": "vitest run tests/source-instrumentation",
     "test:preview-runtime": "vitest run tests/preview-runtime",
     "test:studio": "vitest run tests/bridge tests/studio",
+    "test:multi-preview": "vitest run tests/bridge tests/studio tests/preview-runtime/fixtureAdapter.test.ts",
     "test:e2e": "playwright test -c apps/studio/playwright.config.ts",
     "build": "vite build -c apps/studio/vite.config.ts",
     "fixture:create": "tsx scripts/create-phase0-fixture.ts",

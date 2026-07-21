@@ -5,8 +5,9 @@ import { expect, test, type Page } from '@playwright/test';
 const fixture = resolve(import.meta.dirname, '../../fixtures/generated/support-dashboard');
 test.afterEach(async ({ request }) => { await request.delete('/api/preview').catch(() => undefined); });
 async function start(page: Page, branch: string) {
-  await page.getByLabel('Fixture branch').selectOption(branch);
-  await page.getByRole('button', { name: 'Start / restart preview' }).click();
+  await page.getByLabel('Fixture branch', { exact: true }).selectOption(branch);
+  await page.waitForTimeout(50);
+  await page.getByRole('button', { name: 'Start / restart preview', exact: true }).click();
   await expect(page.getByRole('status')).toHaveText('Preview ready', { timeout: 60_000 });
   return page.frameLocator('iframe');
 }
@@ -55,9 +56,9 @@ test('maps branch-owned sidebar and inspector boundaries without lookup maps', a
 
 test('surfaces explicit refusals and runtime errors', async ({ page }) => {
   await page.goto('/'); const frame = await start(page, 'main'); await selectionMode(page);
-  const origin = await page.locator('iframe').evaluate(element => new URL((element as HTMLIFrameElement).src).origin);
-  await page.evaluate(({ origin }) => { const target = document.querySelector('iframe') as HTMLIFrameElement; target.contentWindow?.postMessage({ version: 1, type: 'select-ancestor', payload: { index: 99 } }, origin); }, { origin });
+  const session = await page.evaluate(async () => (await fetch('/api/repository').then(response => response.json())).sessions[0]);
+  await page.evaluate(({ session }) => { const target = document.querySelector('iframe') as HTMLIFrameElement; target.contentWindow?.postMessage({ version: 2, preview: session, type: 'select-ancestor', payload: { index: 99 } }, session.origin); }, { session });
   await expect(page.getByRole('alert')).toContainText('No selected boundary');
   await frame.locator('body').evaluate(() => dispatchEvent(new ErrorEvent('error', { message: 'Synthetic preview failure' })));
-  await expect(page.getByRole('alert').filter({ hasText: 'Runtime error' })).toContainText('Synthetic preview failure');
+  await expect(page.getByRole('alert').filter({ hasText: 'Preview runtime failure' })).toContainText('Synthetic preview failure');
 });

@@ -9,6 +9,9 @@ export interface SourceIdentity {
   componentName: string | null;
   exportName: string | null;
   branch: string;
+  previewId: string;
+  sessionId: string;
+  generation: number;
   confidence: MappingConfidence;
 }
 
@@ -32,5 +35,7 @@ export function isSourceIdentity(value: unknown): value is SourceIdentity {
     typeof item.line === 'number' && item.line > 0 && typeof item.column === 'number' && item.column > 0 &&
     (typeof item.componentName === 'string' || item.componentName === null) &&
     (typeof item.exportName === 'string' || item.exportName === null) && typeof item.branch === 'string' &&
+    typeof item.previewId === 'string' && typeof item.sessionId === 'string' &&
+    Number.isInteger(item.generation) && (item.generation as number) > 0 &&
     (item.confidence === 'exact' || item.confidence === 'partial');
 }
