@@ -14,6 +14,8 @@
     "test:source-analysis": "vitest run tests/source-analysis",
     "test:feature-slice": "vitest run tests/source-analysis/featureSlice.fixture.test.ts tests/source-analysis/featureSlice.failure.test.ts",
     "test:test-slicing": "vitest run tests/source-analysis/sourceIndex.test.ts tests/source-analysis/testSlicing.test.ts tests/source-analysis/featureSlice.fixture.test.ts",
+    "test:candidate-generation": "vitest run tests/candidate-generation/candidatePlanner.test.ts tests/candidate-generation/candidateFailure.test.ts tests/studio/CandidatePanel.test.tsx",
+    "test:candidate-integration": "vitest run tests/candidate-generation/candidateIntegration.test.ts",
     "test:e2e": "playwright test -c apps/studio/playwright.config.ts",
     "build": "vite build -c apps/studio/vite.config.ts",
     "fixture:create": "tsx scripts/create-phase0-fixture.ts",

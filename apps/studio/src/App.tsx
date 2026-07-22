@@ -1,8 +1,9 @@
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import type { PreviewSession } from '../../../packages/preview-runtime/src/previewController';
 import { createStudioCommand, validatePreviewEvent, type ComparisonContext, type PreviewCapabilities, type PreviewMessage, type StudioCommandType } from '../../../packages/shared/src/bridge';
 import type { SourceIdentity } from '../../../packages/shared/src/sourceIdentity';
 import type { FeatureSliceArtifact } from '../../../packages/source-analysis/src/types';
+import type { CandidateGenerationReport, CandidatePreflight } from '../../../packages/candidate-generation/src/types';
 import { compareCapabilities, comparisonReducer, initialComparisonState, planContextSynchronization, viewportPresets, type PreviewSlotId } from './comparisonState';
 
 interface RepositoryResponse { branches: string[]; clean: boolean; sessions: PreviewSession[] }
@@ -22,6 +23,19 @@ export function SlicePanel({ artifact, status, error }: { artifact: FeatureSlice
   if (!artifact) return <section className="slice-panel panel"><h2>Feature slice</h2><div className="error"><strong>Analysis refused:</strong> {error}</div></section>;
   const slice = artifact.slice;
   return <section className={`slice-panel panel slice-${status}`}><h2>Feature slice · {slice.status}</h2>{status === 'stale' && <div className="notice"><strong>Stale analysis:</strong> {error}</div>}<dl className="slice-meta"><dt>Original boundary</dt><dd>{slice.boundary.original}</dd><dt>Analyzed boundary</dt><dd>{slice.boundary.analyzed}</dd><dt>Expansion</dt><dd>{slice.boundary.reason}</dd><dt>Merge base</dt><dd><code>{slice.repository.mergeBaseCommit.slice(0, 12)}</code></dd><dt>Branch commit</dt><dd><code>{slice.repository.branchCommit.slice(0, 12)}</code></dd></dl><h3>Included changes</h3>{slice.includedChanges.length ? <ul className="change-list included-list">{slice.includedChanges.map(item => <li key={item.branchChangeId}><strong>{item.symbol?.name ?? item.path}</strong><code>{item.path}{item.symbol ? `:${item.symbol.region.startLine}` : ''}</code><span>{item.reason}</span><small>{item.category} · {item.confidence} · {item.wholeFile ? 'whole file' : 'symbol/region'}</small></li>)}</ul> : <p className="muted">None</p>}<TestSlices artifact={artifact} /><h3>Excluded branch changes</h3>{slice.excludedChanges.length ? <ul className="change-list excluded-list">{slice.excludedChanges.map(item => <li key={item.branchChangeId}><strong>{item.symbol?.name ?? item.path}</strong><code>{item.path}</code><span>{item.reason}</span><small>{item.classification} · {item.proof}</small></li>)}</ul> : <p className="muted">None</p>}<h3>Unresolved dependencies</h3>{slice.unresolvedDependencies.length ? <ul className="change-list unresolved-list">{slice.unresolvedDependencies.map(item => <li key={`${item.path}:${item.reason}`}><code>{item.path}</code><span>{item.reason}</span><small>{item.manualNextStep}</small></li>)}</ul> : <p className="muted">None</p>}<a className="artifact-link" href={`/api/analysis/${artifact.analysisId}`} download>Download deterministic JSON</a></section>;
+}
+
+type GenerationInput = { artifact: FeatureSliceArtifact | null; status: string; sessionId: string | null };
+export function CandidatePanel({ inputs, onLaunch }: { inputs: GenerationInput[]; onLaunch: (branch:string)=>void }) {
+  const [preflight,setPreflight]=useState<CandidatePreflight|null>(null);const[report,setReport]=useState<CandidateGenerationReport|null>(null);const[busy,setBusy]=useState(false);const[error,setError]=useState<string|null>(null);const candidateBranch='combined-result';
+  const inputKey=inputs.map(item=>`${item.artifact?.analysisId??'none'}:${item.status}:${item.sessionId??'none'}`).join('|');
+  useEffect(()=>{setPreflight(null);setReport(null);setBusy(false);setError(null);},[inputKey]);
+  const artifacts=inputs.map(item=>item.artifact).filter((item):item is FeatureSliceArtifact=>Boolean(item));const ready=inputs.length===2&&artifacts.length===2&&inputs.every(item=>item.status==='resolved')&&artifacts.every(item=>item.slice.status==='resolved');const base=ready&&new Set(artifacts.map(item=>item.slice.repository.mergeBaseCommit)).size===1?artifacts[0].slice.repository.mergeBaseCommit:null;
+  const request=()=>({expectedBaseCommit:base,candidateBranch,artifacts,analyzerSchemaVersion:artifacts[0]?.slice.version??0});
+  async function preflightCandidate(){setBusy(true);setError(null);setReport(null);try{const response=await fetch('/api/candidate/preflight',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request())});const value=await response.json();if(!response.ok)throw new Error(value.error??response.statusText);setPreflight(value as CandidatePreflight);}catch(value){setError(value instanceof Error?value.message:String(value));}finally{setBusy(false);}}
+  async function generateCandidate(){setBusy(true);setError(null);setReport(null);try{const response=await fetch('/api/candidate/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request())});const value=await response.json();if(!response.ok)throw new Error(value.error??response.statusText);setReport(value as CandidateGenerationReport);}catch(value){setError(value instanceof Error?value.message:String(value));}finally{setBusy(false);}}
+  const blocked=!ready?'Two current resolved slices are required.':!base?'Resolved slices must share one exact base commit.':null;
+  return <section className="candidate panel"><h2>Candidate generation</h2><p><strong>Candidate branch:</strong> <code>{candidateBranch}</code></p><p><strong>Selected resolved slices:</strong> {artifacts.length?artifacts.map(item=>item.analysisId).join(', '):'none'}</p><p><strong>Base commit:</strong> <code>{base?.slice(0,12)??'unavailable'}</code></p>{blocked&&<div className="refusal"><strong>Generation blocked:</strong> {blocked}</div>}<div className="candidate-actions"><button onClick={preflightCandidate} disabled={!ready||!base||busy}>Prepare candidate plan</button><button onClick={generateCandidate} disabled={!preflight||preflight.plan.status!=='ready'||busy}>Generate candidate</button>{report?.status==='succeeded'&&<button onClick={()=>onLaunch(report.repository.candidateBranch)}>Launch candidate</button>}</div>{busy&&<div className="notice"><strong>Candidate generation in progress.</strong> Validate → plan → transform → verify → commit</div>}{error&&<div className="error"><strong>Candidate request failed:</strong> {error}</div>}{preflight&&<section className={preflight.plan.status==='ready'?'candidate-ready':'refusal'}><h3>Preflight: {preflight.plan.status}</h3><p>{preflight.plan.operations.length} operations across {new Set(preflight.plan.operations.map(item=>item.target.path)).size} files.</p>{preflight.plan.conflicts.map(item=><p key={item.id}><strong>{item.path}{item.symbol?`#${item.symbol}`:''}:</strong> {item.reason}</p>)}{preflight.plan.unresolved.map(item=><p key={`${item.path}:${item.reason}`}><strong>{item.path}:</strong> {item.reason}</p>)}</section>}{report&&<section className={`candidate-report candidate-${report.status}`}><h3>Generation {report.status}</h3><p>{report.message}</p><ol className="candidate-stages">{['validate','plan','transform','verify','commit'].map(stage=><li key={stage}>{stage}</li>)}</ol>{report.repository.candidateCommit&&<p><strong>Commit:</strong> <code>{report.repository.candidateCommit}</code><br/><strong>Tree:</strong> <code>{report.repository.candidateTree}</code>{report.repository.idempotent&&<> · idempotent</>}</p>}<p><strong>Worktree/process cleanup:</strong> {report.cleanup.detail}</p><h3>Changed-file audit</h3><ul>{[...new Set(report.appliedOperations.map(item=>item.path))].sort().map(path=><li key={path}><code>{path}</code></li>)}</ul><h3>Verification</h3><ul>{report.verification.map(item=><li key={item.name}>{item.name}: <strong>{item.status}</strong></li>)}</ul>{report.conflicts.map(item=><div className="refusal" key={item.id}><strong>{item.path}:</strong> {item.reason}</div>)}<a className="artifact-link" href={`/api/candidate/reports/${report.generationId}`} download>Download candidate report</a></section>}</section>;
 }
 
 export function App() {
@@ -83,8 +97,8 @@ export function App() {
     if (message.type === 'preview-state') dispatch({ type: 'sync-status', status: 'Route and selected ticket synchronized; reflected acknowledgements are suppressed.', error: null });
   }
 
-  async function startPreview(previewId: PreviewSlotId) {
-    const branch = branchChoices.current[previewId] ?? branchControls.current[previewId]?.value ?? state.previews[previewId].branch;
+  async function startPreview(previewId: PreviewSlotId, overrideBranch?:string) {
+    const branch = overrideBranch ?? branchChoices.current[previewId] ?? branchControls.current[previewId]?.value ?? state.previews[previewId].branch;
     dispatch({ type: 'preview-starting', previewId });
     try {
       const response = await fetch(`/api/previews/${previewId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ branch }) });
@@ -93,7 +107,7 @@ export function App() {
       dispatch({ type: 'preview-started', previewId, session: value as PreviewSession });
     } catch (error) { dispatch({ type: 'preview-failed', previewId, error: error instanceof Error ? error.message : String(error) }); }
   }
-  async function startBoth() { await Promise.all(slots.map(startPreview)); }
+  async function startBoth() { await Promise.all(slots.map(previewId=>startPreview(previewId))); }
   function toggleSelection(previewId: PreviewSlotId) { const preview = state.previews[previewId]; send(previewId, preview.selecting ? 'disable-selection' : 'enable-selection'); }
   function clearSelection(previewId: PreviewSlotId) { send(previewId, 'clear-selection'); dispatch({ type: 'clear-selection', previewId }); }
   async function analyzeSelection(previewId: PreviewSlotId) { const selection = state.previews[previewId].selected?.identity; if (!selection) return; dispatch({ type: 'analysis-started', previewId }); try { const response = await fetch(`/api/previews/${previewId}/analysis`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selection }) }); const value = await response.json(); if (!response.ok) throw new Error(value.error ?? response.statusText); dispatch({ type: 'analysis-finished', previewId, artifact: value as FeatureSliceArtifact }); } catch (error) { dispatch({ type: 'analysis-failed', previewId, error: error instanceof Error ? error.message : String(error) }); } }
@@ -104,6 +118,7 @@ export function App() {
   }
   const ready = slots.filter(id => state.previews[id].status === 'ready').length;
   const workspaceStatus = ready === 2 ? 'Both previews ready' : ready === 1 ? 'Preview ready' : state.repositoryStatus;
+  const generationInputs=slots.map(id=>({artifact:state.previews[id].analysis.artifact,status:state.previews[id].analysis.status,sessionId:state.previews[id].session?.sessionId??null}));
 
   return <div className="studio">
     <header><p className="eyebrow">Phase 0 comparison experiment</p><h1>Cross-branch React comparison</h1><p className="lede">Two isolated runtimes, one validated comparison context.</p></header>
@@ -137,5 +152,6 @@ export function App() {
       })}
     </main>
     <section className="combined panel"><h2>Combined selection summary</h2><div>{slots.map(previewId => { const selected = state.previews[previewId].selected?.identity; return <article key={previewId}><strong>{state.previews[previewId].branch || previewId}</strong>{selected ? <p>{selected.componentName ?? 'Anonymous'} · <code>{selected.repositoryRelativePath}:{selected.line}:{selected.column}</code> · {selected.confidence}</p> : <p className="muted">No active selection.</p>}</article>; })}</div></section>
+    <CandidatePanel inputs={generationInputs} onLaunch={branch=>{branchChoices.current.right=branch;dispatch({type:'set-branch',previewId:'right',branch});void startPreview('right',branch);}} />
   </div>;
 }

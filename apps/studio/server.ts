@@ -7,6 +7,9 @@ import { PreviewController } from '../../packages/preview-runtime/src/previewCon
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
 import { isSourceIdentity } from '../../packages/shared/src/sourceIdentity';
 import { samePreviewIdentity } from '../../packages/shared/src/bridge';
+import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
+import type { CandidateGenerationRequest, CandidateGenerationReport } from '../../packages/candidate-generation/src/types';
+import type { FeatureSliceArtifact } from '../../packages/source-analysis/src/types';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
 const fixturePath = process.env.UI_MERGE_FIXTURE_PATH ?? resolve(workspaceRoot, 'fixtures/generated/support-dashboard');
@@ -15,6 +18,8 @@ const port = Number(process.env.UI_MERGE_STUDIO_PORT ?? 4310);
 const repository = new RepositoryController(fixturePath);
 const previews = new PreviewController(repository, resolve(import.meta.dirname, 'preview.vite.config.ts'));
 const analyzer = new FeatureSliceAnalyzer(fixturePath, workspaceRoot);
+let candidateProgress: { status: 'idle' | 'running' | 'succeeded' | 'refused' | 'failed'; stage: CandidateGenerationReport['stage'] | null; message: string } = { status:'idle',stage:null,message:'No candidate generation is running.' };
+const candidateGenerator = new CandidateGenerator(fixturePath,{artifactRoot:workspaceRoot,onStage:stage=>{candidateProgress={status:'running',stage,message:`Candidate generation is running: ${stage}.`};}});
 const vite = await createViteServer({ configFile: resolve(import.meta.dirname, 'vite.config.ts'), server: { middlewareMode: true }, appType: 'spa' });
 
 async function body(request: import('node:http').IncomingMessage) { const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown; }
@@ -22,6 +27,8 @@ function json(response: import('node:http').ServerResponse, status: number, valu
 function previewRoute(url: string | undefined) { const match = url?.match(/^\/api\/previews\/([a-z][a-z0-9-]*)$/); return match?.[1] ?? null; }
 function analysisPreviewRoute(url: string | undefined) { const match = url?.match(/^\/api\/previews\/([a-z][a-z0-9-]*)\/analysis$/); return match?.[1] ?? null; }
 function artifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/analysis\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
+function generationArtifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/reports\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
+function candidateRequest(value:unknown):CandidateGenerationRequest { if(!value||typeof value!=='object')throw new Error('A candidate generation request object is required.');const item=value as {expectedBaseCommit?:unknown;candidateBranch?:unknown;artifacts?:unknown;analyzerSchemaVersion?:unknown};if(typeof item.expectedBaseCommit!=='string'||typeof item.candidateBranch!=='string'||!Array.isArray(item.artifacts)||typeof item.analyzerSchemaVersion!=='number')throw new Error('Candidate generation requires expected base, branch, schema version, and slice artifacts.');return{repositoryRoot:fixturePath,baseRef:'main',expectedBaseCommit:item.expectedBaseCommit,candidateBranch:item.candidateBranch,artifacts:item.artifacts as FeatureSliceArtifact[],analyzerSchemaVersion:item.analyzerSchemaVersion};}
 const server = createServer(async (request, response) => {
   try {
     if (request.url === '/api/repository' && request.method === 'GET') { const inspected = await repository.inspect(); return json(response, 200, { branches: inspected.branches, clean: inspected.clean, sessions: previews.sessions() }); }
@@ -35,6 +42,10 @@ const server = createServer(async (request, response) => {
     }
     const analysisId = artifactRoute(request.url);
     if (analysisId && request.method === 'GET') { const artifact = await readFile(resolve(workspaceRoot, '.ums', 'analysis', analysisId, 'feature-slice.json')); response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="feature-slice-${analysisId}.json"` }); return response.end(artifact); }
+    if(request.url==='/api/candidate/preflight'&&request.method==='POST'){const value=candidateRequest(await body(request));const result=await candidateGenerator.preflight(value);candidateProgress={status:result.plan.status==='ready'?'idle':'refused',stage:'plan',message:result.plan.status==='ready'?'Candidate plan is ready.':'Candidate plan was refused.'};return json(response,200,result);}
+    if(request.url==='/api/candidate/generate'&&request.method==='POST'){const value=candidateRequest(await body(request));candidateProgress={status:'running',stage:'validate',message:'Candidate generation is running: validate.'};const report=await candidateGenerator.generate(value);candidateProgress={status:report.status,stage:report.stage,message:report.message};return json(response,200,report);}
+    if(request.url==='/api/candidate/status'&&request.method==='GET')return json(response,200,candidateProgress);
+    const generationId=generationArtifactRoute(request.url);if(generationId&&request.method==='GET'){const artifact=await readFile(resolve(workspaceRoot,'.ums','generation',generationId,'candidate-report.json'));response.writeHead(200,{'Content-Type':'application/json','Content-Disposition':`attachment; filename="candidate-report-${generationId}.json"`});return response.end(artifact);}
     const previewId = previewRoute(request.url);
     if (previewId && request.method === 'POST') { const value = await body(request); if (!value || typeof value !== 'object' || typeof (value as { branch?: unknown }).branch !== 'string') return json(response, 400, { error: 'A branch string is required.' }); return json(response, 200, await previews.start(previewId, (value as { branch: string }).branch)); }
     if (previewId && request.method === 'DELETE') { await previews.stop(previewId); return json(response, 200, { stopped: true, previewId }); }

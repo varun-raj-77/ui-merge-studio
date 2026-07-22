@@ -11,7 +11,7 @@ export function verifyFixture(repo = generated) {
   check(git(repo, ['status', '--porcelain']) === '', 'working tree must be clean');
   const existing = git(repo, ['branch', '--format=%(refname:short)']).split(/\r?\n/);
   for (const branch of branches) check(existing.includes(branch), `missing branch: ${branch}`);
-  check(!existing.includes('combined-result'), 'combined-result branch is forbidden');
+  const hasCandidate = existing.includes('combined-result');
   const tags = git(repo, ['tag', '--list']).split(/\r?\n/).filter(Boolean);
   check(tags.length === 0, 'tags are forbidden in the controlled fixture');
   if (failures.length) throw new Error(failures.join('\n'));
@@ -19,6 +19,19 @@ export function verifyFixture(repo = generated) {
   for (const branch of ['branch-sidebar', 'branch-inspector']) {
     check(git(repo, ['merge-base', 'main', branch]) === base, `${branch} does not use the exact main base`);
     check(git(repo, ['rev-list', '--count', `main..${branch}`]) === '1', `${branch} must be exactly one commit ahead`);
+  }
+  if (hasCandidate) {
+    check(git(repo,['merge-base','main','combined-result'])===base,'combined-result must start from the exact main base');
+    const candidateCount=git(repo,['rev-list','--count','main..combined-result']);check(candidateCount==='1','combined-result must be exactly one verified generated commit ahead');
+    if(candidateCount==='1') {
+      check(git(repo,['rev-parse','combined-result^'])===base,'combined-result parent must be the exact main commit');
+      const candidateSource=git(repo,['show','combined-result:src/features/navigation/AppSidebar.tsx']);const candidateInspector=git(repo,['show','combined-result:src/features/tickets/ActivityFilters.tsx']);const candidatePage=git(repo,['show','combined-result:src/features/tickets/TicketPage.tsx']);const candidateTest=git(repo,['show','combined-result:src/test/inspector.test.tsx']);
+      check(candidateSource.includes('Collapse sidebar')&&candidateInspector.includes('Activity filters'),'combined-result lacks selected feature source');
+      check(candidatePage.includes('Support Tickets')&&!candidatePage.includes('Operations Command Center'),'combined-result contains the unrelated heading change');
+      check(!git(repo,['ls-tree','-r','--name-only','combined-result']).split(/\r?\n/).includes('src/utils/sortTickets.ts'),'combined-result contains the unrelated sorting implementation');
+      check(!candidateTest.includes('sorts ticket list newest first'),'combined-result contains the unrelated sorting test');
+      const candidateNames=git(repo,['diff','--name-only','main..combined-result']).split(/\r?\n/);check(!candidateNames.some(name=>name.startsWith('dist/')||name.startsWith('.ums/')||name==='node_modules'),'combined-result tracks generated runtime/build output');
+    }
   }
   const sidebarDiff = git(repo, ['show', '--format=', 'branch-sidebar']);
   check(sidebarDiff.includes('Operations Command Center'), 'sidebar commit lacks unrelated heading change');
