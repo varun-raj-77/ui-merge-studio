@@ -17,6 +17,7 @@ describe('controlled fixture feature slices', () => {
     expect(first.status).toBe('resolved'); expect(first.boundary).toMatchObject({ original: 'AppSidebar', analyzed: 'AppSidebar', status: 'selected-boundary-sufficient' });
     for (const path of ['src/features/navigation/AppSidebar.tsx','src/features/navigation/SidebarNavItem.tsx','src/hooks/useSidebarState.ts','src/types/navigation.ts','src/styles/app.css','src/test/sidebar.test.tsx']) expect(included.has(path), path).toBe(true);
     const heading = first.excludedChanges.find(item => item.path === 'src/features/tickets/TicketPage.tsx'); expect(heading).toMatchObject({ classification: 'proven-unrelated', proof: 'proven' });
+    expect(first.evidence).toContainEqual(expect.objectContaining({ type: 'existing-base-edge', to: 'src/features/tickets/TicketPage.tsx#TicketPage', baseState: 'existing' }));
     expect(first.includedChanges.some(item => item.path === 'src/features/tickets/TicketPage.tsx')).toBe(false);
     expect(second).toEqual(first);
   });

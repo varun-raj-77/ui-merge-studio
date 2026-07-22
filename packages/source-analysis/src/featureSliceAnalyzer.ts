@@ -78,6 +78,10 @@ export class FeatureSliceAnalyzer {
     }
     const evidence = new Map<string, SliceEvidence>();
     const addEvidence = (type: SliceEvidence['type'], from: string, to: string, detail: string, baseState: SliceEvidence['baseState']) => { const id = `edge:${type}:${from}->${to}`; evidence.set(id, { id, type, from, to, detail, baseState }); return id; };
+    if (baseSeed) {
+      const existingIntegration = branchEdges.find(edge => edge.to.key === seed.key && edge.type === 'renders-component' && baseEdgeKeys.has(edgeKey(edge)));
+      if (existingIntegration) addEvidence('existing-base-edge', seed.key, existingIntegration.from.key, `${existingIntegration.from.name} already renders ${seed.name} in the merge base, so no parent branch change is required.`, 'existing');
+    }
     const included = new Map<string, IncludedChange>();
     const integrationKeys = new Set(integrationPath.map(edge => edge.from.key));
     const includeDeclaration = (declaration: DeclarationRecord, reason: string, edgeIds: string[], selected = false) => {
