@@ -20,7 +20,10 @@
 - A reusable Babel AST index records modules, declarations, static imports, supported exports/re-exports, JSX references, styles, assets, and test relationships. Regex is limited to Git hunk headers and non-language classification.
 - Feature evidence uses typed edges; inclusion is limited to changed declarations reachable from the selected/expanded boundary, changed integration steps, direct changed assets, statically registered styles, and statically related changed tests.
 - Added selected components escalate through changed reverse JSX integration edges until an existing base composition boundary is reached. The expansion is explicit in the artifact and UI.
-- CSS and related tests use conservative whole-file fallback because rule- and test-case-level safe extraction is not implemented. Unchanged base dependencies remain evidence only, never branch changes to copy.
+- CSS remains a conservative whole-file fallback. Supported changed test modules are indexed below file level into suites, tests, lexical hooks, local support declarations, and import specifiers; unsupported or inseparable test syntax produces explicit partial/refused evidence. Unchanged base dependencies remain evidence only, never branch changes to copy.
 - Exclusions distinguish affirmative `proven-unrelated` results from `not-reached-by-supported-analysis`; unresolved mechanisms force `partial` or `refused` status.
 - Deterministic JSON omits timestamps, uses resolved commit identities and stable ordering, and hashes normalized slice content for the analysis ID.
 - See ADR 0004 for the Git/AST evidence-slicing boundary.
+- Prompt 004B connects test units to included production declarations with static symbol/helper edges and exact, uniquely-owned callback UI-contract literals. Test titles, branch names, paths, and fixture expectations never determine relevance.
+- Required and excluded imports are represented per specifier, including mixed declarations and aliases. Enclosing suites and applicable hooks are retained structurally; unrelated sibling tests and scoped hooks are excluded.
+- See ADR 0005 for the AST test-unit slicing boundary and conservative fallback rules.

@@ -22,6 +22,9 @@
 | Unchanged selected source is mistaken for the branch feature | Unrelated delta is attributed to the selection | Require a reachable changed declaration or changed reverse integration chain; otherwise refuse |
 | Symbol and unrelated edits share an inseparable region | Unsafe symbol-level extraction | Fall back conservatively to a whole file when justified, or mark ambiguity partial/refused |
 | Style ownership is guessed from class names | Incorrect CSS inclusion | Require a supported static stylesheet import; use whole-file CSS fallback and document it |
-| Broad test association turns tests into ownership metadata | Unrelated test changes enter the slice | Require a changed test's static import graph to reach the analyzed boundary; mark file-level inclusion conservative |
+| Broad test association turns tests into ownership metadata | Unrelated test changes enter the slice | Require static symbol/helper evidence or an exact uniquely-owned production UI-contract literal; never use titles, paths, or fixture expectations |
+| Shared test setup serves included and excluded tests inseparably | A reconstructed test module is incomplete or over-broad | Detect mixed setup/hunk ownership and return partial/refused with a manual next step |
+| Mixed import declaration is classified as one ownership unit | Excluded-test dependencies leak into the slice | Track required and excluded imports by local specifier, including aliases |
+| Dynamic/custom test factories evade the AST unit model | Tests are silently omitted or misclassified | Record unsupported registration and refuse that test-file slice |
 | Branch moves after visual selection | Artifact describes a different source state | Bind preview session to a resolved commit and reject commit/session/location mismatch |
 | Deterministic artifact leaks runtime noise | Equivalent analysis hashes differ | Omit timestamps, sort every collection, and derive IDs from normalized slice JSON |

@@ -1,6 +1,6 @@
 # UI Merge Studio — Phase 0 fixture
 
-This repository contains the controlled Support Operations Dashboard fixture and three UI Merge Studio falsification experiments: rendered React element-to-source mapping, a two-preview comparison workspace, and dependency-aware feature-slice analysis. It does **not** apply slices, create a candidate branch, or implement a merge pipeline.
+This repository contains the controlled Support Operations Dashboard fixture and four UI Merge Studio falsification experiments: rendered React element-to-source mapping, a two-preview comparison workspace, dependency-aware feature-slice analysis, and AST-based mixed test-file slicing. It does **not** apply slices, create a candidate branch, or implement a merge pipeline.
 
 ## Commands
 
@@ -18,6 +18,7 @@ npm run test:studio
 npm run test:multi-preview
 npm run test:source-analysis
 npm run test:feature-slice
+npm run test:test-slicing
 npm run test:e2e
 npm run build
 ```
@@ -34,6 +35,6 @@ Only the controlled ticket route/entity adapter is supported. Local sidebar stat
 
 ## Dependency-aware feature-slice experiment
 
-After selecting a rendered boundary in either preview, choose **Analyze feature slice**. The server validates the live preview/session/commit identity, diffs the branch from its merge base with `main`, indexes TypeScript/TSX with Babel, and returns the smallest supported evidence-backed set of changed declarations plus conservative whole-file styles/tests/assets. The per-preview panel shows boundary escalation, included changes, excluded branch changes, unresolved edges, and a deterministic downloadable JSON artifact under `.ums/analysis/`.
+After selecting a rendered boundary in either preview, choose **Analyze feature slice**. The server validates the live preview/session/commit identity, diffs the branch from its merge base with `main`, indexes TypeScript/TSX with Babel, and returns the smallest supported evidence-backed set of changed declarations plus conservative whole-file styles/assets. Supported Vitest/Jest-style test modules are sliced into individual suites, tests, scoped hooks, local helpers/fixtures, and import specifiers. The per-preview panel shows boundary escalation, included changes, test-unit evidence, excluded branch/test changes, unresolved edges, and a deterministic downloadable JSON artifact under `.ums/analysis/`.
 
-Production analysis is driven by Git and source evidence: it has no fixture feature tables, branch-name semantics, or manual filename input. A resolved slice is an analysis result, not a safe merge plan. Dynamic module paths, unsupported aliases/re-exports, inseparable source regions, and other unsupported dependency mechanisms remain partial or refused.
+Production analysis is driven by Git and source evidence: it has no fixture feature tables, branch-name/title semantics, or manual filename input. A resolved slice is an analysis result, not a safe merge plan. Dynamic test factories, inseparable mixed setup, dynamic module paths, unsupported aliases/re-exports, inseparable source regions, and other unsupported dependency mechanisms remain partial or refused.
