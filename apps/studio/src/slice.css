@@ -1,0 +1,13 @@
+.slice-panel{margin-top:10px}
+.slice-panel h3{font-size:13px;margin:14px 0 7px}
+.slice-meta{grid-template-columns:120px 1fr!important}
+.change-list{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.change-list li{display:grid;gap:3px;border-left:3px solid #8aa2cf;background:#f6f8fc;padding:8px;font-size:12px}
+.change-list li code{overflow-wrap:anywhere}
+.change-list li span{color:#38445b}
+.change-list li small{color:#6b7589}
+.included-list li{border-left-color:#3d9362}
+.excluded-list li{border-left-color:#b58a37}
+.unresolved-list li{border-left-color:#b84a4a}
+.artifact-link{display:inline-block;margin-top:14px;color:#284f91;font-size:13px}
+.slice-stale{opacity:.78}

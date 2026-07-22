@@ -9,6 +9,11 @@ export interface RepositoryInspection { repositoryPath: string; branches: string
 export class RepositoryController {
   constructor(readonly repositoryPath: string) {}
   private async git(args: string[]) { return (await execFileAsync('git', args, { cwd: this.repositoryPath, encoding: 'utf8' })).stdout.trim(); }
+  async resolveRef(ref: string) {
+    if (!/^[A-Za-z0-9._/-]+$/.test(ref) || ref.startsWith('-') || ref.includes('..')) throw new Error(`Invalid branch: ${ref}`);
+    try { return await this.git(['rev-parse', '--verify', `${ref}^{commit}`]); }
+    catch { throw new Error(`Invalid branch: ${ref}`); }
+  }
   async inspect(): Promise<RepositoryInspection> {
     await access(resolve(this.repositoryPath, '.git'));
     const branches = (await this.git(['for-each-ref', '--format=%(refname:short)', 'refs/heads/'])).split(/\r?\n/).filter(Boolean).sort();

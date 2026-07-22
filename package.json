@@ -11,6 +11,8 @@
     "test:preview-runtime": "vitest run tests/preview-runtime",
     "test:studio": "vitest run tests/bridge tests/studio",
     "test:multi-preview": "vitest run tests/bridge tests/studio tests/preview-runtime/fixtureAdapter.test.ts",
+    "test:source-analysis": "vitest run tests/source-analysis",
+    "test:feature-slice": "vitest run tests/source-analysis/featureSlice.fixture.test.ts tests/source-analysis/featureSlice.failure.test.ts",
     "test:e2e": "playwright test -c apps/studio/playwright.config.ts",
     "build": "vite build -c apps/studio/vite.config.ts",
     "fixture:create": "tsx scripts/create-phase0-fixture.ts",

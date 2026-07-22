@@ -7,3 +7,4 @@ fixtures/generated/
 .preview-worktrees/
 apps/studio/dist/
 *.log
+.ums/

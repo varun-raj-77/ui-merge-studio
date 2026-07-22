@@ -2,6 +2,7 @@ import { useEffect, useReducer, useRef } from 'react';
 import type { PreviewSession } from '../../../packages/preview-runtime/src/previewController';
 import { createStudioCommand, validatePreviewEvent, type ComparisonContext, type PreviewCapabilities, type PreviewMessage, type StudioCommandType } from '../../../packages/shared/src/bridge';
 import type { SourceIdentity } from '../../../packages/shared/src/sourceIdentity';
+import type { FeatureSliceArtifact } from '../../../packages/source-analysis/src/types';
 import { compareCapabilities, comparisonReducer, initialComparisonState, planContextSynchronization, viewportPresets, type PreviewSlotId } from './comparisonState';
 
 interface RepositoryResponse { branches: string[]; clean: boolean; sessions: PreviewSession[] }
@@ -10,6 +11,13 @@ function operationId() { return globalThis.crypto?.randomUUID?.() ?? `sync-${Dat
 
 function IdentityPanel({ identity, title }: { identity: SourceIdentity | null; title: string }) {
   return <section className="panel"><h2>{title}</h2>{identity ? <dl><dt>Component</dt><dd>{identity.componentName ?? 'Anonymous'}</dd><dt>Source</dt><dd><code>{identity.repositoryRelativePath}:{identity.line}:{identity.column}</code></dd><dt>Definition boundary</dt><dd><code>{identity.boundaryId}</code></dd><dt>Runtime instance</dt><dd><code>{identity.instanceId}</code></dd><dt>Preview session</dt><dd><code>{identity.previewId} / {identity.sessionId.slice(0, 8)} / g{identity.generation}</code></dd><dt>Branch</dt><dd>{identity.branch}</dd><dt>Mapping</dt><dd>{identity.confidence}</dd></dl> : <p className="muted">None</p>}</section>;
+}
+export function SlicePanel({ artifact, status, error }: { artifact: FeatureSliceArtifact | null; status: string; error: string | null }) {
+  if (status === 'idle') return <section className="slice-panel panel"><h2>Feature slice</h2><p className="muted">Select a source-mapped boundary, then run analysis.</p></section>;
+  if (status === 'loading') return <section className="slice-panel panel" aria-busy="true"><h2>Feature slice</h2><p>Analyzing Git and AST evidence…</p></section>;
+  if (!artifact) return <section className="slice-panel panel"><h2>Feature slice</h2><div className="error"><strong>Analysis refused:</strong> {error}</div></section>;
+  const slice = artifact.slice;
+  return <section className={`slice-panel panel slice-${status}`}><h2>Feature slice · {slice.status}</h2>{status === 'stale' && <div className="notice"><strong>Stale analysis:</strong> {error}</div>}<dl className="slice-meta"><dt>Original boundary</dt><dd>{slice.boundary.original}</dd><dt>Analyzed boundary</dt><dd>{slice.boundary.analyzed}</dd><dt>Expansion</dt><dd>{slice.boundary.reason}</dd><dt>Merge base</dt><dd><code>{slice.repository.mergeBaseCommit.slice(0, 12)}</code></dd><dt>Branch commit</dt><dd><code>{slice.repository.branchCommit.slice(0, 12)}</code></dd></dl><h3>Included changes</h3>{slice.includedChanges.length ? <ul className="change-list included-list">{slice.includedChanges.map(item => <li key={item.branchChangeId}><strong>{item.symbol?.name ?? item.path}</strong><code>{item.path}{item.symbol ? `:${item.symbol.region.startLine}` : ''}</code><span>{item.reason}</span><small>{item.category} · {item.confidence} · {item.wholeFile ? 'whole file' : 'symbol/region'}</small></li>)}</ul> : <p className="muted">None</p>}<h3>Excluded branch changes</h3>{slice.excludedChanges.length ? <ul className="change-list excluded-list">{slice.excludedChanges.map(item => <li key={item.branchChangeId}><strong>{item.symbol?.name ?? item.path}</strong><code>{item.path}</code><span>{item.reason}</span><small>{item.classification} · {item.proof}</small></li>)}</ul> : <p className="muted">None</p>}<h3>Unresolved dependencies</h3>{slice.unresolvedDependencies.length ? <ul className="change-list unresolved-list">{slice.unresolvedDependencies.map(item => <li key={`${item.path}:${item.reason}`}><code>{item.path}</code><span>{item.reason}</span><small>{item.manualNextStep}</small></li>)}</ul> : <p className="muted">None</p>}<a className="artifact-link" href={`/api/analysis/${artifact.analysisId}`} download>Download deterministic JSON</a></section>;
 }
 
 export function App() {
@@ -84,6 +92,7 @@ export function App() {
   async function startBoth() { await Promise.all(slots.map(startPreview)); }
   function toggleSelection(previewId: PreviewSlotId) { const preview = state.previews[previewId]; send(previewId, preview.selecting ? 'disable-selection' : 'enable-selection'); }
   function clearSelection(previewId: PreviewSlotId) { send(previewId, 'clear-selection'); dispatch({ type: 'clear-selection', previewId }); }
+  async function analyzeSelection(previewId: PreviewSlotId) { const selection = state.previews[previewId].selected?.identity; if (!selection) return; dispatch({ type: 'analysis-started', previewId }); try { const response = await fetch(`/api/previews/${previewId}/analysis`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selection }) }); const value = await response.json(); if (!response.ok) throw new Error(value.error ?? response.statusText); dispatch({ type: 'analysis-finished', previewId, artifact: value as FeatureSliceArtifact }); } catch (error) { dispatch({ type: 'analysis-failed', previewId, error: error instanceof Error ? error.message : String(error) }); } }
   function setViewport(name: keyof typeof viewportPresets) {
     const viewport = viewportPresets[name];
     dispatch({ type: 'set-viewport', viewport });
@@ -117,8 +126,9 @@ export function App() {
           <div className="frame-shell" style={{ maxWidth: state.viewport.width }}>
             {preview.session ? <iframe ref={node => { frames.current[previewId] = node; }} title={`${preview.branch} preview`} src={preview.session.url} style={{ width: state.viewport.width, height: state.viewport.height }} /> : <div className="placeholder">Start this branch preview.</div>}
           </div>
-          {preview.session && <div className="selection-controls"><button onClick={() => toggleSelection(previewId)}>{preview.selecting ? 'Exit selection mode' : 'Enter selection mode'}</button><button onClick={() => clearSelection(previewId)} disabled={!preview.selected && !preview.hovered}>Clear selection</button></div>}
+          {preview.session && <div className="selection-controls"><button onClick={() => toggleSelection(previewId)}>{preview.selecting ? 'Exit selection mode' : 'Enter selection mode'}</button><button onClick={() => clearSelection(previewId)} disabled={!preview.selected && !preview.hovered}>Clear selection</button><button onClick={() => analyzeSelection(previewId)} disabled={!preview.selected || preview.analysis.status === 'loading'}>{preview.analysis.status === 'loading' ? 'Analyzing feature…' : 'Analyze feature slice'}</button></div>}
           {preview.session && <div className="preview-details"><IdentityPanel title="Hovered boundary" identity={preview.hovered} /><IdentityPanel title="Selected boundary" identity={preview.selected?.identity ?? null} />{preview.selected && <section className="panel"><h2>Eligible ancestors</h2>{preview.selected.ancestors.length ? preview.selected.ancestors.map((identity, ancestorIndex) => <button className="ancestor" key={`${identity.instanceId}-${ancestorIndex}`} onClick={() => send(previewId, 'select-ancestor', { index: ancestorIndex + 1 })}>{identity.componentName ?? identity.repositoryRelativePath}</button>) : <p className="muted">No instrumented ancestor.</p>}</section>}</div>}
+          {preview.session && <SlicePanel artifact={preview.analysis.artifact} status={preview.analysis.status} error={preview.analysis.error} />}
         </article>;
       })}
     </main>

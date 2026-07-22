@@ -8,7 +8,7 @@ import { RepositoryController } from '../../repository-controller/src/repository
 import { bridgeVersion, type PreviewIdentity } from '../../shared/src/bridge';
 
 export type PreviewStatus = 'running' | 'failed';
-export interface PreviewSession extends PreviewIdentity { protocolVersion: typeof bridgeVersion; url: string; origin: string; port: number; worktreePath: string; status: PreviewStatus; failure: string | null }
+export interface PreviewSession extends PreviewIdentity { protocolVersion: typeof bridgeVersion; branchCommit: string; url: string; origin: string; port: number; worktreePath: string; status: PreviewStatus; failure: string | null }
 export function createPreviewIdentity(previewId: string, branch: string, generation: number, createId: () => string = randomUUID): PreviewIdentity { if (!previewId || !branch || !Number.isInteger(generation) || generation < 1) throw new Error('A valid preview identity requires preview ID, branch, and positive generation.'); return { previewId, branch, generation, sessionId: createId() }; }
 function command(name: string) { return name; }
 export async function allocatePort() { return await new Promise<number>((accept, reject) => { const server = createServer(); server.once('error', reject); server.listen(0, '127.0.0.1', () => { const address = server.address(); const port = typeof address === 'object' && address ? address.port : 0; server.close(error => error ? reject(error) : accept(port)); }); }); }
@@ -29,6 +29,7 @@ export class PreviewController {
     this.generations.set(previewId, generation);
     const identity = createPreviewIdentity(previewId, branch, generation);
     const { sessionId } = identity;
+    const branchCommit = await this.repository.resolveRef(branch);
     const worktreePath = await this.repository.createWorktree(branch);
     try {
       await access(resolve(worktreePath, 'node_modules')).catch(() => runProcess(worktreePath, command('npm'), ['ci', '--no-audit', '--no-fund']));
@@ -45,7 +46,7 @@ export class PreviewController {
       child.stderr?.on('data', value => diagnostics += value);
       child.once('error', error => { diagnostics += error.message; });
       await waitForReady(`${origin}/tickets`, child).catch(error => { throw new Error(`${error instanceof Error ? error.message : String(error)}\n${diagnostics}`); });
-      const session: PreviewSession = { previewId, sessionId, generation, branch, protocolVersion: bridgeVersion, url: `${origin}/tickets`, origin, port, worktreePath, status: 'running', failure: null };
+      const session: PreviewSession = { previewId, sessionId, generation, branch, branchCommit, protocolVersion: bridgeVersion, url: `${origin}/tickets`, origin, port, worktreePath, status: 'running', failure: null };
       this.active.set(previewId, { session, child });
       child.once('exit', code => { const current = this.active.get(previewId); if (current?.child === child && code !== 0) { current.session.status = 'failed'; current.session.failure = `Preview process exited (${code}).`; } });
       return session;

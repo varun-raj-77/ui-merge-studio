@@ -1,6 +1,7 @@
 import type { PreviewSession } from '../../../packages/preview-runtime/src/previewController';
 import type { ComparisonContext, PreviewCapabilities, PreviewMessage, ViewportContext } from '../../../packages/shared/src/bridge';
 import type { BoundarySelection, SelectionRefusal, SourceIdentity } from '../../../packages/shared/src/sourceIdentity';
+import type { FeatureSliceArtifact } from '../../../packages/source-analysis/src/types';
 
 export type PreviewSlotId = 'left' | 'right';
 export type StudioPreviewStatus = 'stopped' | 'starting' | 'restarting' | 'loading' | 'ready' | 'failed';
@@ -15,6 +16,7 @@ export interface PreviewSlot {
   selected: BoundarySelection | null;
   hovered: SourceIdentity | null;
   selecting: boolean;
+  analysis: { status: 'idle' | 'loading' | 'resolved' | 'partial' | 'refused' | 'stale'; artifact: FeatureSliceArtifact | null; error: string | null };
   invalidation: string | null;
   errors: PreviewErrors;
 }
@@ -29,7 +31,7 @@ export interface ComparisonState {
 }
 
 const emptyErrors = (): PreviewErrors => ({ runtime: null, bridge: null, synchronization: null, selection: null });
-const slot = (id: PreviewSlotId): PreviewSlot => ({ id, branch: '', status: 'stopped', session: null, capabilities: null, context: null, selected: null, hovered: null, selecting: false, invalidation: null, errors: emptyErrors() });
+const slot = (id: PreviewSlotId): PreviewSlot => ({ id, branch: '', status: 'stopped', session: null, capabilities: null, context: null, selected: null, hovered: null, selecting: false, analysis: { status: 'idle', artifact: null, error: null }, invalidation: null, errors: emptyErrors() });
 export const viewportPresets: Record<ViewportContext['preset'], ViewportContext> = {
   desktop: { preset: 'desktop', width: 1200, height: 760 },
   tablet: { preset: 'tablet', width: 768, height: 760 },
@@ -67,7 +69,10 @@ export type ComparisonAction =
   | { type: 'sync-status'; status: string; error?: string | null }
   | { type: 'canonical-context'; context: ComparisonContext }
   | { type: 'set-viewport'; viewport: ViewportContext }
-  | { type: 'clear-selection'; previewId: PreviewSlotId };
+  | { type: 'clear-selection'; previewId: PreviewSlotId }
+  | { type: 'analysis-started'; previewId: PreviewSlotId }
+  | { type: 'analysis-finished'; previewId: PreviewSlotId; artifact: FeatureSliceArtifact }
+  | { type: 'analysis-failed'; previewId: PreviewSlotId; error: string };
 
 function updateSlot(state: ComparisonState, id: PreviewSlotId, update: (current: PreviewSlot) => PreviewSlot): ComparisonState { return { ...state, previews: { ...state.previews, [id]: update(state.previews[id]) } }; }
 export function comparisonReducer(state: ComparisonState, action: ComparisonAction): ComparisonState {
@@ -80,7 +85,7 @@ export function comparisonReducer(state: ComparisonState, action: ComparisonActi
   if (action.type === 'set-branch') return updateSlot(state, action.previewId, current => ({ ...current, branch: action.branch }));
   if (action.type === 'preview-starting') return updateSlot(state, action.previewId, current => {
     const restarted = Boolean(current.session);
-    return { ...current, status: restarted ? 'restarting' : 'starting', session: null, capabilities: null, context: null, selected: null, hovered: null, selecting: false, invalidation: current.selected ? `Selection cleared: The ${current.branch} preview restarted, so the previous runtime selection is no longer valid.` : current.invalidation, errors: emptyErrors() };
+    return { ...current, status: restarted ? 'restarting' : 'starting', session: null, capabilities: null, context: null, selected: null, hovered: null, selecting: false, analysis: current.analysis.artifact ? { ...current.analysis, status: 'stale', error: 'Analysis is stale because the preview restarted.' } : current.analysis, invalidation: current.selected ? `Selection cleared: The ${current.branch} preview restarted, so the previous runtime selection is no longer valid.` : current.invalidation, errors: emptyErrors() };
   });
   if (action.type === 'preview-started') return updateSlot(state, action.previewId, current => ({ ...current, branch: action.session.branch, status: 'loading', session: action.session, errors: emptyErrors() }));
   if (action.type === 'preview-failed') return updateSlot(state, action.previewId, current => ({ ...current, status: 'failed', session: null, errors: { ...current.errors, runtime: action.error } }));
@@ -94,7 +99,10 @@ export function comparisonReducer(state: ComparisonState, action: ComparisonActi
   }
   if (action.type === 'canonical-context') return { ...state, canonicalContext: action.context };
   if (action.type === 'set-viewport') return { ...state, viewport: action.viewport };
-  if (action.type === 'clear-selection') return updateSlot(state, action.previewId, current => ({ ...current, selected: null, hovered: null, errors: { ...current.errors, selection: null } }));
+  if (action.type === 'clear-selection') return updateSlot(state, action.previewId, current => ({ ...current, selected: null, hovered: null, analysis: current.analysis.artifact ? { ...current.analysis, status: 'stale', error: 'Analysis is stale because its selection was cleared.' } : current.analysis, errors: { ...current.errors, selection: null } }));
+  if (action.type === 'analysis-started') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: 'loading', artifact: null, error: null } }));
+  if (action.type === 'analysis-finished') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: action.artifact.slice.status, artifact: action.artifact, error: null } }));
+  if (action.type === 'analysis-failed') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: 'refused', artifact: null, error: action.error } }));
   if (action.type === 'preview-message') return updateSlot(state, action.previewId, current => {
     const { message } = action;
     if (message.type === 'preview-ready') { const payload = message.payload as { capabilities: PreviewCapabilities; context: ComparisonContext }; return { ...current, status: 'ready', capabilities: payload.capabilities, context: payload.context }; }
@@ -102,8 +110,8 @@ export function comparisonReducer(state: ComparisonState, action: ComparisonActi
     if (message.type === 'selection-mode-enabled') return { ...current, selecting: true };
     if (message.type === 'selection-mode-disabled') return { ...current, selecting: false, hovered: null };
     if (message.type === 'boundary-hovered') return { ...current, hovered: (message.payload as SourceIdentity | null) ?? null };
-    if (message.type === 'boundary-selected') return { ...current, selected: message.payload as BoundarySelection, invalidation: null, errors: { ...current.errors, selection: null } };
-    if (message.type === 'selection-cleared') return { ...current, selected: null, hovered: null, invalidation: (message.payload as { reason: string }).reason };
+    if (message.type === 'boundary-selected') return { ...current, selected: message.payload as BoundarySelection, analysis: { status: 'idle', artifact: null, error: null }, invalidation: null, errors: { ...current.errors, selection: null } };
+    if (message.type === 'selection-cleared') return { ...current, selected: null, hovered: null, analysis: current.analysis.artifact ? { ...current.analysis, status: 'stale', error: 'Analysis is stale because its runtime selection is no longer active.' } : current.analysis, invalidation: (message.payload as { reason: string }).reason };
     if (message.type === 'selection-error') return { ...current, errors: { ...current.errors, selection: message.payload as SelectionRefusal } };
     if (message.type === 'sync-refused') { const reason = (message.payload as { reason: string }).reason; return { ...current, errors: { ...current.errors, synchronization: reason } }; }
     if (message.type === 'runtime-error') return { ...current, errors: { ...current.errors, runtime: (message.payload as { message: string }).message } };
