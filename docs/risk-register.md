@@ -18,3 +18,10 @@
 | Fixture route contracts diverge | Incorrect guessed navigation | Negotiate adapter-declared contracts and retain interactivity while explicitly refusing synchronization |
 | Restart preserves a dead runtime selection | Misleading source evidence | Clear the restarted slot before launch and reject every envelope from the prior session/generation |
 | Dynamic localhost origin weakens browser trust boundary | Malicious same-machine page attempts messages | Use exact per-session origins plus iframe-window and identity validation; do not use wildcard targets |
+| Static source graph misses runtime dependency | Slice is incomplete | Bound supported edges; record unresolved imports; return partial/refused rather than infer |
+| Unchanged selected source is mistaken for the branch feature | Unrelated delta is attributed to the selection | Require a reachable changed declaration or changed reverse integration chain; otherwise refuse |
+| Symbol and unrelated edits share an inseparable region | Unsafe symbol-level extraction | Fall back conservatively to a whole file when justified, or mark ambiguity partial/refused |
+| Style ownership is guessed from class names | Incorrect CSS inclusion | Require a supported static stylesheet import; use whole-file CSS fallback and document it |
+| Broad test association turns tests into ownership metadata | Unrelated test changes enter the slice | Require a changed test's static import graph to reach the analyzed boundary; mark file-level inclusion conservative |
+| Branch moves after visual selection | Artifact describes a different source state | Bind preview session to a resolved commit and reject commit/session/location mismatch |
+| Deterministic artifact leaks runtime noise | Equivalent analysis hashes differ | Omit timestamps, sort every collection, and derive IDs from normalized slice JSON |
