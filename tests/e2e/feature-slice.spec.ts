@@ -36,11 +36,14 @@ test('extracts deterministic dependency-aware slices for both real visual select
   expect(left.slice.excludedChanges).toContainEqual(expect.objectContaining({ path: 'src/features/tickets/TicketPage.tsx', classification: 'proven-unrelated', proof: 'proven' }));
   for (const path of ['src/features/tickets/ActivityFilters.tsx','src/features/tickets/TicketActivityList.tsx','src/features/tickets/TicketHeader.tsx','src/hooks/useActivityFilter.ts','src/hooks/useCopyReference.ts','src/types/inspector.ts','src/utils/severitySummary.ts','src/styles/inspector.css','src/main.tsx','src/test/inspector.test.tsx']) expect(rightIncluded.has(path), path).toBe(true);
   for (const path of ['src/features/tickets/TicketList.tsx','src/utils/sortTickets.ts']) expect(right.slice.excludedChanges).toContainEqual(expect.objectContaining({ path, classification: 'proven-unrelated', proof: 'proven' }));
-  await card(page, 'left').getByRole('button', { name: 'Analyze feature slice' }).click(); await expect(card(page, 'left').getByRole('heading', { name: 'Feature slice · resolved' })).toBeVisible({ timeout: 60_000 });
-  expect((await downloadSlice(page, 'left')).href).toBe(left.href);
-  await card(page, 'left').getByRole('button', { name: 'Start / restart preview', exact: true }).click();
-  await expect(card(page, 'left')).toContainText('Stale analysis: Analysis is stale because the preview restarted.', { timeout: 90_000 });
-  await expect(card(page, 'right').getByRole('heading', { name: 'Feature slice · resolved' })).toBeVisible();
+  const inspectorTests = right.slice.testFileSlices.find(item => item.path === 'src/test/inspector.test.tsx')!; expect(inspectorTests.mode).toBe('test-units'); expect(inspectorTests.includedUnits.map(item => item.title)).toEqual(['filters activity and reports clipboard failure']); expect(inspectorTests.excludedUnits.map(item => item.title)).toEqual(['sorts ticket list newest first']);
+  expect(inspectorTests.requiredImports.map(item => item.local)).toEqual(['renderApp','fireEvent','screen']); expect(inspectorTests.excludedImports).toEqual([]);
+  await expect(card(page, 'right')).toContainText('Mode: test-units'); await expect(card(page, 'right')).toContainText('filters activity and reports clipboard failure'); await expect(card(page, 'right')).toContainText('sorts ticket list newest first');
+  await card(page, 'right').getByRole('button', { name: 'Analyze feature slice' }).click(); await expect(card(page, 'right').getByRole('heading', { name: 'Feature slice · resolved' })).toBeVisible({ timeout: 60_000 });
+  expect((await downloadSlice(page, 'right')).href).toBe(right.href);
+  await card(page, 'right').getByRole('button', { name: 'Start / restart preview B', exact: true }).click();
+  await expect(card(page, 'right')).toContainText('Stale analysis: Analysis is stale because the preview restarted.', { timeout: 90_000 });
+  await expect(card(page, 'left').getByRole('heading', { name: 'Feature slice · resolved' })).toBeVisible();
   await page.screenshot({ path: 'test-results/feature-slice-two-previews.png', fullPage: true });
 });
 

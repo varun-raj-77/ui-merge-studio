@@ -11,3 +11,11 @@
 .unresolved-list li{border-left-color:#b84a4a}
 .artifact-link{display:inline-block;margin-top:14px;color:#284f91;font-size:13px}
 .slice-stale{opacity:.78}
+.test-slices{margin-top:18px}
+.test-slice{margin:9px 0;padding:10px;border:1px solid #c4cede;border-radius:8px;background:#f8faff}
+.test-slice h4,.test-slice h5{margin:8px 0 5px}
+.test-slice ul{display:grid;gap:5px;margin:0;padding-left:18px}
+.test-slice li{display:grid;gap:2px;font-size:12px}
+.test-slice-test-units{border-color:#78ae8a}
+.test-slice-partial,.test-slice-refused{border-color:#c79a4a}
+.test-slice .warning{margin-top:9px;padding:8px;border-radius:6px;background:#fff2d7;color:#704d10}

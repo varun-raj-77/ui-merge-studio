@@ -19,6 +19,8 @@ describe('controlled fixture feature slices', () => {
     const heading = first.excludedChanges.find(item => item.path === 'src/features/tickets/TicketPage.tsx'); expect(heading).toMatchObject({ classification: 'proven-unrelated', proof: 'proven' });
     expect(first.evidence).toContainEqual(expect.objectContaining({ type: 'existing-base-edge', to: 'src/features/tickets/TicketPage.tsx#TicketPage', baseState: 'existing' }));
     expect(first.includedChanges.some(item => item.path === 'src/features/tickets/TicketPage.tsx')).toBe(false);
+    const sidebarTests = first.testFileSlices.find(item => item.path === 'src/test/sidebar.test.tsx')!; expect(sidebarTests.mode).toBe('test-units'); expect(sidebarTests.includedUnits).toHaveLength(1); expect(sidebarTests.excludedUnits).toEqual([]); expect(sidebarTests.includedUnits[0].title).toContain('collapses accessibly');
+    expect(first.includedChanges.find(item => item.path === 'src/test/sidebar.test.tsx')).toMatchObject({ wholeFile: false, confidence: 'exact' });
     expect(second).toEqual(first);
   });
   test('escalates ActivityFilters to the existing inspector boundary and excludes sorting', async () => {
@@ -27,6 +29,10 @@ describe('controlled fixture feature slices', () => {
     expect(first.status).toBe('resolved'); expect(first.boundary).toMatchObject({ original: 'ActivityFilters', analyzed: 'TicketInspector', status: 'expanded-to-integration-boundary' });
     for (const path of ['src/features/tickets/ActivityFilters.tsx','src/features/tickets/TicketActivityList.tsx','src/features/tickets/TicketHeader.tsx','src/hooks/useActivityFilter.ts','src/hooks/useCopyReference.ts','src/types/inspector.ts','src/utils/severitySummary.ts','src/styles/inspector.css','src/main.tsx','src/test/inspector.test.tsx']) expect(included.has(path), path).toBe(true);
     for (const path of ['src/features/tickets/TicketList.tsx','src/utils/sortTickets.ts']) { expect(included.has(path), path).toBe(false); expect(first.excludedChanges.find(item => item.path === path)).toMatchObject({ classification: 'proven-unrelated', proof: 'proven' }); }
+    const inspectorTests = first.testFileSlices.find(item => item.path === 'src/test/inspector.test.tsx')!; expect(inspectorTests.mode).toBe('test-units');
+    expect(inspectorTests.includedUnits.map(item => item.title)).toEqual(['filters activity and reports clipboard failure']); expect(inspectorTests.excludedUnits.map(item => item.title)).toEqual(['sorts ticket list newest first']);
+    expect(inspectorTests.requiredImports.map(item => item.local)).toEqual(['renderApp','fireEvent','screen']); expect(inspectorTests.excludedImports).toEqual([]);
+    expect(first.includedChanges.find(item => item.path === 'src/test/inspector.test.tsx')).toMatchObject({ wholeFile: false, confidence: 'exact' });
     expect(first.includedChanges.some(item => item.path.includes('navigation'))).toBe(false);
     expect(second).toEqual(first);
   });
