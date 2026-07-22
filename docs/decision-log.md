@@ -1,5 +1,9 @@
 # Decision log
 
+- Prompt 005 treats the exact schema-v2 artifacts as immutable inputs and produces a complete deterministic plan before mutation. Equivalent semantic requirements are coalesced while retaining every slice/evidence ID; incompatible AST/import/export/region ownership refuses.
+- Candidate construction uses a detached worktree at the exact base. The ref is registered only after changed-file audit, whitespace check, install, typecheck, full and focused tests, and build. Fixed commit metadata and normalized text EOFs make the controlled output repeatable.
+- Modified source and tests are reconstructed by AST identity. Whole added blobs require full slice ownership; mixed CSS, deletion, dynamic exports, unresolved helpers, and ambiguous structure refuse. Existing equal candidate trees are idempotent; different trees are preserved. See ADR 0006.
+
 - Use npm and Node scripts for the smallest deterministic outer toolchain.
 - Generate a standalone ignored Git repository from tracked templates.
 - Keep both positive branches at the same exact `main` base and exactly one mixed implementation commit ahead.

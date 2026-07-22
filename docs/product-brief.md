@@ -1,5 +1,7 @@
 # Product brief
 
+Prompt 005 proves the exact controlled positive combination: two immutable real visual-slice artifacts produce a deterministic plan and verified one-commit `combined-result` from the exact fixture base, without manual file selection, cherry-picking, or LLM patch authorship. It also proves a precise overlapping-declaration refusal. This does not prove arbitrary React branch merging or production readiness.
+
 Source of truth: **Visually select preferred features from multiple running React branches and create one verified combined branch.**
 
 The exact Phase 0 claim is: **A developer can select two preferred features directly from two running React branches, and the system can create one functioning combined branch without the developer manually identifying source files.**

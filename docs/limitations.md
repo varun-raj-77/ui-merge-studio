@@ -1,5 +1,7 @@
 # Limitations
 
+Prompt 005 proves that the two exact resolved fixture slices can be reconstructed into `combined-result`, verified, and repeated with an equivalent tree. It does not support arbitrary semantic merging, deletion, CSS rule extraction, ambiguous JSX anchors, dynamic/star export ownership, arbitrary package/path aliases, or unresolved shared test setup. Modified stylesheets are accepted only when the complete file is slice-owned; otherwise generation refuses. Reports are local runtime artifacts, and the staged progress UI does not stream subprocess logs. Controlled success does not establish general repositories, multi-writer coordination, production security, deployment, or production readiness.
+
 The fixture is controlled, small, local, React-only, and intentionally omits live services. It cannot establish generality. Browser execution depends on an installed Playwright Chromium binary. Commit SHAs can vary with timestamps.
 
 The repository foundation alone did not prove source mapping. Prompt 002 adds controlled evidence for rendered function-component definition mapping, selection, and ancestor semantics; that evidence is limited to the documented patterns and fixture branches. It does not prove dependency extraction, exclusion of unrelated hunks, safe branch combination, incompatibility detection by UI Merge Studio, or the Phase 0 product claim.

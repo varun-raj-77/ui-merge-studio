@@ -2,6 +2,11 @@
 
 | Risk | Consequence | Response |
 | --- | --- | --- |
+| Candidate branch receives partial output | Broken branch looks successful | Transform and verify in a detached worktree; register only the verified commit; always clean the worktree |
+| Two slices overwrite the same source | Silent last-write-wins behavior | Group operations by AST/import/export/region identity and refuse incompatible content with slice/evidence IDs |
+| Equivalent requirements duplicate code | Duplicate imports, tests, or JSX | Normalize semantic operations and retain combined provenance before applying in stable order |
+| Existing candidate contains unreviewed output | User work is overwritten | Compare generated and existing trees; accept only equality and otherwise refuse without moving the ref |
+| Controlled fixture success is generalized | Unsafe product claim | Document the bounded grammar and preserve conservative unsupported-operation refusal |
 | Rendered element cannot be mapped reliably | Wrong source identity | Falsify early with instrumentation experiments |
 | Static imports miss runtime dependencies | Broken candidate | Bound supported patterns and verify behavior |
 | Selected and unrelated edits share a hunk | Unsafe exclusion | Reconcile or refuse with evidence |
