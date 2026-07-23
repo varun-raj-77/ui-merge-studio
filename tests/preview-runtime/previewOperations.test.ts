@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import type { PreviewController, PreviewSession } from '../../packages/preview-runtime/src/previewController';
+import { PreviewCancelledError, type PreviewController, type PreviewSession } from '../../packages/preview-runtime/src/previewController';
 import { PreviewOperationManager } from '../../packages/preview-runtime/src/previewOperations';
 
 function deferred<T>() {
@@ -92,5 +92,19 @@ describe('preview operation manager', () => {
     work.reject(new Error('cancelled'));
     await manager.stopAll();
     expect(stopAll).toHaveBeenCalledOnce();
+  });
+
+  test('waits for an in-flight slot operation before stopping its prepared resources', async () => {
+    const work = deferred<PreviewSession>();
+    const stop = vi.fn().mockResolvedValue(undefined);
+    const manager = new PreviewOperationManager({ start: vi.fn(() => work.promise), stop, stopAll: vi.fn() } as unknown as PreviewController, () => '00000000-0000-0000-0000-000000000005');
+    const launch = manager.launch('left', 'branch-sidebar');
+    await eventually(() => expect(manager.get(launch.operationId)?.state).toBe('running'));
+    const stopping = manager.stop('left');
+    expect(manager.get(launch.operationId)?.state).toBe('cancelled');
+    work.reject(new PreviewCancelledError());
+    await stopping;
+    expect(stop).toHaveBeenCalledOnce();
+    expect(stop).toHaveBeenCalledWith('left');
   });
 });

@@ -64,8 +64,8 @@ const server = createServer(async (request, response) => {
       if (!value || typeof value !== 'object' || typeof (value as { branch?: unknown }).branch !== 'string') return json(response, 400, { error: 'A branch string is required.' });
       return json(response, 202, previewOperations.launch(previewId, (value as { branch: string }).branch));
     }
-    if (previewId && request.method === 'DELETE') { await previews.stop(previewId); return json(response, 200, { stopped: true, previewId }); }
-    if (request.url === '/api/preview' && request.method === 'DELETE') { await previews.stopAll(); return json(response, 200, { stopped: true }); }
+    if (previewId && request.method === 'DELETE') { await previewOperations.stop(previewId); return json(response, 200, { stopped: true, previewId }); }
+    if (request.url === '/api/preview' && request.method === 'DELETE') { await previewOperations.stopAll(); return json(response, 200, { stopped: true }); }
     vite.middlewares(request, response, (error?: Error) => { if (error) json(response, 500, { error: error.message }); else { response.statusCode = 404; response.end(); } });
   } catch (error) { json(response, 500, { error: error instanceof Error ? error.message : String(error) }); }
 });

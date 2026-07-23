@@ -21,17 +21,20 @@ async function openDrawer(page: Page) {
   await page.getByRole('button', { name: 'Technical details' }).click();
   return page.getByRole('dialog').locator('.drawer-version').nth(0);
 }
-function selectedPanel(version: Locator) { return version.locator('.evidence-card').filter({ has: version.getByRole('heading', { name: 'Selected boundary' }) }); }
+function selectedPanel(version: Locator) { return version.locator('.evidence-card').filter({ hasText: 'Selected boundary' }); }
 function field(panel: ReturnType<typeof selectedPanel>, name: string) { return panel.locator('dt', { hasText: name }).locator('xpath=following-sibling::dd[1]'); }
 
 test('maps nested components to accurate source definitions and preserves ancestor navigation', async ({ page }) => {
   const frame = await start(page, 'main');
   await frame.getByRole('button', { name: /TCK-102/ }).click();
   await selectionMode(page);
-  const version = await openDrawer(page);
   await frame.getByRole('heading', { name: 'Payment gateway timeout' }).hover();
+  let version = await openDrawer(page);
   await expect(version.locator('.evidence-card').filter({ hasText: 'Hovered boundary' })).toContainText('TicketHeader');
+  await page.getByRole('button', { name: 'Close technical details' }).click();
   await frame.getByRole('heading', { name: 'Payment gateway timeout' }).click();
+  await expect(card(page)).toContainText('Ticket Header', { timeout: 60_000 });
+  version = await openDrawer(page);
   const panel = selectedPanel(version);
   await expect(panel).toContainText('TicketHeader');
   await expect(field(panel, 'Source')).toContainText('src/features/tickets/TicketHeader.tsx:2:8');
@@ -55,6 +58,7 @@ test('maps branch-owned sidebar and inspector boundaries without lookup maps', a
   let frame = await start(page, 'branch-sidebar');
   await selectionMode(page);
   await frame.getByRole('button', { name: 'Collapse sidebar' }).click();
+  await expect(card(page)).toContainText('Collapsible Sidebar', { timeout: 60_000 });
   let version = await openDrawer(page);
   let panel = selectedPanel(version);
   await expect(panel).toContainText('AppSidebar');
@@ -68,6 +72,7 @@ test('maps branch-owned sidebar and inspector boundaries without lookup maps', a
   await frame.getByRole('button', { name: /TCK-102/ }).click();
   await selectionMode(page);
   await frame.getByRole('button', { name: 'note' }).click();
+  await expect(card(page)).toContainText('Activity Filters', { timeout: 60_000 });
   version = await openDrawer(page);
   panel = selectedPanel(version);
   await expect(panel).toContainText('ActivityFilters');

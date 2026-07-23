@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 test.afterEach(async ({ request }) => { await request.delete('/api/preview').catch(() => undefined); });
 const card = (page: Page, id: 'left' | 'right') => page.locator(`[data-preview-id="${id}"]`);
-async function prepareResolvedFeatures(page: Page) {
+async function prepareResolvedFeatures(page: Page, expectReady = true) {
   await page.goto('/');
   await expect(page.locator('.onboarding [role="status"]')).toHaveText('Ready');
   await page.getByRole('button', { name: 'Load both versions' }).click();
@@ -14,7 +14,8 @@ async function prepareResolvedFeatures(page: Page) {
   await left.getByRole('button', { name: 'Collapse sidebar' }).click();
   await card(page, 'right').getByRole('button', { name: 'Choose a feature' }).click();
   await right.getByRole('button', { name: 'note' }).click();
-  await expect(page.getByRole('button', { name: 'Create combined branch' })).toBeEnabled({ timeout: 90_000 });
+  if (expectReady) await expect(page.getByRole('button', { name: 'Create combined branch' })).toBeEnabled({ timeout: 90_000 });
+  else await expect(page.getByText(/need review before they can be combined/)).toBeVisible({ timeout: 90_000 });
 }
 
 test('creates, verifies, repeats idempotently, and opens the real two-feature candidate', async ({ page }) => {
@@ -42,7 +43,7 @@ test('creates, verifies, repeats idempotently, and opens the real two-feature ca
 test('shows a controlled unsafe integration conflict and never enables combination', async ({ page }) => {
   test.setTimeout(180_000);
   await page.route('**/api/candidate/preflight', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generationId: 'controlled-conflict', plan: { version: 1, repository: { baseCommit: '2337f31', candidateBranch: 'combined-result' }, sliceIds: ['slice-left', 'slice-right'], operations: [], conflicts: [{ id: 'conflict:controlled', kind: 'overlapping-declaration', path: 'src/Shared.tsx', symbol: 'SharedView', sliceIds: ['slice-left', 'slice-right'], operationIds: ['op:left', 'op:right'], evidenceEdgeIds: ['edge:left', 'edge:right'], reason: 'Slices reconstruct the same component with different source declarations.', manualResolution: 'Resolve manually.' }], unresolved: [], status: 'refused' } }) }));
-  await prepareResolvedFeatures(page);
+  await prepareResolvedFeatures(page, false);
   await expect(page.getByText(/need review before they can be combined/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
 });

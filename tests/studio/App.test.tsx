@@ -35,10 +35,12 @@ function appFetch() {
   });
 }
 async function launch() {
-  fireEvent.click(await screen.findByRole('button', { name: 'Load both versions' }));
+  const launchButton = await screen.findByRole('button', { name: 'Load both versions' });
+  await waitFor(() => expect(launchButton).toBeEnabled(), { timeout: 10_000 });
+  fireEvent.click(launchButton);
   return {
-    left: await screen.findByTitle('Collapsible Sidebar Variant preview') as HTMLIFrameElement,
-    right: await screen.findByTitle('Activity Filters Variant preview') as HTMLIFrameElement
+    left: await screen.findByTitle('Collapsible Sidebar Variant preview', {}, { timeout: 5_000 }) as HTMLIFrameElement,
+    right: await screen.findByTitle('Activity Filters Variant preview', {}, { timeout: 5_000 }) as HTMLIFrameElement
   };
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });

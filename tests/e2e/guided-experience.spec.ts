@@ -7,10 +7,14 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   await expect(page.locator('.onboarding [role="status"]')).toHaveText('Ready');
   const guidedText = await page.locator('body').innerText();
   for (const phrase of ['Hovered boundary', 'Selected boundary', 'Eligible ancestors', 'Feature slice', 'Merge base', 'Test-file slices', 'Required import specifiers', 'Definition boundary', 'Runtime instance', 'Schema-v2', 'Proven-unrelated', 'Candidate preflight']) expect(guidedText).not.toContain(phrase);
-  for (const width of [1280, 1440, 1920]) {
-    await page.setViewportSize({ width, height: 900 });
+  for (const { width, height } of [
+    { width: 1280, height: 720 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 }
+  ]) {
+    await page.setViewportSize({ width, height });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-    await page.screenshot({ path: `docs/evidence/prompt-006/guided-${width}x900.png`, fullPage: false });
+    await page.screenshot({ path: `docs/evidence/prompt-006/guided-${width}x${height}.png`, fullPage: false });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Load both versions' }).click();
@@ -66,4 +70,10 @@ test('acknowledges launches immediately, coalesces duplicates, and cancels expli
   expect((await superseded.json()).state).toBe('superseded');
   const cancelled = await request.delete(`/api/preview-operations/${replacementAck.operationId}`);
   expect((await cancelled.json()).state).toBe('cancelled');
+  const cleanupLaunch = await request.post('/api/previews/right', { data: { branch: 'branch-sidebar' } });
+  const cleanupAck = await cleanupLaunch.json();
+  const cleanup = await request.delete('/api/preview');
+  expect(cleanup.status()).toBe(200);
+  const cleanedOperation = await request.get(`/api/preview-operations/${cleanupAck.operationId}`);
+  expect((await cleanedOperation.json()).state).toBe('cancelled');
 });

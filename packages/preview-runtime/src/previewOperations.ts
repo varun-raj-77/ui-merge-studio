@@ -155,6 +155,14 @@ export class PreviewOperationManager {
     return operation;
   }
 
+  async stop(previewId: string) {
+    const operationId = this.activeByPreview.get(previewId);
+    if (operationId) this.cancel(operationId);
+    const chain = this.chains.get(previewId);
+    if (chain) await Promise.allSettled([chain]);
+    await this.previews.stop(previewId);
+  }
+
   async stopAll() {
     for (const operation of this.operations.values()) if (!terminal(operation.state)) this.cancel(operation.operationId);
     await Promise.allSettled(this.chains.values());
