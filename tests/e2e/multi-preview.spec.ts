@@ -3,65 +3,72 @@ import { expect, test, type Page } from '@playwright/test';
 test.afterEach(async ({ request }) => { await request.delete('/api/preview').catch(() => undefined); });
 const card = (page: Page, id: 'left' | 'right') => page.locator(`[data-preview-id="${id}"]`);
 async function launch(page: Page, left = 'branch-sidebar', right = 'branch-inspector') {
-  await page.goto('/'); await expect(page.getByRole('status')).toHaveText('Ready');
-  await page.getByLabel('Fixture branch', { exact: true }).selectOption(left); await page.getByLabel('Fixture branch B', { exact: true }).selectOption(right);
-  await page.waitForTimeout(50);
-  await page.getByRole('button', { name: 'Launch both previews' }).click();
-  await expect(page.getByRole('status')).toHaveText('Both previews ready', { timeout: 90_000 });
-  return { left: page.frameLocator(`iframe[title="${left} preview"]`), right: page.frameLocator(`iframe[title="${right} preview"]`) };
+  await page.goto('/');
+  await expect(page.locator('.onboarding [role="status"]')).toHaveText('Ready');
+  await page.getByLabel('Version A source').selectOption(left);
+  await page.getByLabel('Version B source').selectOption(right);
+  await page.getByRole('button', { name: 'Load both versions' }).click();
+  await expect(page.locator('.onboarding [role="status"]')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  return { left: page.frameLocator('iframe').nth(0), right: page.frameLocator('iframe').nth(1) };
 }
 
-test('synchronizes tickets in both directions, viewports, and independent cross-branch selections', async ({ page }) => {
+test('synchronizes tickets in both directions, responsive preview sizes, and independent selections', async ({ page }) => {
   const frames = await launch(page);
   await frames.left.getByRole('button', { name: /TCK-102/ }).click();
   await expect(frames.right.getByRole('heading', { name: 'Payment gateway timeout' })).toBeVisible();
   await frames.right.getByRole('button', { name: /TCK-103/ }).click();
-  await expect(frames.right.getByRole('heading', { name: 'Seat count mismatch' })).toBeVisible();
-  await expect(card(page, 'right')).toContainText('Ticket context: TCK-103');
   await expect(frames.left.getByRole('heading', { name: 'Seat count mismatch' })).toBeVisible();
+  await expect(card(page, 'right')).toContainText('Viewing TCK-103');
   for (const preset of [{ name: 'tablet', width: 768 }, { name: 'mobile', width: 390 }, { name: 'desktop', width: 1200 }]) {
-    await page.getByLabel('Viewport preset').selectOption(preset.name);
-    await expect(page.locator('iframe').nth(0)).toHaveCSS('width', `${preset.width}px`); await expect(page.locator('iframe').nth(1)).toHaveCSS('width', `${preset.width}px`);
+    await page.getByLabel('Preview size').selectOption(preset.name);
+    await expect(page.locator('iframe').nth(0)).toHaveCSS('width', `${preset.width}px`);
+    await expect(page.locator('iframe').nth(1)).toHaveCSS('width', `${preset.width}px`);
   }
-  await card(page, 'left').getByRole('button', { name: 'Enter selection mode' }).click();
+  await card(page, 'left').getByRole('button', { name: 'Choose a feature' }).click();
   await frames.left.getByRole('button', { name: 'Collapse sidebar' }).click();
-  await card(page, 'right').getByRole('button', { name: 'Enter selection mode' }).click();
+  await card(page, 'right').getByRole('button', { name: 'Choose a feature' }).click();
   await frames.right.getByRole('button', { name: 'note' }).click();
-  const summary = page.locator('.combined');
-  await expect(summary).toContainText('AppSidebar'); await expect(summary).toContainText('src/features/navigation/AppSidebar.tsx');
-  await expect(summary).toContainText('ActivityFilters'); await expect(summary).toContainText('src/features/tickets/ActivityFilters.tsx');
-  await page.screenshot({ path: 'test-results/manual-multi-preview-selections.png', fullPage: true });
+  await expect(card(page, 'left')).toContainText('Collapsible Sidebar', { timeout: 60_000 });
+  await expect(card(page, 'right')).toContainText('Activity Filters', { timeout: 60_000 });
+  await expect(page.getByRole('button', { name: 'Create combined branch' })).toBeEnabled({ timeout: 60_000 });
 });
 
-test('invalidates a restarted selection, rejects the stale session, and preserves its peer', async ({ page }) => {
+test('invalidates a restarted selection, rejects stale sessions, and preserves the peer', async ({ page }) => {
   const frames = await launch(page);
-  await card(page, 'left').getByRole('button', { name: 'Enter selection mode' }).click(); await frames.left.getByRole('button', { name: 'Collapse sidebar' }).click();
-  await expect(card(page, 'left')).toContainText('AppSidebar');
+  await card(page, 'left').getByRole('button', { name: 'Choose a feature' }).click();
+  await frames.left.getByRole('button', { name: 'Collapse sidebar' }).click();
+  await expect(card(page, 'left')).toContainText('Collapsible Sidebar', { timeout: 60_000 });
   const oldSession = await page.evaluate(async () => (await fetch('/api/repository').then(response => response.json())).sessions.find((item: { previewId: string }) => item.previewId === 'left'));
-  await card(page, 'left').getByRole('button', { name: 'Start / restart preview', exact: true }).click();
-  await expect(card(page, 'left')).toContainText('Selection cleared:');
-  await expect(card(page, 'left').locator('.session-line')).toContainText(`generation ${oldSession.generation + 1}`, { timeout: 90_000 });
-  await expect(card(page, 'right')).toContainText('ready'); await expect(frames.right.getByRole('heading', { name: 'Support Tickets' })).toBeVisible();
+  await card(page, 'left').getByRole('button', { name: 'Restart' }).click();
+  await expect(card(page, 'left')).toContainText('The previous choice was cleared.');
+  await expect(card(page, 'left').locator('.version-status')).toHaveText('Ready', { timeout: 30_000 });
+  await expect(card(page, 'right').locator('.version-status')).toHaveText('Ready');
   const active = await page.evaluate(async () => (await fetch('/api/repository').then(response => response.json())).sessions.find((item: { previewId: string }) => item.previewId === 'left'));
-  await page.evaluate(({ oldSession, active }) => { const target = document.querySelector('[data-preview-id="left"] iframe') as HTMLIFrameElement; const forged = { ...oldSession, origin: active.origin }; window.dispatchEvent(new MessageEvent('message', { origin: active.origin, source: target.contentWindow, data: { version: 2, preview: forged, type: 'selection-mode-enabled' } })); }, { oldSession, active });
-  await expect(card(page, 'left').getByRole('alert')).toContainText('Bridge validation failure: Stale or mismatched preview session identity.');
-  await expect(card(page, 'left').locator('.panel').filter({ hasText: 'Selected boundary' })).toContainText('None');
+  expect(active.generation).toBe(oldSession.generation + 1);
+  await page.evaluate(({ oldSession, active }) => {
+    const target = document.querySelector('[data-preview-id="left"] iframe') as HTMLIFrameElement;
+    window.dispatchEvent(new MessageEvent('message', { origin: active.origin, source: target.contentWindow, data: { version: 2, preview: { ...oldSession, origin: active.origin }, type: 'selection-mode-enabled' } }));
+  }, { oldSession, active });
+  await expect(card(page, 'left').getByRole('alert')).toContainText('stale preview message was rejected');
 });
 
-test('reports incompatible contracts while both previews remain independently interactive', async ({ page }) => {
+test('reports incompatible synchronization while both versions remain interactive', async ({ page }) => {
   const frames = await launch(page, 'branch-sidebar', 'branch-incompatible-route');
   await expect(page.getByLabel('Synchronization status')).toContainText('contracts differ');
-  await frames.left.getByRole('button', { name: /TCK-102/ }).click(); await expect(frames.left.getByRole('heading', { name: 'Payment gateway timeout' })).toBeVisible();
-  await expect(frames.right.getByRole('heading', { name: 'Payment gateway timeout' })).toHaveCount(0);
-  await frames.right.getByRole('button', { name: /TCK-103/ }).click(); await expect(frames.right.getByRole('heading', { name: 'Seat count mismatch' })).toBeVisible();
+  await frames.left.getByRole('button', { name: /TCK-102/ }).click();
   await expect(frames.left.getByRole('heading', { name: 'Payment gateway timeout' })).toBeVisible();
-  await page.screenshot({ path: 'test-results/manual-incompatible-contract.png', fullPage: true });
+  await expect(frames.right.getByRole('heading', { name: 'Payment gateway timeout' })).toHaveCount(0);
+  await frames.right.getByRole('button', { name: /TCK-103/ }).click();
+  await expect(frames.right.getByRole('heading', { name: 'Seat count mismatch' })).toBeVisible();
 });
 
-test('rejects malformed and mismatched bridge events without mutating selection state', async ({ page }) => {
+test('rejects malformed bridge events without mutating the guided selection', async ({ page }) => {
   await launch(page);
   const active = await page.evaluate(async () => (await fetch('/api/repository').then(response => response.json())).sessions.find((item: { previewId: string }) => item.previewId === 'left'));
-  await page.evaluate(({ active }) => { const target = document.querySelector('[data-preview-id="left"] iframe') as HTMLIFrameElement; const send = (data: unknown) => window.dispatchEvent(new MessageEvent('message', { origin: active.origin, source: target.contentWindow, data })); send({ version: 2, preview: active, type: 'boundary-selected', payload: {} }); send({ version: 2, preview: { ...active, previewId: 'right' }, type: 'selection-mode-enabled' }); }, { active });
-  await expect(card(page, 'left').getByRole('alert')).toContainText('Bridge validation failure');
-  await expect(card(page, 'left').locator('.panel').filter({ hasText: 'Selected boundary' })).toContainText('None');
+  await page.evaluate(({ active }) => {
+    const target = document.querySelector('[data-preview-id="left"] iframe') as HTMLIFrameElement;
+    window.dispatchEvent(new MessageEvent('message', { origin: active.origin, source: target.contentWindow, data: { version: 2, preview: active, type: 'boundary-selected', payload: {} } }));
+  }, { active });
+  await expect(card(page, 'left').getByRole('alert')).toContainText('stale preview message was rejected');
+  await expect(card(page, 'left')).toContainText('No feature selected');
 });

@@ -23,7 +23,8 @@ function importKey(item: Pick<ImportRequirement,'source'|'local'|'imported'|'kin
 function operationOrder(operation: CandidateOperation) { const rank: Record<CandidateOperation['kind'],number> = { 'add-file':0,'add-style-file':0,'add-asset':0,'replace-style-file':0,'reconstruct-source-file':0,'insert-import-specifier':1,'insert-export':2,'insert-declaration':3,'replace-declaration':3,'replace-jsx-region':3,'reconstruct-test-file':4 }; return `${operation.target.path}:${rank[operation.kind]}:${operation.target.symbol ?? ''}:${operation.id}`; }
 
 interface VerificationCommand { name: string; executable: string; args: string[] }
-export interface CandidateGeneratorOptions { artifactRoot?: string; verificationCommands?: VerificationCommand[]; onStage?: (stage: CandidateGenerationReport['stage']) => void }
+export interface CandidateProgressEvent { stage: string; message: string; sliceId?: string; path?: string; verification?: string }
+export interface CandidateGeneratorOptions { artifactRoot?: string; verificationCommands?: VerificationCommand[]; onStage?: (stage: CandidateGenerationReport['stage']) => void; onProgress?: (event: CandidateProgressEvent) => void }
 class CandidateRefusal extends Error { constructor(message: string) { super(message); this.name = 'CandidateRefusal'; } }
 class VerificationFailure extends Error { constructor(message: string) { super(message); this.name = 'VerificationFailure'; } }
 
@@ -53,19 +54,23 @@ export class CandidateGenerator {
   }
 
   async generate(request: CandidateGenerationRequest): Promise<CandidateGenerationReport> {
-    const immutable = JSON.parse(JSON.stringify(request)) as CandidateGenerationRequest; this.options.onStage?.('validate');
+    const immutable = JSON.parse(JSON.stringify(request)) as CandidateGenerationRequest; this.options.onStage?.('validate'); this.options.onProgress?.({stage:'validate',message:'Validating immutable feature evidence.'});
     const preflight = await this.preflight(immutable); const report = this.emptyReport(preflight, immutable); report.stage='plan'; this.options.onStage?.('plan');
+    this.options.onProgress?.({stage:'plan',message:'Building and checking the deterministic integration plan.'});
     if (preflight.plan.status === 'refused') { report.status='refused'; report.message='Candidate generation was refused before mutation because preflight did not produce a safe plan.'; await this.persist(report); return report; }
     let worktreePath = ''; let worktreeRemoved = false; let branchBefore: string | null = null;
     try {
       branchBefore = await this.tryResolve(immutable.candidateBranch);
+      this.options.onProgress?.({stage:'preparing-workspace',message:'Preparing an isolated candidate workspace.'});
       worktreePath = await mkdtemp(join(tmpdir(),'ui-merge-studio-candidate-')); report.repository.worktreePath=worktreePath;
       await this.git(['worktree','add','--detach',worktreePath,immutable.expectedBaseCommit]); report.stage='transform'; this.options.onStage?.('transform');
       await this.applyPlan(preflight.plan, worktreePath, report.appliedOperations);
+      this.options.onProgress?.({stage:'checking-changed-files',message:'Checking that the changed-file set exactly matches the plan.'});
       const plannedPaths = new Set(preflight.plan.operations.map(item=>item.target.path)); const tracked=(await this.git(['diff','--name-only'],worktreePath)).split(/\r?\n/).filter(Boolean);const untracked=(await this.git(['ls-files','--others','--exclude-standard'],worktreePath)).split(/\r?\n/).filter(Boolean);const actualPaths = new Set([...tracked,...untracked]);
       if ([...actualPaths].some(path=>!plannedPaths.has(path)) || [...plannedPaths].some(path=>!actualPaths.has(path))) throw new CandidateRefusal(`Candidate changed-file set does not match the deterministic plan. Planned: ${[...plannedPaths].sort().join(', ')}; actual: ${[...actualPaths].sort().join(', ')}.`);
       await this.git(['add','-A'],worktreePath); try{await this.git(['diff','--cached','--check'],worktreePath);}catch(error){const value=error as Error&{stdout?:string;stderr?:string};throw new CandidateRefusal(`Candidate whitespace check failed: ${(value.stdout??value.stderr??value.message).trim()}`);}
       report.stage='verify'; this.options.onStage?.('verify'); await this.verify(worktreePath, report.verification);
+      this.options.onProgress?.({stage:'writing-tree',message:'Writing and comparing the verified candidate tree.'});
       const tree = await this.git(['write-tree'],worktreePath); report.repository.candidateTree=tree;
       const currentCandidate = await this.tryResolve(immutable.candidateBranch);
       if (currentCandidate !== branchBefore) throw new CandidateRefusal(`Candidate branch ${immutable.candidateBranch} changed during generation.`);
@@ -75,15 +80,17 @@ export class CandidateGenerator {
         report.repository.candidateCommit=currentCandidate; report.repository.idempotent=true; report.status='succeeded'; report.stage='complete'; report.message='Equivalent candidate already exists; generation is idempotent and created no divergent commit.';
       } else {
         report.stage='commit'; this.options.onStage?.('commit');
+        this.options.onProgress?.({stage:'commit',message:'Registering the verified candidate commit atomically.'});
         const environment = { ...process.env, GIT_AUTHOR_NAME:'UI Merge Studio', GIT_AUTHOR_EMAIL:'candidate@ui-merge-studio.invalid', GIT_COMMITTER_NAME:'UI Merge Studio', GIT_COMMITTER_EMAIL:'candidate@ui-merge-studio.invalid', GIT_AUTHOR_DATE:'2000-01-01T00:00:00Z', GIT_COMMITTER_DATE:'2000-01-01T00:00:00Z' };
         await this.git(['commit','-m','Generate verified UI Merge Studio candidate'],worktreePath,environment); const commit = await this.git(['rev-parse','HEAD'],worktreePath);
         if (await this.tryResolve(immutable.candidateBranch)) throw new CandidateRefusal(`Candidate branch ${immutable.candidateBranch} appeared before registration.`);
         await this.git(['branch',immutable.candidateBranch,commit]); report.repository.candidateCommit=commit; report.repository.idempotent=false; report.status='succeeded'; report.stage='complete'; report.message='Candidate transformations and verification passed; the candidate branch was registered atomically.';
       }
-      this.options.onStage?.('complete');
+      this.options.onStage?.('complete'); this.options.onProgress?.({stage:'complete',message:'The combined branch is verified and ready.'});
     } catch (error) {
       report.status = error instanceof CandidateRefusal ? 'refused' : 'failed'; report.message = error instanceof Error ? error.message : String(error);
     } finally {
+      this.options.onProgress?.({stage:'cleanup',message:'Removing temporary worktrees and confirming process cleanup.'});
       if (worktreePath) { try { await this.removeWorktree(worktreePath); worktreeRemoved=true; } catch (error) { report.message += ` Cleanup failed: ${error instanceof Error ? error.message : String(error)}`; report.status='failed'; } }
       report.cleanup={worktreeRemoved:!worktreePath||worktreeRemoved,processesStopped:true,detail:!worktreePath||worktreeRemoved?'Temporary candidate worktree removed; verification processes exited.':'Temporary worktree cleanup failed.'}; delete report.repository.worktreePath;
       await this.persist(report);
@@ -176,8 +183,10 @@ export class CandidateGenerator {
   }
 
   private async applyPlan(plan:CandidatePlan,worktree:string,applied:AppliedOperation[]) {
-    const verifiedBase=new Set<string>(); const reconstructedTests=new Set<string>();
+    const verifiedBase=new Set<string>(); const reconstructedTests=new Set<string>(); let activeSlice='';
     for(const operation of plan.operations) {
+      const sliceId=operation.sliceIds[0]??''; if(sliceId!==activeSlice){activeSlice=sliceId;this.options.onProgress?.({stage:'applying-feature',message:'Applying one selected feature from its verified source operations.',sliceId});}
+      this.options.onProgress?.({stage:'applying-operation',message:`Applying ${operation.kind} to ${operation.target.path}.`,sliceId,path:operation.target.path});
       const target=resolve(worktree,validateRepositoryPath(operation.target.path)); if(!target.startsWith(`${resolve(worktree)}\\`)&&!target.startsWith(`${resolve(worktree)}/`))throw new CandidateRefusal(`Unsafe target path ${operation.target.path}.`);
       if(operation.precondition.baseContentHash&&!verifiedBase.has(operation.target.path)){const current=await readFile(target);if(textHash(current)!==operation.precondition.baseContentHash)throw new CandidateRefusal(`Base content hash precondition failed for ${operation.target.path}.`);verifiedBase.add(operation.target.path);}
       let status:AppliedOperation['status']='applied';
@@ -192,7 +201,7 @@ export class CandidateGenerator {
       if(/\.[jt]sx?$/.test(operation.target.path))parseModule(await readFile(target,'utf8'),operation.target.path); applied.push({operationId:operation.id,path:operation.target.path,status,resultingContentHash:textHash(await readFile(target)),detail:operation.detail});
     }
   }
-  private async verify(worktree:string,results:VerificationResult[]) { for(const command of this.verificationCommands){let output='';let exitCode=0;try{const result=await execFileAsync(command.executable,command.args,{cwd:worktree,encoding:'utf8',maxBuffer:20*1024*1024,windowsHide:true});output=`${result.stdout}\n${result.stderr}`;}catch(error){const value=error as Error&{stdout?:string;stderr?:string;code?:number};output=`${value.stdout??''}\n${value.stderr??''}\n${value.message}`;exitCode=typeof value.code==='number'?value.code:1;}results.push({name:command.name,command:[command.executable,...command.args].join(' '),status:exitCode===0?'passed':'failed',exitCode,outputTail:output.trim().slice(-4000)});if(exitCode!==0)throw new VerificationFailure(`Verification command ${command.name} failed with exit code ${exitCode}.`);} }
+  private async verify(worktree:string,results:VerificationResult[]) { for(const command of this.verificationCommands){this.options.onProgress?.({stage:'verification',message:`Running verification: ${command.name}.`,verification:command.name});let output='';let exitCode=0;try{const result=await execFileAsync(command.executable,command.args,{cwd:worktree,encoding:'utf8',maxBuffer:20*1024*1024,windowsHide:true});output=`${result.stdout}\n${result.stderr}`;}catch(error){const value=error as Error&{stdout?:string;stderr?:string;code?:number};output=`${value.stdout??''}\n${value.stderr??''}\n${value.message}`;exitCode=typeof value.code==='number'?value.code:1;}results.push({name:command.name,command:[command.executable,...command.args].join(' '),status:exitCode===0?'passed':'failed',exitCode,outputTail:output.trim().slice(-4000)});if(exitCode!==0)throw new VerificationFailure(`Verification command ${command.name} failed with exit code ${exitCode}.`);} }
   private generationId(request:CandidateGenerationRequest){return createHash('sha256').update(JSON.stringify({version:candidateGenerationVersion,repositoryRoot:resolve(request.repositoryRoot),baseRef:request.baseRef,expectedBaseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch,analyzerSchemaVersion:request.analyzerSchemaVersion,sliceIds:stable(request.artifacts.map(item=>item.analysisId),value=>value)})).digest('hex').slice(0,16);}
   private emptyReport(preflight:CandidatePreflight,request:CandidateGenerationRequest):CandidateGenerationReport{const excluded:ExcludedSourceChange[]=request.artifacts.flatMap(artifact=>artifact.slice.excludedChanges.map(item=>({sliceId:artifact.analysisId,path:item.path,symbol:item.symbol?.name??null,reason:item.reason})));const relativePath=`.ums/generation/${preflight.generationId}/candidate-report.json`;return{version:candidateGenerationVersion,generationId:preflight.generationId,status:'failed',stage:'validate',message:'Candidate generation has not completed.',repository:{baseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch},sliceIds:preflight.plan.sliceIds,plan:preflight.plan,appliedOperations:[],excludedSourceChanges:stable(excluded,item=>`${item.sliceId}:${item.path}:${item.symbol??''}`),conflicts:preflight.plan.conflicts,verification:[],cleanup:{worktreeRemoved:true,processesStopped:true,detail:'No worktree created.'},relativePath};}
   private unresolved(target:CandidateUnresolved[],path:string,sliceId:string,reason:string){target.push({path,sliceId,reason,manualResolution:'Use a supported non-overlapping source structure or resolve the source integration manually, then re-analyze.'});}
