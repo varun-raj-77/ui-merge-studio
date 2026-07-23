@@ -1,5 +1,15 @@
 # Decision log
 
+- Prompt 006 makes Guided Mode the default information architecture: Compare → Select → Combine → Verify. Technical evidence remains complete but moves into a focus-managed drawer.
+- Preview launch is an acknowledged operation, not a request held open until Vite is ready. Operations have explicit pending/running/ready/failed/cancelled/superseded states and measured phase events.
+- A slot reuses only its own unchanged detached worktree. This preserves checkout and dependency isolation while reducing warm dual restart from roughly 22 seconds to under 4 seconds on the measured machine.
+- Identical in-flight requests coalesce. A different request for the same slot aborts and waits for predecessor cleanup before starting. Left and right slots remain safely concurrent.
+- Browser polling is a single awaited loop with bounded backoff, one active controller per slot, terminal-state stop, stale-operation rejection, and unmount cancellation.
+- Visual selection immediately starts the existing generic Git/AST analyzer. The analyzer’s real integration-boundary expansion is used as the meaningful feature result; scenario labels only translate validated component identities for display.
+- Candidate preflight becomes an automatic read-only safety check. Candidate mutation still requires the one explicit **Create combined branch** action.
+- Candidate progress is emitted from actual generator stages, operations, verification commands, commit registration, and cleanup. The UI may translate a slice ID to its presentation label, but the generator never receives fixture feature names.
+- See ADR 0007 for the product/operation boundary.
+
 - Prompt 005 treats the exact schema-v2 artifacts as immutable inputs and produces a complete deterministic plan before mutation. Equivalent semantic requirements are coalesced while retaining every slice/evidence ID; incompatible AST/import/export/region ownership refuses.
 - Candidate construction uses a detached worktree at the exact base. The ref is registered only after changed-file audit, whitespace check, install, typecheck, full and focused tests, and build. Fixed commit metadata and normalized text EOFs make the controlled output repeatable.
 - Modified source and tests are reconstructed by AST identity. Whole added blobs require full slice ownership; mixed CSS, deletion, dynamic exports, unresolved helpers, and ambiguous structure refuse. Existing equal candidate trees are idempotent; different trees are preserved. See ADR 0006.

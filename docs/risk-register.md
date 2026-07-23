@@ -2,6 +2,14 @@
 
 | Risk | Consequence | Response |
 | --- | --- | --- |
+| Async acknowledgement is mistaken for readiness | User acts on an unavailable runtime | Keep acknowledgement and terminal readiness distinct; poll the operation and wait for the validated bridge handshake |
+| Polling overlaps or survives a restart | Excess requests or stale UI mutation | Await every poll, bound backoff, cancel per-slot controllers, reject stale operation IDs, and stop on all terminal states |
+| Superseded launch races its replacement | Wrong worktree is removed or wrong session wins | Serialize work within each preview slot; abort and finish predecessor cleanup before replacement work |
+| Warm reuse shares writable dependencies across previews | Cross-runtime contamination | Reuse only the same slot’s exact-commit detached worktree; never share one `node_modules` directory between simultaneous slots |
+| Friendly fixture labels affect engine output | Hidden hard-coding invalidates the proof | Keep labels in `demoScenario.ts`; engine packages use only validated identities, Git/AST evidence, and immutable artifacts |
+| Automatic analysis chooses an overly narrow DOM owner | User thinks a leaf is the whole feature | Use the existing evidence-backed reverse integration expansion and show its real analyzed boundary in Technical details |
+| Sticky action tray obscures content | Important controls become unreachable at small heights | Reserve page-bottom space, use responsive tray layouts, and keep the preview cards independently scrollable |
+| Technical drawer loses keyboard context | Keyboard user becomes trapped or disoriented | Focus the close control on open, support Escape, label the modal, and retain visible focus styles |
 | Candidate branch receives partial output | Broken branch looks successful | Transform and verify in a detached worktree; register only the verified commit; always clean the worktree |
 | Two slices overwrite the same source | Silent last-write-wins behavior | Group operations by AST/import/export/region identity and refuse incompatible content with slice/evidence IDs |
 | Equivalent requirements duplicate code | Duplicate imports, tests, or JSX | Normalize semantic operations and retain combined provenance before applying in stable order |

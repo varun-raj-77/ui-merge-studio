@@ -1,5 +1,13 @@
 # Phase 0 evaluation
 
+## Prompt 006 product-experience result
+
+Prompt 006 is evaluated separately from the engine proof. PASS requires immediate task clarity, fixture context, one guided happy path, API acknowledgement below one second, truthful operation progress, bounded non-overlapping polling, cold dual readiness below 20 seconds on the controlled measured setup, warm dual and restart readiness below 10 seconds, technical evidence preservation, keyboard operation, responsive layouts, and no regression in Prompt 001–005 behavior.
+
+The measured implementation meets those controlled targets: the two launch POST requests completed in 2 ms and 19 ms (99 ms click-to-first-response), cold dual readiness completed in 18.123 seconds, warm dual readiness completed in 3.807 seconds, and a warm single-slot restart completed in 4.027 seconds with an 85 ms acknowledgement. Polling used 50 cold, 16 warm-dual, and 25 warm-restart GETs with zero overlap. These are one-machine measurements, not service-level guarantees.
+
+The controlled Prompt 006 result is **PASS**. The complete final-code browser matrix passed as three bounded Playwright groups (15/15 scenarios), the complete Vitest matrix passed (79/79), the production build and fixture contract passed, the browser walkthrough completed without DevTools or verbal coaching, source refs remained fixed, and final worktree/process/polling cleanup audits were clean. A monolithic Playwright invocation later exceeded its outer wrapper timeout without a test failure; bounded groups were used to obtain deterministic final evidence for every scenario.
+
 ## Prompt 005 candidate-generation result
 
 Current evidence meets **PASS** for the controlled fixture. The real `AppSidebar` and expanded `ActivityFilters` slices produce a plan-before-mutation candidate exactly one commit above `main`. `combined-result` contains both behaviors, retains `Support Tickets`, and contains neither `sortTickets` nor the sorting test. Install, TypeScript, full tests, focused feature tests, build, browser behavior, repeated tree equality, changed-file equality, source-ref immutability, failure cleanup, and a source-level conflict refusal are covered.

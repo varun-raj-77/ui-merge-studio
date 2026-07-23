@@ -1,5 +1,13 @@
 # Product brief
 
+## Prompt 006 product experience
+
+The primary user is a developer or technical evaluator who needs to understand the proof in roughly five seconds and complete it without DevTools or source-file coaching. The default experience is a four-step Guided Mode: Compare two named running versions, select one visible feature in each, create one combined branch, and verify the result. Source paths, boundary identities, schema terminology, merge-base evidence, test slices, and detailed plans remain available in a secondary technical drawer.
+
+The sample application is contextualized as **Sample Support Dashboard**. “Beacon Ops” remains inside the immutable controlled fixture UI, while the surrounding product explicitly explains that it is a local ticket-management sample. Human labels are presentation metadata keyed by validated component identity. They never decide which declarations, files, tests, or candidate operations the engine includes.
+
+Prompt 006 adds no general merge claim. It proves that the previously demonstrated controlled path can be presented as a coherent, responsive local product experience with immediate API acknowledgement, truthful progress, bounded polling, cancellation/supersession, safe warm restarts, one primary action, and progressive disclosure.
+
 Prompt 005 proves the exact controlled positive combination: two immutable real visual-slice artifacts produce a deterministic plan and verified one-commit `combined-result` from the exact fixture base, without manual file selection, cherry-picking, or LLM patch authorship. It also proves a precise overlapping-declaration refusal. This does not prove arbitrary React branch merging or production readiness.
 
 Source of truth: **Visually select preferred features from multiple running React branches and create one verified combined branch.**

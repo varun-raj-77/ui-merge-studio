@@ -1,5 +1,15 @@
 # Limitations
 
+## Prompt 006 limitations
+
+The improved startup numbers depend on a prepared exact-commit worktree in the same preview slot. A first launch still performs a real locked dependency install and remains machine/cache dependent. The operation API makes that wait responsive and truthful; it does not make package installation free. Prepared worktrees are local temporary resources and are removed on explicit stop or server shutdown.
+
+Automatic meaningful selection uses the existing generic source analyzer’s supported reverse-integration expansion. It is not semantic AI and may return partial/refused evidence for unsupported component patterns. Ambiguity is represented by that conservative analyzer status and the available instrumented ancestor chain in Technical details; Prompt 006 does not add a new probabilistic recommender.
+
+The demo scenario’s names are intentionally presentation-only and cover the controlled default versions. An arbitrary branch selected in the advanced source dropdown may retain the default version-card narrative even though its technical branch identity changes. General repository onboarding, author-defined scenario configuration, authentication, collaboration, cloud execution, and deployment remain out of scope.
+
+The accessibility audit covers semantic structure, accessible names, keyboard activation, focus entry/Escape for the drawer, visible focus, responsive overflow, and the real Chromium flow. It is not a formal WCAG conformance audit with assistive-technology user testing.
+
 Prompt 005 proves that the two exact resolved fixture slices can be reconstructed into `combined-result`, verified, and repeated with an equivalent tree. It does not support arbitrary semantic merging, deletion, CSS rule extraction, ambiguous JSX anchors, dynamic/star export ownership, arbitrary package/path aliases, or unresolved shared test setup. Modified stylesheets are accepted only when the complete file is slice-owned; otherwise generation refuses. Reports are local runtime artifacts, and the staged progress UI does not stream subprocess logs. Controlled success does not establish general repositories, multi-writer coordination, production security, deployment, or production readiness.
 
 The fixture is controlled, small, local, React-only, and intentionally omits live services. It cannot establish generality. Browser execution depends on an installed Playwright Chromium binary. Commit SHAs can vary with timestamps.
