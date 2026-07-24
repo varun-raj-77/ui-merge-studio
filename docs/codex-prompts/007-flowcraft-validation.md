@@ -46,7 +46,7 @@ Do not create mockups.
 
 UI Merge Studio repository:
 
-C:\Users\rekha\OneDrive\Documents\UI merge studio
+<UI_MERGE_STUDIO_REPOSITORY>
 
 Expected branch:
 

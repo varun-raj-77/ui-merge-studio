@@ -35,7 +35,7 @@ Preserve all working Prompt 001–006B behavior.
 
 Repository:
 
-C:\Users\rekha\OneDrive\Documents\UI merge studio
+<UI_MERGE_STUDIO_REPOSITORY>
 
 Starting branch:
 

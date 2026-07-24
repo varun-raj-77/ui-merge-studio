@@ -2,7 +2,7 @@
 
 ## Repository inspected
 
-- Path: `C:\Users\rekha\Documents\Codex\2026-07-15\files-mentioned-by-the-user-you\work\flowcraft-source`
+- Path: `<FLOWCRAFT_REPOSITORY>`
 - Commit: `261ab0f7c841278b0d68da7083955930980527fa`
 - Branch: `main`, tracking `origin/main`
 - State: tracked files clean; pre-existing untracked `work/` retained

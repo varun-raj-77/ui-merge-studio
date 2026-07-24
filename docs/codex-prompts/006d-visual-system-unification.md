@@ -39,7 +39,7 @@ This is the final controlled-demo styling and information-density pass.
 
 Repository:
 
-C:\Users\rekha\OneDrive\Documents\UI merge studio
+<UI_MERGE_STUDIO_REPOSITORY>
 
 Starting branch:
 

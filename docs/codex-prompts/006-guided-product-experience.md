@@ -48,7 +48,7 @@ Every screen, label, interaction, and technical decision must support that sente
 
 Repository:
 
-C:\Users\rekha\OneDrive\Documents\UI merge studio
+<UI_MERGE_STUDIO_REPOSITORY>
 
 Starting branch:
 
