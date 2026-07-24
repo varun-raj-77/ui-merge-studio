@@ -126,7 +126,7 @@ export class PreviewController {
   private prepared = new Map<string, PreparedPreview>();
   private generations = new Map<string, number>();
 
-  constructor(private repository: RepositoryController, private previewViteConfig: string) {}
+  constructor(private repository: RepositoryController, private previewViteConfig: string, private previewRoute = '/tickets') {}
 
   async branches() { return (await this.repository.inspect()).branches; }
 
@@ -226,7 +226,7 @@ export class PreviewController {
       child.once('error', error => { diagnostics += error.message; });
 
       done = this.phase(options, 'waiting-for-runtime', 'Waiting for the preview route to answer successfully.');
-      await waitForReady(`${origin}/tickets`, child, options.signal).catch(error => {
+      await waitForReady(`${origin}${this.previewRoute}`, child, options.signal).catch(error => {
         throw new Error(`${error instanceof Error ? error.message : String(error)}\n${diagnostics}`);
       });
       done();
@@ -236,7 +236,7 @@ export class PreviewController {
         ...identity,
         branchCommit,
         protocolVersion: bridgeVersion,
-        url: `${origin}/tickets`,
+        url: `${origin}${this.previewRoute}`,
         origin,
         port,
         worktreePath: prepared.worktreePath,

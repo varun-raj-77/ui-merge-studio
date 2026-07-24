@@ -8,6 +8,12 @@ const roots: string[] = [];
 async function fixture(source: string) { const root = await mkdtemp(resolve(tmpdir(), 'ums-adapter-')); roots.push(root); await mkdir(resolve(root, 'src/state'), { recursive: true }); await writeFile(resolve(root, 'src/state/ticketSelection.ts'), source); return root; }
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 describe('controlled fixture capability adapter', () => {
+  test('falls back to source selection for a Vite repository without the fixture state contract', async () => {
+    const root = await mkdtemp(resolve(tmpdir(), 'ums-adapter-generic-'));
+    roots.push(root);
+    await expect(detectFixtureCapabilities(root)).resolves.toEqual({ routeSync: null, fixtureContext: null, sourceSelection: { version: 1 } });
+  });
+
   test('detects query and path contracts from checked-out source evidence without a branch name', async () => {
     const query = await detectFixtureCapabilities(await fixture("export const ticketQueryKey = 'ticket'; export function selectedTicketId() {}"));
     const path = await detectFixtureCapabilities(await fixture("export function ticketPath(id: string) { return '/tickets/' + id } export function selectedTicketId() {}"));

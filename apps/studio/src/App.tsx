@@ -9,7 +9,7 @@ import { compareCapabilities, comparisonReducer, initialComparisonState, planCon
 import { demoScenario, featureLabel, guidedSelectionDecision } from './demoScenario';
 import { pollPreviewOperation } from './operationPolling';
 
-interface RepositoryResponse { branches: string[]; clean: boolean; sessions: PreviewSession[] }
+interface RepositoryResponse { branches: string[]; preferredBranches?: string[]; clean: boolean; sessions: PreviewSession[] }
 const slots: PreviewSlotId[] = ['left', 'right'];
 const terminalPreviewStates = new Set(['ready', 'failed', 'cancelled', 'superseded']);
 function synchronizationId() { return globalThis.crypto?.randomUUID?.() ?? `sync-${Date.now()}-${Math.random()}`; }
@@ -263,7 +263,8 @@ export function App() {
   useEffect(() => {
     const controller = new AbortController();
     fetch('/api/repository', { signal: controller.signal }).then(response => response.json()).then((value: RepositoryResponse) => {
-      const ordered = [demoScenario.versions.left.branch, demoScenario.versions.right.branch, ...value.branches.filter(branch => branch !== demoScenario.versions.left.branch && branch !== demoScenario.versions.right.branch)];
+      const preferred = value.preferredBranches?.length ? value.preferredBranches : [demoScenario.versions.left.branch, demoScenario.versions.right.branch];
+      const ordered = [...preferred, ...value.branches.filter(branch => !preferred.includes(branch))];
       dispatch({ type: 'repository-loaded', branches: ordered, clean: value.clean });
     }).catch(error => { if ((error as Error).name !== 'AbortError') dispatch({ type: 'repository-failed', error: String(error) }); });
     return () => controller.abort();

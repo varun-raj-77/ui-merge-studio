@@ -8,7 +8,11 @@ import type { PreviewCapabilities } from '../../shared/src/bridge';
 const babelTraverse = ((traverse as unknown as { default?: typeof traverse }).default ?? traverse);
 
 export async function detectFixtureCapabilities(repositoryRoot: string): Promise<PreviewCapabilities> {
-  const source = await readFile(resolve(repositoryRoot, 'src/state/ticketSelection.ts'), 'utf8');
+  const source = await readFile(resolve(repositoryRoot, 'src/state/ticketSelection.ts'), 'utf8').catch(error => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  });
+  if (source === null) return { routeSync: null, fixtureContext: null, sourceSelection: { version: 1 } };
   const ast = parse(source, { sourceType: 'module', plugins: ['typescript'] });
   let queryContract = false;
   let pathContract = false;
