@@ -48,3 +48,12 @@
 - Reuse the right preview slot for the activity source and verified result, avoiding three unusably narrow simultaneous panes.
 - Keep raw branch refs secondary and technical evidence contextual.
 - Use scenario metadata only for guided presentation; source analysis and generation remain evidence-driven.
+
+# Prompt 006D decisions
+
+- Treat the homepage tokens—ink, warm ivory, white, soft/light stone, graphite, and signal orange—as the single Guided Mode system; reserve the dark surface for contextual technical evidence.
+- Keep guided source identity read-only. The controlled demo always compares `branch-sidebar` and `branch-inspector`; future repository onboarding owns branch configuration.
+- Put workflow and layout controls in one compact product header, then reduce the workspace introduction to one title, one sentence, and two contextual evidence links.
+- Make each preview card consist of experiment identity, raw ref, live/restart state, compact selection state, and the live application. Runtime/session/protocol details remain in the evidence drawer.
+- Use ink text on signal-orange controls so the accent remains legible without relying on white-on-orange contrast.
+- Keep generation, refusal, polling, synchronization, candidate, and cleanup behavior unchanged; this pass changes presentation metadata, UI copy, layout, and affected assertions only.

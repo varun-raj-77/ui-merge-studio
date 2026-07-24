@@ -10,13 +10,19 @@ The no-horizontal-drag guarantee is covered for the controlled previews at the d
 
 The result workspace switches one reusable live slot among the activity source and verified result; it does not keep three runtimes visible simultaneously. Changed-region category copy describes how the controlled selection pipeline responds, while the initial recommended sample targets remain presentation metadata. Arbitrary repository onboarding and universal React support are not claimed.
 
+## Prompt 006D visual boundary
+
+Guided Mode intentionally exposes two fixed controlled sources and no branch picker. This removes misleading configurability; it does not implement arbitrary-repository branch selection. Raw refs remain visible, and the same runtime can still switch the right preview slot to `combined-result` after verified generation.
+
+The responsive checks establish no outer or preview-shell horizontal dragging for the controlled sample at 1280×720, 1440×900, and 1920×1080. They do not guarantee that an arbitrary embedded application is responsive. The browser evidence includes a real verified combined result, but the final corrected assertion-only rerun exceeded its ten-minute outer command timeout.
+
 ## Prompt 006 limitations
 
 The improved startup numbers depend on a prepared exact-commit worktree in the same preview slot. A first launch still performs a real locked dependency install and remains machine/cache dependent. The operation API makes that wait responsive and truthful; it does not make package installation free. Prepared worktrees are local temporary resources and are removed on explicit stop or server shutdown.
 
 Automatic meaningful selection uses the existing generic source analyzer’s supported reverse-integration expansion. It is not semantic AI and may return partial/refused evidence for unsupported component patterns. Ambiguity is represented by that conservative analyzer status and the available instrumented ancestor chain in Technical details; Prompt 006 does not add a new probabilistic recommender.
 
-The demo scenario’s names are intentionally presentation-only and cover the controlled default versions. An arbitrary branch selected in the advanced source dropdown may retain the default version-card narrative even though its technical branch identity changes. General repository onboarding, author-defined scenario configuration, authentication, collaboration, cloud execution, and deployment remain out of scope.
+The demo scenario’s names are intentionally presentation-only and cover the two controlled source branches. General repository onboarding, author-defined scenario configuration, authentication, collaboration, cloud execution, and deployment remain out of scope.
 
 The accessibility audit covers semantic structure, accessible names, keyboard activation, focus entry/Escape for the drawer, visible focus, responsive overflow, and the real Chromium flow. It is not a formal WCAG conformance audit with assistive-technology user testing.
 

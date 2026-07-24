@@ -48,3 +48,9 @@ The prior Prompt 004 blocker is eliminated for the conventional test syntax exer
 # Prompt 006C acceptance
 
 The controlled Phase 0 shell is recommended **PASS** when the final command matrix remains green. The implementation preserves deterministic runtime mapping, Git/static analysis, generation, verification, refusal, rollback, and cleanup while making the visual decision-to-source relationship explicit.
+
+## Prompt 006D visual-system acceptance
+
+Prompt 006D meets the product-facing acceptance criteria in the controlled demo: Guided Mode is no longer a dark dashboard; the shared token system is explicit; previews dominate the workspace; branch selectors are removed; meaningful experiment labels and raw refs are both present; the compact warm tray expresses selection and safety state; the evidence drawer remains deliberately dark; the homepage relationship diagram has aligned split/join connectors; and source/result tabs clearly distinguish Navigation source, Activity-filter source, and Combined result.
+
+Focused Studio tests passed 27/27. The initial focused browser group passed five of six scenarios; its only failure was a stale exact-copy assertion expecting “Live” after the UI intentionally changed to “Live and synchronized.” The corrected single-scenario rerun exceeded the ten-minute outer command timeout, although the verified combined-result view and screenshot had already been reached. Final regression results and fixture verification are recorded in the 006D completion report.

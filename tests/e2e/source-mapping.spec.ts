@@ -9,7 +9,7 @@ const card = (page: Page) => page.locator('[data-preview-id="left"]');
 async function start(page: Page, branch: string) {
   await page.goto('/');
   await page.getByRole('button', { name: /Try sample demo/ }).click();
-  await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  await expect(page.locator('.workspace-status')).toHaveText('Both live apps are ready to compare', { timeout: 90_000 });
   if (branch !== 'branch-sidebar') {
     await page.getByLabel('Navigation experiment source').selectOption(branch);
     await card(page).getByRole('button', { name: 'Restart version' }).click();
@@ -18,7 +18,7 @@ async function start(page: Page, branch: string) {
   return page.frameLocator('iframe').nth(0);
 }
 async function selectionMode(page: Page) {
-  await card(page).getByRole('button', { name: 'Choose a feature' }).click();
+  await card(page).getByRole('button', { name: 'Choose feature' }).click();
   await expect(card(page).getByRole('button', { name: 'Cancel choosing' })).toBeVisible();
 }
 async function openDrawer(page: Page) {

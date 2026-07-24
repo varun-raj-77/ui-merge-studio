@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import '../setup';
+import { readFileSync } from 'node:fs';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { App, SlicePanel } from '../../apps/studio/src/App';
@@ -45,6 +46,13 @@ async function launch() {
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
+test('shares the homepage ink, ivory, stone, and signal-orange token system with Guided Mode', () => {
+  const css = readFileSync('apps/studio/src/studio.css', 'utf8');
+  for (const token of ['--ink: #111315', '--ivory: #f5f2eb', '--white: #ffffff', '--stone: #d9d4ca', '--light-stone: #ece8df', '--graphite: #686c70', '--signal: #ff6b3d', '--signal-dark: #e9562f']) expect(css).toContain(token);
+  expect(css).toContain('.studio { min-height: 100vh; padding: 0 18px 126px; color: var(--ink); background: var(--ivory); }');
+  expect(css).toContain('.primary-action { color: var(--ink); background: var(--signal)');
+});
+
 test('renders an explicit analysis refusal in technical evidence', () => {
   render(<SlicePanel artifact={null} status="refused" error="Branch commit mismatch: restart and select again." />);
   expect(screen.getByText('Analysis refused:')).toBeVisible();
@@ -72,9 +80,15 @@ test('launches through acknowledged operations and keeps both runtime identities
   const frames = await launch();
   emit(frames.left, session('left', 'branch-sidebar'), 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
   emit(frames.right, session('right', 'branch-inspector'), 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
-  expect(await screen.findByText('Both versions are ready to compare')).toBeVisible();
-  expect(screen.getByText(/two Git branches of the same React application/)).toBeVisible();
-  expect(screen.getAllByText('Live app from this branch')).toHaveLength(2);
+  expect(await screen.findByText('Both live apps are ready to compare')).toBeVisible();
+  expect(screen.getByText(/two live Git branches of the same React application/)).toBeVisible();
+  expect(screen.getByText('Navigation experiment')).toBeVisible();
+  expect(screen.getByText('Activity-filter experiment')).toBeVisible();
+  expect(screen.getByText('branch-sidebar')).toBeVisible();
+  expect(screen.getByText('branch-inspector')).toBeVisible();
+  expect(screen.queryByRole('combobox', { name: /source/i })).not.toBeInTheDocument();
+  expect(document.querySelector('.studio')).not.toHaveTextContent('Version A');
+  expect(document.querySelector('.studio')).not.toHaveTextContent('Version B');
   expect(frames.left).toHaveAttribute('src', session('left', 'branch-sidebar').url);
   expect(frames.right).toHaveAttribute('src', session('right', 'branch-inspector').url);
   fireEvent.change(screen.getByLabelText('Preview size'), { target: { value: 'mobile' } });
@@ -121,7 +135,7 @@ test('returns to the overview without duplicating active previews and resumes pr
   fireEvent.click(await screen.findByRole('button', { name: '← Back to overview' }));
   expect(screen.getByRole('button', { name: /Resume sample demo/ })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: /Resume sample demo/ }));
-  expect(await screen.findByRole('heading', { name: 'Compare two live branches' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'Compare branches' })).toBeVisible();
   expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/left')).toHaveLength(1);
   expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/right')).toHaveLength(1);
   fireEvent.click(screen.getByRole('button', { name: /UI Merge Studio/ }));

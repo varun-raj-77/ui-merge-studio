@@ -61,7 +61,7 @@ export function guidedSelectionDecision(previewId: keyof typeof demoScenario.ver
     ? { allowed: true as const, message: null }
     : {
         allowed: false as const,
-        message: `That area is broader than this guided demo can verify safely. ${version.selectionPrompt} No combined branch was created, and both original versions are unchanged.`
+        message: `That area is broader than this guided demo can verify safely. ${version.selectionPrompt} No combined branch was created, and both source branches are unchanged.`
       };
 }
 

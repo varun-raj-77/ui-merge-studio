@@ -44,3 +44,11 @@ The product controls are native buttons/selects with visible focus. Enter activa
 The controlled product proof now uses a distinctive ink/ivory/orange system, a generic product-first overview, honest sample limitations, resumable application navigation, branch-first comparison labels, compact live-app framing, explicit changed-region guidance, selection confirmation, and a live three-view result workspace. Technical evidence is contextual rather than globally dominant.
 
 At 1280×720, 1440×900, and 1920×1080 the outer document and preview shells remain free of required horizontal dragging. The sticky state action remains reachable and the source applications occupy most of the comparison viewport.
+
+# Prompt 006D visual-system evaluation
+
+The homepage and working environment now share one ivory, ink, soft-stone, and signal-orange system. Guided Mode opens with a compact product header, the Compare → Select → Combine → Verify path, fixed preview layout controls, and the concise “Compare branches” instruction. Navigation experiment and Activity-filter experiment are the primary labels; `branch-sidebar` and `branch-inspector` remain visible as secondary metadata. Guided source dropdowns and primary Version A / Version B labels are absent.
+
+At 1280×720, 1440×900, and 1920×1080, the document and both frame shells have no horizontal overflow. Side-by-side previews occupy most of the working viewport, the compact selection/safety tray remains reachable, and Focus navigation / Focus activity preserve full-width inspection. Keyboard selection, focus-visible treatment, drawer focus entry and Escape dismissal, non-color status text, and one-H1/accessible-name checks remain intact.
+
+The fresh walkthrough covered homepage, back/resume, side-by-side comparison, focus mode, source-backed selection, contextual technical evidence, broad-selection refusal, candidate generation, and the real combined result. The combined-result screenshot was produced during the first journey; a corrected assertion-only rerun later exceeded the ten-minute outer command limit and is recorded as a timeout rather than a pass.

@@ -5,7 +5,7 @@ const card = (page: Page, id: 'left' | 'right') => page.locator(`[data-preview-i
 async function launch(page: Page, left = 'branch-sidebar', right = 'branch-inspector') {
   await page.goto('/');
   await page.getByRole('button', { name: /Try sample demo/ }).click();
-  await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  await expect(page.locator('.workspace-status')).toHaveText('Both live apps are ready to compare', { timeout: 90_000 });
   for (const [id, label, branch, expected] of [['left', 'Navigation experiment source', left, 'branch-sidebar'], ['right', 'Activity-filter experiment source', right, 'branch-inspector']] as const) {
     if (branch === expected) continue;
     await page.getByLabel(label).selectOption(branch);
@@ -32,9 +32,9 @@ test('synchronizes tickets in both directions, responsive preview sizes, and ind
     expect(await frames.left.locator('html').evaluate(element => element.scrollWidth <= window.innerWidth + 1)).toBe(true);
     expect(await frames.right.locator('html').evaluate(element => element.scrollWidth <= window.innerWidth + 1)).toBe(true);
   }
-  await card(page, 'left').getByRole('button', { name: 'Choose a feature' }).click();
+  await card(page, 'left').getByRole('button', { name: 'Choose feature' }).click();
   await frames.left.getByRole('button', { name: 'Collapse sidebar' }).click();
-  await card(page, 'right').getByRole('button', { name: 'Choose a feature' }).click();
+  await card(page, 'right').getByRole('button', { name: 'Choose feature' }).click();
   await frames.right.getByRole('button', { name: 'note' }).click();
   await expect(card(page, 'left')).toContainText('Collapsible navigation', { timeout: 60_000 });
   await expect(card(page, 'right')).toContainText('Activity filters', { timeout: 60_000 });
@@ -47,7 +47,7 @@ test('synchronizes tickets in both directions, responsive preview sizes, and ind
 
 test('invalidates a restarted selection, rejects stale sessions, and preserves the peer', async ({ page }) => {
   const frames = await launch(page);
-  await card(page, 'left').getByRole('button', { name: 'Choose a feature' }).click();
+  await card(page, 'left').getByRole('button', { name: 'Choose feature' }).click();
   await frames.left.getByRole('button', { name: 'Collapse sidebar' }).click();
   await expect(card(page, 'left')).toContainText('Collapsible navigation', { timeout: 60_000 });
   const oldSession = await page.evaluate(async () => (await fetch('/api/repository').then(response => response.json())).sessions.find((item: { previewId: string }) => item.previewId === 'left'));

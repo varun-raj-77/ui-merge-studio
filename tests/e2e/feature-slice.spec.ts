@@ -6,7 +6,7 @@ const card = (page: Page, id: 'left' | 'right') => page.locator(`[data-preview-i
 async function launchBoth(page: Page, left = 'branch-sidebar', right = 'branch-inspector') {
   await page.goto('/');
   await page.getByRole('button', { name: /Try sample demo/ }).click();
-  await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  await expect(page.locator('.workspace-status')).toHaveText('Both live apps are ready to compare', { timeout: 90_000 });
   for (const [id, label, branch, expected] of [['left', 'Navigation experiment source', left, 'branch-sidebar'], ['right', 'Activity-filter experiment source', right, 'branch-inspector']] as const) {
     if (branch === expected) continue;
     await page.getByLabel(label).selectOption(branch);
@@ -28,9 +28,9 @@ async function downloadSlice(page: Page, version: Locator) {
 test('extracts deterministic dependency-aware slices from both guided visual selections', async ({ page }) => {
   const frames = await launchBoth(page);
   await frames.right.getByRole('button', { name: /TCK-102/ }).click();
-  await card(page, 'left').getByRole('button', { name: 'Choose a feature' }).click();
+  await card(page, 'left').getByRole('button', { name: 'Choose feature' }).click();
   await frames.left.getByRole('button', { name: 'Collapse sidebar' }).click();
-  await card(page, 'right').getByRole('button', { name: 'Choose a feature' }).click();
+  await card(page, 'right').getByRole('button', { name: 'Choose feature' }).click();
   await frames.right.getByRole('button', { name: 'note' }).click();
   await expect(card(page, 'left')).toContainText('Collapsible navigation', { timeout: 60_000 });
   await expect(card(page, 'right')).toContainText('Activity filters', { timeout: 60_000 });
@@ -57,7 +57,7 @@ test('extracts deterministic dependency-aware slices from both guided visual sel
 
 test('stops an out-of-scope visual choice without exposing implementation jargon in Guided Mode', async ({ page }) => {
   const frames = await launchBoth(page);
-  await card(page, 'left').getByRole('button', { name: 'Choose a feature' }).click();
+  await card(page, 'left').getByRole('button', { name: 'Choose feature' }).click();
   await frames.left.getByRole('heading', { name: 'Operations Command Center' }).click();
   await expect(card(page, 'left').getByRole('alert')).toContainText('broader than this guided demo', { timeout: 60_000 });
   const guidedText = await page.locator('.studio').innerText();
