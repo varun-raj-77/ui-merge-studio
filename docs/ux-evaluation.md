@@ -39,3 +39,8 @@ The product controls are native buttons/selects with visible focus. Enter activa
 - Advanced arbitrary branch choices retain the scenario card narrative.
 - Choosing a feature happens inside an iframe, so assistive technology traverses a document boundary.
 - The success summary is intentionally concise; full changed-file and verification evidence remains secondary.
+# Prompt 006C shell evaluation
+
+The controlled product proof now uses a distinctive ink/ivory/orange system, a generic product-first overview, honest sample limitations, resumable application navigation, branch-first comparison labels, compact live-app framing, explicit changed-region guidance, selection confirmation, and a live three-view result workspace. Technical evidence is contextual rather than globally dominant.
+
+At 1280×720, 1440×900, and 1920×1080 the outer document and preview shells remain free of required horizontal dragging. The sticky state action remains reachable and the source applications occupy most of the comparison viewport.

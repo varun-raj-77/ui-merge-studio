@@ -1,17 +1,17 @@
-# Prompt 006B guided demo script
+# Prompt 006C controlled product-shell demo
 
 1. Run `npm run fixture:verify`, then `npm run dev` and open `http://127.0.0.1:4310`.
-2. On the introduction screen, identify the product promise, the fictional Sample Support Dashboard, the two experiment branches, the verified result, and the examples beyond navigation and filters.
-3. Choose **Start guided comparison**. Point out that both cards immediately show truthful phases while the launch API has already acknowledged the operations.
+2. On the overview, identify the generic product promise, the honest arbitrary-repository limitation, the fictional Sample Support Dashboard, the two experiment branches, and the verified result.
+3. Choose **Try sample demo**. Point out that each panel is the complete live application from one Git branch, not a screenshot or code excerpt.
 4. Open TCK-102 in either version and show that the other version follows the ticket and route.
-5. Choose **Choose a feature** in Version A, then activate the sidebar collapse control. Confirm **Collapsible Sidebar** appears automatically.
-6. In Version B, choose TCK-102, choose a feature, and activate **note**. Confirm **Activity Filters** appears automatically.
+5. In the Navigation experiment, choose a feature, activate the sidebar collapse control, review the compact inclusion/exclusion summary, and confirm **Collapsible navigation**.
+6. In the Activity-filter experiment, choose TCK-102, choose a feature, activate **note**, and confirm **Activity filters**.
 7. Confirm the persistent tray names both selected features and says the safety checks found no conflicts. There is one primary **Create verified branch** action.
 8. Create the branch. Narrate the real changing stages: isolated workspace, each selected feature, changed-file check, install, typecheck, tests, focused tests, build, tree/commit, and cleanup.
-9. Open the verification summary, then **Open verified result**. Demonstrate the collapsible sidebar and activity filters together.
-10. Open **Technical details** and show operation timings, source identities, eligible ancestors, Git/AST inclusion/exclusion evidence, test-unit slicing, and downloadable artifacts. Press Escape to close it.
+9. Open the verification summary, then **View combined app**. Use the three result tabs to compare both sources with `combined-result`; demonstrate both features together and the unrelated heading/sorting exclusions.
+10. Use a contextual evidence link to show operation timings, source identities, Git/AST inclusion/exclusion evidence, test-unit slicing, and downloadable artifacts. Press Escape to close it.
 
-Use **Both**, **Focus A**, and **Focus B** to inspect the previews without horizontal dragging. The happy path needs five primary product clicks after the introduction: choose Version A, choose Version B, create, expand verification, and open the result. Interactions inside the sample previews are feature targets, not product navigation. No DevTools or verbal explanation of source files is required.
+Use **Side by side**, **Focus navigation branch**, and **Focus activity branch** without horizontal dragging. Use **Back to overview**, then **Resume sample demo**, to prove state is preserved without duplicate previews. No DevTools or external coaching is required.
 
 For the safety proof, choose the ticket-page heading instead of the prompted navigation control. The card must explain that the area is broader than the guided demo can safely verify, keep branch creation disabled, and direct the user to choose the focused feature. For a verification failure, the primary UI must say that no branch was created and offer **Change selected features**; raw command output belongs only in the collapsed technical details.
 

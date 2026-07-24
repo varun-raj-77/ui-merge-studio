@@ -6,6 +6,10 @@ The polished experience remains a controlled-fixture product proof. Friendly exp
 
 The no-horizontal-drag guarantee is covered for the controlled previews at the desktop, tablet, and mobile presets. Other applications may require repository-specific responsive work before they provide the same visual-selection experience.
 
+## Prompt 006C result boundary
+
+The result workspace switches one reusable live slot among the activity source and verified result; it does not keep three runtimes visible simultaneously. Changed-region category copy describes how the controlled selection pipeline responds, while the initial recommended sample targets remain presentation metadata. Arbitrary repository onboarding and universal React support are not claimed.
+
 ## Prompt 006 limitations
 
 The improved startup numbers depend on a prepared exact-commit worktree in the same preview slot. A first launch still performs a real locked dependency install and remains machine/cache dependent. The operation API makes that wait responsive and truthful; it does not make package installation free. Prepared worktrees are local temporary resources and are removed on explicit stop or server shutdown.

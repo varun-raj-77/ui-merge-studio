@@ -41,3 +41,10 @@
 - Prompt 004B connects test units to included production declarations with static symbol/helper edges and exact, uniquely-owned callback UI-contract literals. Test titles, branch names, paths, and fixture expectations never determine relevance.
 - Required and excluded imports are represented per specifier, including mixed declarations and aliases. Enclosing suites and applicable hooks are retained structurally; unrelated sibling tests and scoped hooks are excluded.
 - See ADR 0005 for the AST test-unit slicing boundary and conservative fallback rules.
+# Prompt 006C decisions
+
+- Keep overview/workspace navigation in React state so active previews survive and no routing dependency is added.
+- Require explicit confirmation after source-backed analysis before compatibility planning.
+- Reuse the right preview slot for the activity source and verified result, avoiding three unusably narrow simultaneous panes.
+- Keep raw branch refs secondary and technical evidence contextual.
+- Use scenario metadata only for guided presentation; source analysis and generation remain evidence-driven.
