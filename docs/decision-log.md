@@ -57,3 +57,12 @@
 - Make each preview card consist of experiment identity, raw ref, live/restart state, compact selection state, and the live application. Runtime/session/protocol details remain in the evidence drawer.
 - Use ink text on signal-orange controls so the accent remains legible without relying on white-on-orange contrast.
 - Keep generation, refusal, polling, synchronization, candidate, and cleanup behavior unchanged; this pass changes presentation metadata, UI copy, layout, and affected assertions only.
+
+# Prompt 007 decisions
+
+- Stop the real-repository experiment before branch preparation because FlowCraft is Next.js 14 while the only runtime integration executes Vite directly and the prompt forbids adding Next.js support.
+- Do not reinterpret a framework-startup incompatibility as an evidence-backed feature-combination refusal. No live mapping means there are no legitimate visual seeds, dependency slices, exclusions, or candidate plan.
+- Preserve FlowCraft at `261ab0f`; create no validation refs, worktrees, commits, or candidate branch.
+- Classify the result as **ABANDON**, not MODIFY: the current runtime/source-mapping boundary is fixture-specific at the first causal step.
+- Keep the required UI corrections bounded: an in-flow sticky action dock, one grouped preview-control cluster, and deterministic Sample Support Desk fixture branding.
+- See ADR 0009 for the framework boundary and the conditions for a future retry.

@@ -54,3 +54,11 @@ The controlled Phase 0 shell is recommended **PASS** when the final command matr
 Prompt 006D meets the product-facing acceptance criteria in the controlled demo: Guided Mode is no longer a dark dashboard; the shared token system is explicit; previews dominate the workspace; branch selectors are removed; meaningful experiment labels and raw refs are both present; the compact warm tray expresses selection and safety state; the evidence drawer remains deliberately dark; the homepage relationship diagram has aligned split/join connectors; and source/result tabs clearly distinguish Navigation source, Activity-filter source, and Combined result.
 
 Focused Studio tests passed 27/27. The initial focused browser group passed five of six scenarios; its only failure was a stale exact-copy assertion expecting “Live” after the UI intentionally changed to “Live and synchronized.” The corrected single-scenario rerun exceeded the ten-minute outer command timeout, although the verified combined-result view and screenshot had already been reached. Final regression results and fixture verification are recorded in the 006D completion report.
+
+## Prompt 007 FlowCraft validation
+
+Final recommendation: **ABANDON**.
+
+FlowCraft is a real full-stack Next.js 14 repository using React 18, React Flow, Zustand, Socket.IO, Express, MongoDB, and npm. Its actual typecheck, 104 client tests, 53 server tests, server/client production build, and five mocked Playwright journeys pass. Existing feature history includes execution inspector, resizing, replay, node focus, and runtime insights.
+
+UI Merge Studio cannot begin the required causal chain against it. Preview launch is Vite-only, instrumentation is a Vite plugin, readiness is `/tickets`, and state compatibility is detected from the controlled ticket fixture. Adding the missing Next.js integration was prohibited. Therefore no FlowCraft validation branches, source mappings, dependency evidence, exclusion claims, candidate, or bounded merge refusal were created. The controlled demo remains green, but Prompt 007 falsifies generalization beyond its Vite fixture.

@@ -105,7 +105,7 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .feature-spectrum strong { border-bottom: 2px solid var(--stone); font-weight: 700; }
 
 /* Comparison shell */
-.studio { min-height: 100vh; padding: 0 18px 126px; color: var(--ink); background: var(--ivory); }
+.studio { min-height: 100vh; padding: 0 18px 20px; color: var(--ink); background: var(--ivory); }
 .product-header { max-width: 1720px; min-height: 58px; margin: 0 auto 12px; display: grid; grid-template-columns: minmax(280px, 1fr) auto minmax(400px, 1fr); align-items: center; gap: 18px; border-bottom: 1px solid var(--stone); }
 .workspace-navigation { display: flex; align-items: center; gap: 16px; }
 .back-action, .product-name { min-height: 36px; border: 0; color: inherit; background: transparent; font-weight: 760; }
@@ -113,7 +113,8 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .back-action:hover, .product-name:hover { color: var(--signal); }
 .product-name { display: flex; align-items: center; gap: 9px; padding: 0; font-size: 14px; }
 .product-name .brand-mark { width: 30px; height: 30px; color: var(--ink); background: var(--signal); }
-.header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.header-control-group { display: flex; align-items: center; gap: 6px; padding: 3px; border: 1px solid var(--stone); border-radius: 9px; background: var(--light-stone); }
 .header-actions label { display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px; color: var(--graphite); font-size: 8px; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
 select { min-height: 32px; border: 1px solid var(--stone); border-radius: 6px; color: var(--ink); background: var(--white); padding: 5px 28px 5px 8px; }
 .help-action { width: 32px; height: 32px; border: 1px solid var(--stone); border-radius: 50%; color: var(--ink); background: var(--white); font-weight: 850; }
@@ -131,6 +132,7 @@ select { min-height: 32px; border: 1px solid var(--stone); border-radius: 6px; c
 .comparison-controls strong { max-width: 900px; font-size: 11px; font-weight: 650; }
 .comparison-controls span { display: flex; gap: 10px; color: var(--graphite); font-size: 9px; }
 .segmented-control, .result-tabs { display: flex; padding: 3px; border: 1px solid var(--stone); border-radius: 7px; background: var(--light-stone); }
+.header-layout { padding: 0; border: 0; }
 .segmented-control button, .result-tabs button { min-height: 28px; border: 0; border-radius: 4px; padding: 5px 8px; color: var(--graphite); background: transparent; font-size: 9px; font-weight: 760; white-space: nowrap; }
 .segmented-control button.active, .result-tabs button.active { color: var(--ink); background: var(--signal); }
 .workspace-meta { max-width: 1680px; margin: 0 auto 5px; color: var(--graphite); font-size: 9px; }
@@ -178,7 +180,7 @@ select { min-height: 32px; border: 1px solid var(--stone); border-radius: 6px; c
 .sync-summary > div { display: grid; font-size: 9px; }
 
 /* Persistent action and result */
-.combine-tray, .result-actions { position: fixed; z-index: 20; left: 50%; bottom: 12px; transform: translateX(-50%); width: min(1180px, calc(100vw - 28px)); }
+.combine-tray, .result-actions { position: sticky; z-index: 20; bottom: 10px; width: min(1180px, calc(100vw - 28px)); margin: 10px auto 0; }
 .combine-tray { display: grid; grid-template-columns: minmax(420px, 1.2fr) minmax(230px, .8fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--stone); border-top: 3px solid var(--signal); color: var(--ink); background: #fffffff5; box-shadow: 0 16px 44px #1113152b; backdrop-filter: blur(18px); }
 .tray-features { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 9px; }
 .tray-features div { min-width: 0; display: grid; gap: 2px; }
@@ -265,6 +267,7 @@ select { min-height: 32px; border: 1px solid var(--stone); border-radius: 6px; c
   .product-header { grid-template-columns: 1fr; }
   .product-header .workflow { grid-column: 1; grid-row: auto; width: min(310px, 100%); }
   .header-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .header-control-group { width: 100%; flex-wrap: wrap; }
   .header-layout { width: 100%; overflow-x: auto; }
   .header-layout button { flex: 1 0 auto; }
   .comparison-controls, .result-heading { align-items: stretch; flex-direction: column; }

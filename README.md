@@ -6,7 +6,7 @@ Run `npm run dev`, open `http://127.0.0.1:4310`, and choose **Try sample demo**.
 
 The controlled default compares the **Navigation experiment** with the **Activity-filter experiment**. Guided selection recommends the collapsible navigation and activity filters, explains included supporting code and excluded unrelated edits, and requires confirmation before compatibility planning. After verification, a live result workspace switches among both source branches and `combined-result`.
 
-This repository contains the controlled Support Operations Dashboard fixture and six UI Merge Studio falsification/product experiments. Prompt 006 makes the proven Prompt 001–005 path understandable and responsive without expanding the engine’s bounded claim. This is a controlled-fixture product proof, not an arbitrary merge pipeline.
+This repository contains the controlled Support Operations Dashboard fixture and seven UI Merge Studio falsification/product experiments. Prompt 007 tested the architecture against the real FlowCraft repository and returned **ABANDON**: FlowCraft is Next.js 14, while preview launch, instrumentation, readiness, and route synchronization are currently Vite- and fixture-specific. FlowCraft itself builds and passes its tests, but UI Merge Studio cannot honestly map it without adding the explicitly out-of-scope Next.js runtime adapter. This remains a controlled-fixture product proof, not an arbitrary merge pipeline.
 
 ## Commands
 

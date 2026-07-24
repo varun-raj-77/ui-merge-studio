@@ -1,5 +1,11 @@
 # Limitations
 
+## Prompt 007 real-repository result
+
+The first real-repository target, FlowCraft at commit `261ab0f`, is Next.js 14. UI Merge Studio’s current preview controller always starts Vite from `node_modules/vite/bin/vite.js`; rendered-source instrumentation exists only as a Vite `transform`/`transformIndexHtml` plugin; readiness is fixed to `/tickets`; and synchronization reads `src/state/ticketSelection.ts`. Under Prompt 007’s explicit ban on adding Next.js support, FlowCraft cannot reach the first valid visual-selection event.
+
+This is an architecture-level **ABANDON** result. It is not a safe-combination refusal: no FlowCraft branches were launched through UI Merge Studio, no FlowCraft element mapped to source, no dependency slice was created, and no candidate was planned. FlowCraft’s own typechecks, 157 unit tests, production build, and five deterministic mocked browser journeys pass independently.
+
 ## Prompt 006B product boundary
 
 The polished experience remains a controlled-fixture product proof. Friendly experiment labels and guided target restrictions describe the Sample Support Dashboard scenario; they do not claim validated support for arbitrary repositories. Raw refs and technical evidence remain available through progressive disclosure.

@@ -34,6 +34,12 @@ export function verifyFixture(repo = generated) {
     }
   }
   const sidebarDiff = git(repo, ['show', '--format=', 'branch-sidebar']);
+  for (const branch of ['main', 'branch-sidebar', 'branch-inspector', 'branch-incompatible-route']) {
+    const sidebarSource = git(repo, ['show', `${branch}:src/features/navigation/AppSidebar.tsx`]);
+    check(sidebarSource.includes('Sample Support Desk'), `${branch} lacks deterministic demo branding`);
+    check(sidebarSource.includes('Demo application · Fake ticket data'), `${branch} lacks deterministic fake-data context`);
+    check(!sidebarSource.includes('Beacon Ops'), `${branch} retains obsolete demo branding`);
+  }
   check(sidebarDiff.includes('Operations Command Center'), 'sidebar commit lacks unrelated heading change');
   check(sidebarDiff.includes('sidebarStorageKey') && sidebarDiff.includes('Collapse sidebar'), 'sidebar commit lacks useful behavior');
   check(sidebarDiff.includes("persists state"), 'sidebar commit lacks supporting behavior test');

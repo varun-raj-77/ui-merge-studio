@@ -49,8 +49,10 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 test('shares the homepage ink, ivory, stone, and signal-orange token system with Guided Mode', () => {
   const css = readFileSync('apps/studio/src/studio.css', 'utf8');
   for (const token of ['--ink: #111315', '--ivory: #f5f2eb', '--white: #ffffff', '--stone: #d9d4ca', '--light-stone: #ece8df', '--graphite: #686c70', '--signal: #ff6b3d', '--signal-dark: #e9562f']) expect(css).toContain(token);
-  expect(css).toContain('.studio { min-height: 100vh; padding: 0 18px 126px; color: var(--ink); background: var(--ivory); }');
+  expect(css).toContain('.studio { min-height: 100vh; padding: 0 18px 20px; color: var(--ink); background: var(--ivory); }');
   expect(css).toContain('.primary-action { color: var(--ink); background: var(--signal)');
+  expect(css).toContain('.combine-tray, .result-actions { position: sticky;');
+  expect(css).not.toContain('.combine-tray, .result-actions { position: fixed;');
 });
 
 test('renders an explicit analysis refusal in technical evidence', () => {
@@ -66,7 +68,7 @@ test('explains the task and defaults to the intended named versions without tech
   expect(screen.getByText(/Combine the best UI changes from different React branches/)).toBeVisible();
   expect(screen.getByRole('button', { name: /Try sample demo/ })).toBeVisible();
   expect(screen.getByText(/arbitrary local repositories is the next validation milestone/)).toBeVisible();
-  expect(screen.getByText(/fake customer-support application with sample ticket data/)).toBeVisible();
+  expect(screen.getByText(/Demo application · Fake ticket data/)).toBeVisible();
   expect(screen.getByText(/These are examples—not limits/)).toBeVisible();
   expect(screen.queryByTitle(/Variant preview/)).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'How it works' })).toBeVisible();

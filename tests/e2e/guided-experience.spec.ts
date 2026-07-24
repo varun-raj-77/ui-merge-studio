@@ -8,7 +8,7 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   await expect(page.getByText(/Combine the best UI changes from different React branches/)).toBeVisible();
   await expect(page.getByRole('button', { name: /Try sample demo/ })).toBeVisible();
   await expect(page.getByText(/arbitrary local repositories is the next validation milestone/)).toBeVisible();
-  await expect(page.getByText(/fake customer-support application with sample ticket data/)).toBeVisible();
+  await expect(page.getByText(/Demo application · Fake ticket data/)).toBeVisible();
   await expect(page.getByText(/These are examples—not limits/)).toBeVisible();
   await expect(page.locator('iframe')).toHaveCount(0);
   const guidedText = await page.locator('body').innerText();
@@ -20,7 +20,7 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   ]) {
     await page.setViewportSize({ width, height });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-    await page.screenshot({ path: `docs/evidence/prompt-006d/homepage-${width}x${height}.png`, fullPage: false });
+    await page.screenshot({ path: `docs/evidence/prompt-007/homepage-${width}x${height}.png`, fullPage: false });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: /Try sample demo/ }).click();
@@ -32,6 +32,8 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   await expect(page.getByRole('heading', { name: 'Activity-filter experiment' })).toBeVisible();
   await expect(page.getByText('branch-sidebar')).toBeVisible();
   await expect(page.getByText('branch-inspector')).toBeVisible();
+  await expect(page.frameLocator('iframe').nth(0).getByText('Sample Support Desk')).toBeVisible();
+  await expect(page.frameLocator('iframe').nth(0).getByText('Demo application · Fake ticket data')).toBeVisible();
   await expect(page.getByRole('combobox', { name: /source/i })).toHaveCount(0);
   await expect(page.locator('.studio')).not.toContainText('Version A');
   await expect(page.locator('.studio')).not.toContainText('Version B');
@@ -44,12 +46,16 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
     await page.setViewportSize({ width, height });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
     for (const shell of await page.locator('.frame-shell').all()) expect(await shell.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
-    await page.screenshot({ path: `docs/evidence/prompt-006d/comparison-${width}x${height}.png`, fullPage: false });
+    const trayBox = await page.locator('.combine-tray').boundingBox();
+    const frameBoxes = await page.locator('.frame-shell').evaluateAll(elements => elements.map(element => { const box = element.getBoundingClientRect(); return { bottom: box.bottom }; }));
+    expect(trayBox).not.toBeNull();
+    expect(trayBox!.y).toBeGreaterThanOrEqual(Math.max(...frameBoxes.map(box => box.bottom)) - 1);
+    await page.screenshot({ path: `docs/evidence/prompt-007/comparison-${width}x${height}.png`, fullPage: false });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Focus navigation' }).click();
   await expect(page.locator('[data-preview-id="right"]')).toBeHidden();
-  await page.screenshot({ path: 'docs/evidence/prompt-006d/focused-navigation-1440x900.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/prompt-007/focused-navigation-1440x900.png', fullPage: false });
   await page.getByRole('button', { name: 'Side by side' }).click();
   const leftSource = await page.locator('iframe').nth(0).getAttribute('src');
   await page.getByRole('button', { name: '← Back to overview' }).click();
@@ -67,7 +73,7 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   await frame.getByRole('button', { name: 'Collapse sidebar' }).press('Enter');
   await expect(page.locator('[data-preview-id="left"]')).toContainText('Collapsible navigation', { timeout: 60_000 });
   await expect(page.locator('.selection-summary')).toContainText('Selected');
-  await page.screenshot({ path: 'docs/evidence/prompt-006d/selected-features-1440x900.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/prompt-007/selected-features-1440x900.png', fullPage: false });
   await page.getByRole('button', { name: 'View source evidence' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: 'Close technical details' })).toBeFocused();

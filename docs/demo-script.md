@@ -29,3 +29,11 @@ For the safety proof, choose the ticket-page heading instead of the prompted nav
 10. Run the controlled conflict test and inspect its file, declaration, slice IDs, evidence, reason, and manual resolution guidance.
 
 Primary evidence is the Git tree/diff, report, verification output, tests, and runtime behavior; screenshots are supplementary.
+
+## Prompt 007 falsification demonstration
+
+1. Show FlowCraft at `261ab0f`: Next.js 14 frontend, React Flow canvas, Zustand stores, Socket.IO execution updates, Express/MongoDB backend, and passing native checks.
+2. Show the UI Merge Studio preview controller executing `node_modules/vite/bin/vite.js`, the Vite-only instrumentation plugin, fixed `/tickets` readiness probe, and support-ticket capability detector.
+3. State the causal stop clearly: without a live instrumented FlowCraft element, there is no valid source seed, dependency slice, exclusion proof, or candidate plan.
+4. Confirm no FlowCraft refs or files changed and no `ui-merge/flowcraft-combined` branch exists.
+5. In the controlled demo, show the non-obstructing sticky action dock, grouped preview controls, and generated **Sample Support Desk** / **Demo application · Fake ticket data** branding.

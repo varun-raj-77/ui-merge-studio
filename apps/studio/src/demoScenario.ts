@@ -6,7 +6,7 @@ export const demoScenario = {
   sampleAppName: 'Sample Support Dashboard',
   promise: 'Combine the best UI changes from different React branches.',
   description: 'Run branches as real interactive applications, click the visible changes you want, and create one tested combined Git branch.',
-  sampleAppDescription: 'A fake customer-support application with sample ticket data. “Beacon Ops” is the fictional company shown inside the sample; the tickets and brand are demonstration content, not the product.',
+  sampleAppDescription: 'Demo application · Fake ticket data. Sample Support Desk is the fictional workspace shown inside the sample, not the product.',
   task: 'Choose the navigation improvement from the Navigation experiment and the activity-filter improvement from the Activity-filter experiment.',
   examples: ['Forms', 'Tables', 'Charts', 'Checkout flows', 'Search', 'Editors', 'Modals', 'Loading states', 'Validation', 'Accessibility improvements'],
   branchRelationship: {

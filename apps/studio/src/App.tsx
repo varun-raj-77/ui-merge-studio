@@ -427,12 +427,14 @@ export function App() {
       <div className="workspace-navigation"><button className="back-action" onClick={() => setGuidedStarted(false)}>← Back to overview</button><button className="product-name" onClick={() => setGuidedStarted(false)}><span className="brand-mark" aria-hidden="true">UM</span><span>{demoScenario.productName}</span></button></div>
       <WorkflowStepper state={state} />
       <div className="header-actions">
-        <div className="segmented-control header-layout" aria-label="Preview layout">
-          <button className={comparisonLayout === 'both' ? 'active' : ''} onClick={() => setComparisonLayout('both')}>Side by side</button>
-          <button className={comparisonLayout === 'left' ? 'active' : ''} onClick={() => setComparisonLayout('left')}>Focus navigation</button>
-          <button className={comparisonLayout === 'right' ? 'active' : ''} onClick={() => setComparisonLayout('right')}>Focus {state.previews.right.branch === 'combined-result' ? 'result' : 'activity'}</button>
+        <div className="header-control-group" aria-label="Preview controls">
+          <div className="segmented-control header-layout" aria-label="Preview layout">
+            <button className={comparisonLayout === 'both' ? 'active' : ''} onClick={() => setComparisonLayout('both')}>Side by side</button>
+            <button className={comparisonLayout === 'left' ? 'active' : ''} onClick={() => setComparisonLayout('left')}>Focus navigation</button>
+            <button className={comparisonLayout === 'right' ? 'active' : ''} onClick={() => setComparisonLayout('right')}>Focus {state.previews.right.branch === 'combined-result' ? 'result' : 'activity'}</button>
+          </div>
+          <label>Fit<select aria-label="Preview size" value={state.viewport.preset} onChange={event => setViewport(event.target.value as keyof typeof viewportPresets)}><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="mobile">Mobile</option></select></label>
         </div>
-        <label>Preview fit<select aria-label="Preview size" value={state.viewport.preset} onChange={event => setViewport(event.target.value as keyof typeof viewportPresets)}><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="mobile">Mobile</option></select></label>
         <button className="help-action" onClick={() => setComparisonHelpOpen(value => !value)} aria-label="Comparison help">?</button>
       </div>
     </header>
