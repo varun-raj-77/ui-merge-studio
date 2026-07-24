@@ -4,7 +4,11 @@ test.afterEach(async ({ request }) => { await request.delete('/api/preview').cat
 
 test('keeps Guided Mode plain-language, responsive, and keyboard operable', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.onboarding [role="status"]')).toHaveText('Ready');
+  await expect(page.getByRole('heading', { name: 'UI Merge Studio' })).toBeVisible();
+  await expect(page.getByText(/Combine preferred UI features from different React branches/)).toBeVisible();
+  await expect(page.getByText(/fake customer-support application with sample ticket data/)).toBeVisible();
+  await expect(page.getByText(/These are examples—not limits/)).toBeVisible();
+  await expect(page.locator('iframe')).toHaveCount(0);
   const guidedText = await page.locator('body').innerText();
   for (const phrase of ['Hovered boundary', 'Selected boundary', 'Eligible ancestors', 'Feature slice', 'Merge base', 'Test-file slices', 'Required import specifiers', 'Definition boundary', 'Runtime instance', 'Schema-v2', 'Proven-unrelated', 'Candidate preflight']) expect(guidedText).not.toContain(phrase);
   for (const { width, height } of [
@@ -14,11 +18,15 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   ]) {
     await page.setViewportSize({ width, height });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-    await page.screenshot({ path: `docs/evidence/prompt-006/guided-${width}x${height}.png`, fullPage: false });
+    await page.screenshot({ path: `docs/evidence/prompt-006b/intro-${width}x${height}.png`, fullPage: false });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole('button', { name: 'Load both versions' }).click();
-  await expect(page.locator('.onboarding [role="status"]')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  await expect(page.frameLocator('iframe').nth(0).getByRole('button', { name: /TCK-102/ })).toBeVisible();
+  await expect(page.frameLocator('iframe').nth(1).getByRole('button', { name: /TCK-102/ })).toBeVisible();
+  await page.screenshot({ path: 'docs/evidence/prompt-006b/comparison-1440x900.png', fullPage: false });
+  for (const shell of await page.locator('.frame-shell').all()) expect(await shell.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
   await page.locator('[data-preview-id="left"]').getByRole('button', { name: 'Choose a feature' }).focus();
   await page.keyboard.press('Enter');
   const frame = page.frameLocator('iframe').nth(0);
@@ -48,9 +56,31 @@ test('passes automated structural accessibility checks in initial and ready stat
   }
   await page.goto('/');
   expect(await audit()).toEqual({ h1: 1, unnamedButtons: 0, unnamedFrames: 0, duplicateIds: [] });
-  await page.getByRole('button', { name: 'Load both versions' }).click();
-  await expect(page.locator('.onboarding [role="status"]')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
   expect(await audit()).toEqual({ h1: 1, unnamedButtons: 0, unnamedFrames: 0, duplicateIds: [] });
+});
+
+test('stops a broad activity-feed selection before compatibility or branch creation', async ({ page }) => {
+  let preflightRequests = 0;
+  page.on('request', request => { if (request.url().endsWith('/api/candidate/preflight')) preflightRequests += 1; });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  const leftCard = page.locator('[data-preview-id="left"]');
+  const rightCard = page.locator('[data-preview-id="right"]');
+  const left = page.frameLocator('iframe').nth(0);
+  const right = page.frameLocator('iframe').nth(1);
+  await leftCard.getByRole('button', { name: 'Choose a feature' }).click();
+  await left.getByRole('button', { name: 'Collapse sidebar' }).click();
+  await expect(leftCard).toContainText('Collapsible Sidebar', { timeout: 60_000 });
+  await right.getByRole('button', { name: /TCK-102/ }).click();
+  await rightCard.getByRole('button', { name: 'Choose a feature' }).click();
+  await right.getByRole('heading', { name: 'Activity' }).click();
+  await expect(rightCard.getByText('This selection was stopped before branch creation.')).toBeVisible({ timeout: 60_000 });
+  await expect(rightCard).toContainText('broader than this guided demo can verify safely');
+  await expect(page.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
+  expect(preflightRequests).toBe(0);
 });
 
 test('acknowledges launches immediately, coalesces duplicates, and cancels explicitly', async ({ request }) => {

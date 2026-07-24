@@ -5,11 +5,14 @@ test.afterEach(async ({ request }) => { await request.delete('/api/preview').cat
 const card = (page: Page, id: 'left' | 'right') => page.locator(`[data-preview-id="${id}"]`);
 async function launchBoth(page: Page, left = 'branch-sidebar', right = 'branch-inspector') {
   await page.goto('/');
-  await expect(page.locator('.onboarding [role="status"]')).toHaveText('Ready');
-  await page.getByLabel('Version A source').selectOption(left);
-  await page.getByLabel('Version B source').selectOption(right);
-  await page.getByRole('button', { name: 'Load both versions' }).click();
-  await expect(page.locator('.onboarding [role="status"]')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
+  for (const [id, label, branch, expected] of [['left', 'Version A source', left, 'branch-sidebar'], ['right', 'Version B source', right, 'branch-inspector']] as const) {
+    if (branch === expected) continue;
+    await page.getByLabel(label).selectOption(branch);
+    await card(page, id).getByRole('button', { name: 'Restart version' }).click();
+    await expect(card(page, id).locator('.version-status')).toHaveText('Ready', { timeout: 90_000 });
+  }
   return { left: page.frameLocator('iframe').nth(0), right: page.frameLocator('iframe').nth(1) };
 }
 async function openEvidence(page: Page) {
@@ -52,15 +55,13 @@ test('extracts deterministic dependency-aware slices from both guided visual sel
   expect(tests.excludedUnits.map(item => item.title)).toEqual(['sorts ticket list newest first']);
 });
 
-test('refuses an unchanged visual choice without exposing implementation jargon in Guided Mode', async ({ page }) => {
-  const frames = await launchBoth(page, 'branch-incompatible-route', 'branch-inspector');
+test('stops an out-of-scope visual choice without exposing implementation jargon in Guided Mode', async ({ page }) => {
+  const frames = await launchBoth(page);
   await card(page, 'left').getByRole('button', { name: 'Choose a feature' }).click();
-  await frames.left.getByText('Beacon Ops').click();
-  await expect(card(page, 'left').getByRole('alert')).toContainText('not safe to combine', { timeout: 60_000 });
+  await frames.left.getByRole('heading', { name: 'Operations Command Center' }).click();
+  await expect(card(page, 'left').getByRole('alert')).toContainText('broader than this guided demo', { timeout: 60_000 });
   const guidedText = await page.locator('.studio').innerText();
   expect(guidedText).not.toContain('Merge base');
   expect(guidedText).not.toContain('Definition boundary');
-  const dialog = await openEvidence(page);
-  await expect(dialog.locator('.drawer-version').nth(0)).toContainText('Feature slice · refused');
-  expect((await downloadSlice(page, dialog.locator('.drawer-version').nth(0))).slice.status).toBe('refused');
+  await expect(page.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
 });

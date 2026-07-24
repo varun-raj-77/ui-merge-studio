@@ -72,6 +72,7 @@ export type ComparisonAction =
   | { type: 'clear-selection'; previewId: PreviewSlotId }
   | { type: 'analysis-started'; previewId: PreviewSlotId }
   | { type: 'analysis-finished'; previewId: PreviewSlotId; artifact: FeatureSliceArtifact }
+  | { type: 'analysis-guidance-refused'; previewId: PreviewSlotId; artifact: FeatureSliceArtifact; error: string }
   | { type: 'analysis-failed'; previewId: PreviewSlotId; error: string };
 
 function updateSlot(state: ComparisonState, id: PreviewSlotId, update: (current: PreviewSlot) => PreviewSlot): ComparisonState { return { ...state, previews: { ...state.previews, [id]: update(state.previews[id]) } }; }
@@ -102,6 +103,7 @@ export function comparisonReducer(state: ComparisonState, action: ComparisonActi
   if (action.type === 'clear-selection') return updateSlot(state, action.previewId, current => ({ ...current, selected: null, hovered: null, analysis: current.analysis.artifact ? { ...current.analysis, status: 'stale', error: 'Analysis is stale because its selection was cleared.' } : current.analysis, errors: { ...current.errors, selection: null } }));
   if (action.type === 'analysis-started') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: 'loading', artifact: null, error: null } }));
   if (action.type === 'analysis-finished') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: action.artifact.slice.status, artifact: action.artifact, error: null } }));
+  if (action.type === 'analysis-guidance-refused') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: 'refused', artifact: action.artifact, error: action.error } }));
   if (action.type === 'analysis-failed') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: 'refused', artifact: null, error: action.error } }));
   if (action.type === 'preview-message') return updateSlot(state, action.previewId, current => {
     const { message } = action;

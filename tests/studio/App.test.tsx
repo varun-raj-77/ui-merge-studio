@@ -20,7 +20,7 @@ function readyOperation(previewId: 'left' | 'right', branch: string): PreviewOpe
   const value = session(previewId, branch);
   return { operationId: `${previewId}-operation`, previewId, branch, state: 'ready', requestedAt: '2026-01-01T00:00:00.000Z', startedAt: '2026-01-01T00:00:00.001Z', completedAt: '2026-01-01T00:00:00.002Z', updatedAt: '2026-01-01T00:00:00.002Z', phases: [], result: value, error: null, supersededBy: null };
 }
-function appFetch() {
+function appFetch(rightComponent = 'ActivityFilters') {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
     const url = String(input);
     if (url === '/api/repository') return response({ branches: ['branch-sidebar', 'branch-inspector', 'main'], clean: true, sessions: [] });
@@ -29,13 +29,13 @@ function appFetch() {
     if (url.endsWith('/left-operation')) return response(readyOperation('left', 'branch-sidebar'));
     if (url.endsWith('/right-operation')) return response(readyOperation('right', 'branch-inspector'));
     if (url === '/api/previews/left/analysis') return response(artifact(sourceIdentity(session('left', 'branch-sidebar'), 'AppSidebar')));
-    if (url === '/api/previews/right/analysis') return response(artifact(sourceIdentity(session('right', 'branch-inspector'), 'ActivityFilters')));
+    if (url === '/api/previews/right/analysis') return response(artifact(sourceIdentity(session('right', 'branch-inspector'), rightComponent)));
     if (url === '/api/candidate/preflight') return response({ generationId: 'f'.repeat(16), plan: { version: 1, repository: { baseCommit: '1'.repeat(40), candidateBranch: 'combined-result' }, sliceIds: ['a'.repeat(16), 'b'.repeat(16)], operations: [], conflicts: [], unresolved: [], status: 'ready' } });
     return response({ error: `Unexpected request: ${url}` }, 500);
   });
 }
 async function launch() {
-  const launchButton = await screen.findByRole('button', { name: 'Load both versions' });
+  const launchButton = await screen.findByRole('button', { name: /Start guided comparison/i });
   await waitFor(() => expect(launchButton).toBeEnabled(), { timeout: 10_000 });
   fireEvent.click(launchButton);
   return {
@@ -55,9 +55,11 @@ test('explains the task and defaults to the intended named versions without tech
   appFetch();
   render(<App />);
   expect(await screen.findByRole('heading', { name: 'UI Merge Studio' })).toBeVisible();
-  expect(screen.getByText(/Choose one useful change from each version/)).toBeVisible();
-  expect(screen.getByRole('heading', { name: 'Collapsible Sidebar Variant' })).toBeVisible();
-  expect(screen.getByRole('heading', { name: 'Activity Filters Variant' })).toBeVisible();
+  expect(screen.getByText(/Combine preferred UI features from different React branches/)).toBeVisible();
+  expect(screen.getByText(/fake customer-support application with sample ticket data/)).toBeVisible();
+  expect(screen.getByText(/These are examples—not limits/)).toBeVisible();
+  expect(screen.queryByTitle(/Variant preview/)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'How it works' })).toBeVisible();
   const text = document.body.textContent ?? '';
   for (const forbidden of ['Hovered boundary', 'Selected boundary', 'Eligible ancestors', 'Feature slice', 'Merge base', 'Runtime instance', 'Candidate preflight']) expect(text).not.toContain(forbidden);
 });
@@ -72,8 +74,10 @@ test('launches through acknowledged operations and keeps both runtime identities
   expect(frames.left).toHaveAttribute('src', session('left', 'branch-sidebar').url);
   expect(frames.right).toHaveAttribute('src', session('right', 'branch-inspector').url);
   fireEvent.change(screen.getByLabelText('Preview size'), { target: { value: 'mobile' } });
-  expect(frames.left).toHaveStyle({ width: '390px' });
-  expect(frames.right).toHaveStyle({ width: '390px' });
+  expect(frames.left.parentElement).toHaveStyle({ maxWidth: '390px' });
+  expect(frames.right.parentElement).toHaveStyle({ maxWidth: '390px' });
+  expect(frames.left).not.toHaveAttribute('style');
+  expect(frames.right).not.toHaveAttribute('style');
 });
 
 test('automatically understands two visual selections and prepares the single combine action', async () => {
@@ -88,7 +92,7 @@ test('automatically understands two visual selections and prepares the single co
   emit(frames.right, right, 'boundary-selected', { identity: sourceIdentity(right, 'ActivityFilters'), ancestors: [] });
   expect((await screen.findAllByText('Collapsible Sidebar')).length).toBeGreaterThanOrEqual(2);
   expect((await screen.findAllByText('Activity Filters')).length).toBeGreaterThanOrEqual(2);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeEnabled());
   expect(screen.getByText('Ready to combine. Safety checks found no conflicts.')).toBeVisible();
   expect(fetchMock.mock.calls.filter(call => String(call[0]).endsWith('/analysis'))).toHaveLength(2);
 });
@@ -96,10 +100,27 @@ test('automatically understands two visual selections and prepares the single co
 test('keeps detailed evidence in a keyboard-dismissible technical drawer', async () => {
   appFetch();
   render(<App />);
+  await launch();
   fireEvent.click(await screen.findByRole('button', { name: 'Technical details' }));
   const dialog = screen.getByRole('dialog', { name: 'Technical details' });
   expect(within(dialog).getAllByText('Feature slice')).toHaveLength(2);
   expect(screen.getByRole('button', { name: 'Close technical details' })).toHaveFocus();
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('blocks a broad sample selection before it can appear safe to combine', async () => {
+  const fetchMock = appFetch('TicketActivityList');
+  render(<App />);
+  const frames = await launch();
+  const left = session('left', 'branch-sidebar');
+  const right = session('right', 'branch-inspector');
+  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
+  emit(frames.right, right, 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
+  emit(frames.left, left, 'boundary-selected', { identity: sourceIdentity(left, 'AppSidebar'), ancestors: [] });
+  emit(frames.right, right, 'boundary-selected', { identity: sourceIdentity(right, 'TicketActivityList'), ancestors: [] });
+  expect(await screen.findByText('This selection was stopped before branch creation.')).toBeVisible();
+  expect(screen.getByText(/broader than this guided demo can verify safely/)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
+  await waitFor(() => expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/candidate/preflight')).toHaveLength(0));
 });

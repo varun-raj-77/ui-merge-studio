@@ -15,7 +15,7 @@ function report(status: 'succeeded' | 'failed' = 'succeeded'): CandidateGenerati
 
 test('blocks the primary action until two current resolved slices exist', () => {
   render(<CandidatePanel inputs={[inputs()[0]]} onLaunch={() => undefined} />);
-  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
   expect(screen.getByText(/Select one supported feature from each version/)).toBeVisible();
 });
 
@@ -29,14 +29,14 @@ test('runs safety checking automatically, creates the candidate, and exposes ver
     return response({ error: 'unexpected' }, 500);
   });
   render(<CandidatePanel inputs={inputs()} onLaunch={launch} />);
-  const button = screen.getByRole('button', { name: 'Create combined branch' });
+  const button = screen.getByRole('button', { name: 'Create verified branch' });
   await waitFor(() => expect(button).toBeEnabled());
   expect(screen.getByText(/Safety checks found no conflicts/)).toBeVisible();
   fireEvent.click(button);
-  expect(await screen.findByRole('button', { name: 'Combined branch ready' })).toBeVisible();
+  expect(await screen.findByText('Combined branch verified')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Open verified result' }));
   expect(launch).toHaveBeenCalledWith('combined-result');
-  fireEvent.click(screen.getByText('Verification summary'));
+  fireEvent.click(screen.getByText('Technical verification details'));
   expect(screen.getByText('typecheck:')).toBeVisible();
   expect(screen.getByText(/Cleanup: clean/)).toBeVisible();
 });
@@ -45,6 +45,32 @@ test('states a safety refusal without enabling combination', async () => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(() => response(preflight('refused')));
   render(<CandidatePanel inputs={inputs()} onLaunch={() => undefined} />);
   await screen.findByText(/need review/);
-  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
   expect(screen.getByText(/safety check found a conflict/i)).toBeVisible();
+});
+
+test('uses plain failure language and replaces branch creation with a revision action', async () => {
+  const revise = vi.fn();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/status') return response({ status: 'running', stage: 'verification', message: 'Verification command typecheck failed with exit code 2.', verification: 'typecheck' });
+    if (url === '/api/candidate/generate') {
+      const failed = report('failed');
+      failed.message = 'Verification command typecheck failed with exit code 2.';
+      failed.verification[0].exitCode = 2;
+      return response(failed);
+    }
+    return response({ error: 'unexpected' }, 500);
+  });
+  render(<CandidatePanel inputs={inputs()} onLaunch={() => undefined} onRevise={revise} />);
+  const create = screen.getByRole('button', { name: 'Create verified branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  expect(await screen.findByText(/Code checks did not pass/)).toBeVisible();
+  expect(screen.getByText(/No combined branch was created/)).toBeVisible();
+  expect(screen.queryByRole('button', { name: /Create/ })).not.toBeInTheDocument();
+  const change = screen.getByRole('button', { name: 'Change selected features' });
+  fireEvent.click(change);
+  expect(revise).toHaveBeenCalledOnce();
 });
