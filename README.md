@@ -1,26 +1,156 @@
-# UI Merge Studio — Phase 0
+# UI Merge Studio
 
-UI Merge Studio is a local React/Vite product proof for running multiple React branches as complete interactive applications, visually selecting branch-specific UI changes, and creating one verified combined branch. Its ink, warm-ivory, and signal-orange product shell explains the controlled sample before launch and keeps the causal path visible: **Compare → Select → Combine → Verify**.
+**Visually select preferred features from multiple running React branches and create one verified combined branch.**
 
-Run `npm run dev`, open `http://127.0.0.1:4310`, and choose **Try sample demo**. The responsive comparison supports side-by-side, navigation-branch focus, and activity-branch focus without horizontal preview dragging. Return to the overview without destroying active previews, explicitly stop the demo when desired, and open source or verification evidence only from contextual links.
+UI Merge Studio is an open-source local developer tool for comparing multiple React and TypeScript Git branches as live applications. Developers can select preferred rendered UI regions, trace those selections to React source and supporting dependencies, generate a deterministic candidate branch, and verify the result with typechecks, tests, builds, and runtime checks.
 
-The controlled default compares the **Navigation experiment** with the **Activity-filter experiment**. Guided selection recommends the collapsible navigation and activity filters, explains included supporting code and excluded unrelated edits, and requires confirmation before compatibility planning. After verification, a live result workspace switches among both source branches and `combined-result`.
+> Current scope: local React + TypeScript + Vite repositories using npm, pnpm, or yarn.
 
-This repository contains the controlled Support Operations Dashboard fixture and seven UI Merge Studio falsification/product experiments. Prompt 007 tested the architecture against the real FlowCraft repository and returned **ABANDON**: FlowCraft is Next.js 14, while preview launch, instrumentation, readiness, and route synchronization are currently Vite- and fixture-specific. FlowCraft itself builds and passes its tests, but UI Merge Studio cannot honestly map it without adding the explicitly out-of-scope Next.js runtime adapter. This remains a controlled-fixture product proof, not an arbitrary merge pipeline.
+![UI Merge Studio external Vite mapping](docs/evidence/prompt-007b/external-vite-mapping.png)
 
-## Commands
+## Why it exists
+
+Git understands files and commits, but it does not understand statements such as:
+
+> “Use the navigation from this branch and the activity filters from that branch.”
+
+UI Merge Studio translates a visual preference expressed through a running interface into a constrained source integration:
+
+```text
+visual selection
+→ runtime React identity
+→ source declaration
+→ Git diff from common base
+→ dependency slice
+→ candidate plan
+→ deterministic transformation
+→ verification
+→ live combined result
+```
+
+AI is not the merge authority. Git evidence, runtime source metadata, AST analysis, dependency tracing, and verification determine what can be included.
+
+## What has been proven
+
+### Controlled Phase 0
+
+The controlled React/TypeScript/Vite repository demonstrates:
+
+- isolated branch execution through Git worktrees;
+- side-by-side live previews;
+- rendered UI selection;
+- runtime React element-to-source mapping;
+- dependency-aware source slicing;
+- required imports, types, hooks, styles, assets, and tests;
+- exclusion of unrelated branch changes;
+- deterministic and idempotent candidate generation;
+- TypeScript, test, build, and runtime verification;
+- a working combined result;
+- evidence-backed refusal of an intentionally unsafe combination.
+
+### External Vite validation
+
+UI Merge Studio was also tested against an unrelated open-source React/TypeScript/Vite application.
+
+Proven externally:
+
+- two feature branches launched in separate worktrees and processes;
+- rendered UI regions were selected through the Studio;
+- generic runtime instrumentation mapped those regions to source;
+- no repository-specific component names drove the mapping;
+- source branches remained unchanged;
+- preview processes and temporary worktrees were cleaned up.
+
+Observed mappings:
+
+```text
+PageContent
+→ src/components/layout/contentbar.tsx:25:7
+
+RevenueTrendChart
+→ src/views/dashboard/index.tsx:26:7
+```
+
+External dependency slicing and candidate generation are the next validation milestone.
+
+## Product workflow
+
+1. Choose two compatible local feature branches.
+2. Launch them as isolated interactive applications.
+3. Compare them side by side.
+4. Select preferred rendered features.
+5. Inspect source and dependency evidence.
+6. Plan the integration before mutation.
+7. Create a candidate branch from the exact common base.
+8. Run verification gates.
+9. Open the combined application.
+10. Refuse unsupported or unsafe combinations.
+
+## Architecture
+
+UI Merge Studio currently uses:
+
+- Git merge-base analysis;
+- isolated Git worktrees;
+- managed Vite processes and ports;
+- development-only React source instrumentation;
+- DOM and React element-to-source mapping;
+- TypeScript and TSX AST analysis;
+- declaration and dependency slicing;
+- import reconciliation;
+- deterministic candidate planning;
+- candidate branch generation;
+- Playwright runtime verification;
+- cleanup and rollback.
+
+Every generated source change must trace to either:
+
+- a selected rendered feature; or
+- a required dependency of that feature.
+
+## Requirements
+
+- Node.js 20 or newer
+- Git
+- npm
+- Chromium for Playwright
+
+Install Playwright Chromium with:
+
+```sh
+npx playwright install chromium
+```
+
+## Run the controlled demo
 
 ```sh
 npm ci
-npm test
-npm run fixture:create
-npm run fixture:verify
-npm run fixture:test
-npm run fixture:build-all
+npm run dev
+```
+
+Open:
+
+```text
+http://127.0.0.1:4310
+```
+
+Choose **Try sample demo**.
+
+The controlled sample compares:
+
+- a collapsible navigation feature;
+- activity-filter controls.
+
+The final workflow creates and verifies `combined-result`.
+
+## Verification commands
+
+```sh
 npm run typecheck
+npm test
+npm run test:studio
 npm run test:instrumentation
 npm run test:preview-runtime
-npm run test:studio
 npm run test:multi-preview
 npm run test:source-analysis
 npm run test:feature-slice
@@ -28,27 +158,101 @@ npm run test:test-slicing
 npm run test:candidate-generation
 npm run test:candidate-integration
 npm run test:e2e
+npm run fixture:verify
 npm run build
 ```
 
-The generated standalone repository is written to `fixtures/generated/support-dashboard` and is ignored by the outer repository. Generation refuses to replace a dirty fixture; use `npm run fixture:create -- --recreate` only after confirming generated work is disposable. Node 20+, Git, and npm are required. Playwright browsers can be installed with `npx playwright install chromium`.
+The latest controlled product run reported 85 passing tests, 27 focused Studio tests, successful typechecking, a successful production build, successful fixture verification, and four focused Playwright scenarios.
 
-Commit timestamps and therefore commit SHAs may vary between runs; branch trees and behavior are deterministic.
+The external Vite source-mapping validation reported 23 focused instrumentation/runtime tests and one successful external Playwright journey.
 
-## Rendered source-mapping experiment
+## Generated data
 
-Run `npm run dev` and open `http://127.0.0.1:4310`. The Studio can launch two independently managed detached-worktree previews. Compatible fixture checkouts synchronize the `/tickets?ticket=…` comparison context in either direction; incompatible path-contract previews remain interactive and show an explicit refusal. Desktop, tablet, and mobile frame dimensions are applied to both previews. Source selections retain branch, controller slot, session UUID, generation, runtime instance, and stable definition identity. Instrumentation is absent from production builds.
+The controlled fixture is generated under:
 
-Only the controlled ticket route/entity adapter is supported. Local sidebar state and arbitrary React, Redux, Zustand, or server state remain independent.
+```text
+fixtures/generated/support-dashboard
+```
 
-## Dependency-aware feature-slice experiment
+Runtime analysis and generation reports are written under:
 
-After choosing a rendered area, the Studio automatically validates the live preview/session/commit identity, diffs the branch from its merge base with `main`, indexes TypeScript/TSX with Babel, and returns the smallest supported evidence-backed set of changed declarations plus conservative whole-file styles/assets. Guided Mode shows a human-readable feature name and readiness summary. Technical details shows boundary escalation, included changes, test-unit evidence, excluded branch/test changes, unresolved edges, and a deterministic downloadable JSON artifact under `.ums/analysis/`.
+```text
+.ums/
+```
 
-Production analysis is driven by Git and source evidence: it has no fixture feature tables, branch-name/title semantics, or manual filename input. A resolved slice is an analysis result, not a safe merge plan. Dynamic test factories, inseparable mixed setup, dynamic module paths, unsupported aliases/re-exports, inseparable source regions, and other unsupported dependency mechanisms remain partial or refused.
+These directories are ignored by Git.
 
-## Deterministic candidate-generation experiment
+Generation refuses to overwrite a dirty controlled fixture. Recreate it only when generated work is disposable:
 
-With two current resolved slices, the Studio automatically performs the read-only safety check and enables one **Create verified branch** action. The generator validates immutable slice hashes, commits, merge base, evidence, repository cleanliness, and the candidate name. It plans every mutation before creating a detached worktree, reconstructs declarations and test units with AST identities, reconciles imports/static re-exports, audits the exact changed-file set, and runs install, typecheck, full/focused tests, and build before registering `combined-result`.
+```sh
+npm run fixture:create -- --recreate
+```
 
-Runtime reports live under `.ums/generation/` and are ignored. An equivalent existing tree reports idempotent success; a different branch, conflict, unsupported mixed file, or failed check is preserved and refused/failed without a successful commit. The verified fixture result excludes the sidebar heading delta, inspector sorting utility/change, and sorting test. Whole-file additions are allowed only for fully slice-owned added blobs; mixed modified CSS and ambiguous ownership remain refused.
+## Current limitations
+
+UI Merge Studio does not currently claim support for:
+
+- Next.js;
+- arbitrary React repositories;
+- arbitrary monorepos;
+- cloud code execution;
+- GitHub-hosted repository execution;
+- mobile applications;
+- backend-service merging;
+- collaboration or billing;
+- guaranteed integration of every branch combination.
+
+FlowCraft was evaluated as a validation target but uses Next.js 14 App Router, outside the current Vite-only scope. No FlowCraft integration is claimed.
+
+Candidate generation has been fully demonstrated on the controlled repository. External Vite execution and generic runtime-to-source mapping have also been demonstrated. Full candidate generation on the external Vite repository remains pending.
+
+Correct refusal is considered a product capability.
+
+## Deployment boundary
+
+The real execution engine is local because it requires:
+
+- local repository access;
+- Git worktree creation;
+- package installation;
+- process and port management;
+- source-file mutation;
+- tests and production builds;
+- branch creation.
+
+A public hosted version should therefore be presented as an interactive showcase or recorded walkthrough, not as cloud execution of a visitor’s repository.
+
+## Project status
+
+| Capability | Status |
+|---|---|
+| Controlled multi-branch execution | Passed |
+| Controlled rendered UI selection | Passed |
+| Controlled source mapping | Passed |
+| Controlled dependency slicing | Passed |
+| Controlled candidate generation | Passed |
+| Controlled unrelated-change exclusion | Passed |
+| Controlled verification | Passed |
+| Controlled unsafe-combination refusal | Passed |
+| External Vite execution | Passed |
+| External Vite source mapping | Passed |
+| External Vite candidate generation | Pending |
+| Next.js support | Unsupported |
+| Cloud execution | Unsupported |
+
+## Roadmap
+
+The next bounded milestone is external Vite candidate generation:
+
+- extract direct and transitive dependencies;
+- exclude unrelated changes;
+- reconcile imports;
+- create a candidate from the exact base;
+- run typecheck, tests, build, and runtime verification;
+- confirm both selected external features;
+- preserve source branches;
+- clean up all temporary resources.
+
+## License
+
+MIT
