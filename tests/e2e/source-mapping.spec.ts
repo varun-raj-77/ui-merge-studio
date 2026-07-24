@@ -8,10 +8,10 @@ test.afterEach(async ({ request }) => { await request.delete('/api/preview').cat
 const card = (page: Page) => page.locator('[data-preview-id="left"]');
 async function start(page: Page, branch: string) {
   await page.goto('/');
-  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await page.getByRole('button', { name: /Try sample demo/ }).click();
   await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
   if (branch !== 'branch-sidebar') {
-    await page.getByLabel('Version A source').selectOption(branch);
+    await page.getByLabel('Navigation experiment source').selectOption(branch);
     await card(page).getByRole('button', { name: 'Restart version' }).click();
     await expect(card(page).locator('.version-status')).toHaveText('Ready', { timeout: 90_000 });
   }
@@ -22,7 +22,7 @@ async function selectionMode(page: Page) {
   await expect(card(page).getByRole('button', { name: 'Cancel choosing' })).toBeVisible();
 }
 async function openDrawer(page: Page) {
-  await page.getByRole('button', { name: 'Technical details' }).click();
+  await page.getByRole('button', { name: 'How are changes identified?' }).click();
   return page.getByRole('dialog').locator('.drawer-version').nth(0);
 }
 function selectedPanel(version: Locator) { return version.locator('.evidence-card').filter({ hasText: 'Selected boundary' }); }
@@ -62,21 +62,21 @@ test('maps branch-owned sidebar and inspector boundaries without lookup maps', a
   let frame = await start(page, 'branch-sidebar');
   await selectionMode(page);
   await frame.getByRole('button', { name: 'Collapse sidebar' }).click();
-  await expect(card(page)).toContainText('Collapsible Sidebar', { timeout: 60_000 });
+  await expect(card(page)).toContainText('Collapsible navigation', { timeout: 60_000 });
   let version = await openDrawer(page);
   let panel = selectedPanel(version);
   await expect(panel).toContainText('AppSidebar');
   await expect(field(panel, 'Source')).toContainText('src/features/navigation/AppSidebar.tsx');
   await expect(field(panel, 'Branch')).toHaveText('branch-sidebar');
   await page.getByRole('button', { name: 'Close technical details' }).click();
-  await page.getByLabel('Version A source').selectOption('branch-inspector');
+  await page.getByLabel('Navigation experiment source').selectOption('branch-inspector');
   await card(page).getByRole('button', { name: 'Restart version' }).click();
   await expect(card(page).locator('.version-status')).toHaveText('Ready', { timeout: 30_000 });
   frame = page.frameLocator('iframe').nth(0);
   await frame.getByRole('button', { name: /TCK-102/ }).click();
   await selectionMode(page);
   await frame.getByRole('button', { name: 'note' }).click();
-  await expect(card(page)).toContainText('Activity Filters', { timeout: 60_000 });
+  await expect(card(page)).toContainText('Activity filters', { timeout: 60_000 });
   version = await openDrawer(page);
   panel = selectedPanel(version);
   await expect(panel).toContainText('ActivityFilters');

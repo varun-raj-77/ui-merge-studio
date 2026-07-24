@@ -16,7 +16,7 @@ function report(status: 'succeeded' | 'failed' = 'succeeded'): CandidateGenerati
 test('blocks the primary action until two current resolved slices exist', () => {
   render(<CandidatePanel inputs={[inputs()[0]]} onLaunch={() => undefined} />);
   expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
-  expect(screen.getByText(/Select one supported feature from each version/)).toBeVisible();
+  expect(screen.getAllByText(/Select one branch-specific change from each live app/).length).toBeGreaterThan(0);
 });
 
 test('runs safety checking automatically, creates the candidate, and exposes verification', async () => {
@@ -31,22 +31,22 @@ test('runs safety checking automatically, creates the candidate, and exposes ver
   render(<CandidatePanel inputs={inputs()} onLaunch={launch} />);
   const button = screen.getByRole('button', { name: 'Create verified branch' });
   await waitFor(() => expect(button).toBeEnabled());
-  expect(screen.getByText(/Safety checks found no conflicts/)).toBeVisible();
+  expect(screen.getByText(/Both selections passed the compatibility check/)).toBeVisible();
   fireEvent.click(button);
-  expect(await screen.findByText('Combined branch verified')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'Open verified result' }));
+  expect(await screen.findByText('Verified branch created')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'View combined app' }));
   expect(launch).toHaveBeenCalledWith('combined-result');
-  fireEvent.click(screen.getByText('Technical verification details'));
-  expect(screen.getByText('typecheck:')).toBeVisible();
+  fireEvent.click(screen.getByText('Verification summary'));
+  expect(screen.getByText('Code checks:')).toBeVisible();
   expect(screen.getByText(/Cleanup: clean/)).toBeVisible();
 });
 
 test('states a safety refusal without enabling combination', async () => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(() => response(preflight('refused')));
   render(<CandidatePanel inputs={inputs()} onLaunch={() => undefined} />);
-  await screen.findByText(/need review/);
+  await screen.findAllByText(/cannot be combined safely/);
   expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
-  expect(screen.getByText(/safety check found a conflict/i)).toBeVisible();
+  expect(screen.getAllByText(/cannot be combined safely/i).length).toBeGreaterThan(0);
 });
 
 test('uses plain failure language and replaces branch creation with a revision action', async () => {

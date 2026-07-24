@@ -35,12 +35,12 @@ function appFetch(rightComponent = 'ActivityFilters') {
   });
 }
 async function launch() {
-  const launchButton = await screen.findByRole('button', { name: /Start guided comparison/i });
+  const launchButton = await screen.findByRole('button', { name: /Try sample demo/i });
   await waitFor(() => expect(launchButton).toBeEnabled(), { timeout: 10_000 });
   fireEvent.click(launchButton);
   return {
-    left: await screen.findByTitle('Collapsible Sidebar Variant preview', {}, { timeout: 5_000 }) as HTMLIFrameElement,
-    right: await screen.findByTitle('Activity Filters Variant preview', {}, { timeout: 5_000 }) as HTMLIFrameElement
+    left: await screen.findByTitle('Navigation experiment live application', {}, { timeout: 5_000 }) as HTMLIFrameElement,
+    right: await screen.findByTitle('Activity-filter experiment live application', {}, { timeout: 5_000 }) as HTMLIFrameElement
   };
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -55,7 +55,9 @@ test('explains the task and defaults to the intended named versions without tech
   appFetch();
   render(<App />);
   expect(await screen.findByRole('heading', { name: 'UI Merge Studio' })).toBeVisible();
-  expect(screen.getByText(/Combine preferred UI features from different React branches/)).toBeVisible();
+  expect(screen.getByText(/Combine the best UI changes from different React branches/)).toBeVisible();
+  expect(screen.getByRole('button', { name: /Try sample demo/ })).toBeVisible();
+  expect(screen.getByText(/arbitrary local repositories is the next validation milestone/)).toBeVisible();
   expect(screen.getByText(/fake customer-support application with sample ticket data/)).toBeVisible();
   expect(screen.getByText(/These are examples—not limits/)).toBeVisible();
   expect(screen.queryByTitle(/Variant preview/)).not.toBeInTheDocument();
@@ -71,6 +73,8 @@ test('launches through acknowledged operations and keeps both runtime identities
   emit(frames.left, session('left', 'branch-sidebar'), 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
   emit(frames.right, session('right', 'branch-inspector'), 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
   expect(await screen.findByText('Both versions are ready to compare')).toBeVisible();
+  expect(screen.getByText(/two Git branches of the same React application/)).toBeVisible();
+  expect(screen.getAllByText('Live app from this branch')).toHaveLength(2);
   expect(frames.left).toHaveAttribute('src', session('left', 'branch-sidebar').url);
   expect(frames.right).toHaveAttribute('src', session('right', 'branch-inspector').url);
   fireEvent.change(screen.getByLabelText('Preview size'), { target: { value: 'mobile' } });
@@ -90,10 +94,11 @@ test('automatically understands two visual selections and prepares the single co
   emit(frames.right, right, 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
   emit(frames.left, left, 'boundary-selected', { identity: sourceIdentity(left, 'AppSidebar'), ancestors: [] });
   emit(frames.right, right, 'boundary-selected', { identity: sourceIdentity(right, 'ActivityFilters'), ancestors: [] });
-  expect((await screen.findAllByText('Collapsible Sidebar')).length).toBeGreaterThanOrEqual(2);
-  expect((await screen.findAllByText('Activity Filters')).length).toBeGreaterThanOrEqual(2);
+  expect((await screen.findAllByText('Collapsible navigation')).length).toBeGreaterThanOrEqual(2);
+  expect((await screen.findAllByText('Activity filters')).length).toBeGreaterThanOrEqual(2);
+  for (const button of await screen.findAllByRole('button', { name: 'Confirm selection' })) fireEvent.click(button);
   await waitFor(() => expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeEnabled());
-  expect(screen.getByText('Ready to combine. Safety checks found no conflicts.')).toBeVisible();
+  expect(screen.getByText('Both selections passed the compatibility check.')).toBeVisible();
   expect(fetchMock.mock.calls.filter(call => String(call[0]).endsWith('/analysis'))).toHaveLength(2);
 });
 
@@ -101,12 +106,26 @@ test('keeps detailed evidence in a keyboard-dismissible technical drawer', async
   appFetch();
   render(<App />);
   await launch();
-  fireEvent.click(await screen.findByRole('button', { name: 'Technical details' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'How are changes identified?' }));
   const dialog = screen.getByRole('dialog', { name: 'Technical details' });
   expect(within(dialog).getAllByText('Feature slice')).toHaveLength(2);
   expect(screen.getByRole('button', { name: 'Close technical details' })).toHaveFocus();
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('returns to the overview without duplicating active previews and resumes predictably', async () => {
+  const fetchMock = appFetch();
+  render(<App />);
+  await launch();
+  fireEvent.click(await screen.findByRole('button', { name: '← Back to overview' }));
+  expect(screen.getByRole('button', { name: /Resume sample demo/ })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: /Resume sample demo/ }));
+  expect(await screen.findByRole('heading', { name: 'Compare two live branches' })).toBeVisible();
+  expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/left')).toHaveLength(1);
+  expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/right')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: /UI Merge Studio/ }));
+  expect(screen.getByRole('button', { name: /Resume sample demo/ })).toBeVisible();
 });
 
 test('blocks a broad sample selection before it can appear safe to combine', async () => {

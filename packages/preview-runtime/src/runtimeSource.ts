@@ -20,7 +20,7 @@ let instanceCounter = 0;
 let lastContextFingerprint = '';
 const instances = new WeakMap();
 const overlay = document.createElement('div');
-Object.assign(overlay.style,{position:'fixed',pointerEvents:'none',zIndex:'2147483647',border:'2px solid #8b7cff',background:'rgba(139,124,255,.14)',boxShadow:'0 0 0 3px rgba(139,124,255,.2)',display:'none'});
+Object.assign(overlay.style,{position:'fixed',pointerEvents:'none',zIndex:'2147483647',border:'3px solid #FF6B3D',background:'rgba(255,107,61,.12)',boxShadow:'0 0 0 3px rgba(255,107,61,.2)',display:'none'});
 document.documentElement.appendChild(overlay);
 const send=(type,payload)=>parent.postMessage({version:VERSION,preview:identity,type,payload},studioOrigin);
 const refusal=(reason,evidence,ancestor=false)=>send('selection-error',{confidence:'refused',reason,evidence,supportedAncestorAvailable:ancestor});

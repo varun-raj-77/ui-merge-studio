@@ -65,7 +65,7 @@ function failedCandidateMessage(report: CandidateGenerationReport) {
   const gate = failed ? verificationLabels[failed.name] ?? 'A verification check' : 'A verification check';
   return `${gate} did not pass, so UI Merge Studio discarded the proposed result. No combined branch was created, both original versions are unchanged, and the temporary workspace was cleaned.`;
 }
-export function CandidatePanel({ inputs, onLaunch, onRevise }: { inputs: GenerationInput[]; onLaunch: (branch: string) => void; onRevise?: () => void }) {
+export function CandidatePanel({ inputs, onLaunch, onRevise, onEvidence }: { inputs: GenerationInput[]; onLaunch: (branch: string) => void; onRevise?: () => void; onEvidence?: () => void }) {
   const [preflight, setPreflight] = useState<CandidatePreflight | null>(null);
   const [report, setReport] = useState<CandidateGenerationReport | null>(null);
   const [busy, setBusy] = useState(false);
@@ -78,12 +78,12 @@ export function CandidatePanel({ inputs, onLaunch, onRevise }: { inputs: Generat
   const base = ready && new Set(artifacts.map(item => item.slice.repository.mergeBaseCommit)).size === 1 ? artifacts[0].slice.repository.mergeBaseCommit : null;
   const request = () => ({ expectedBaseCommit: base, candidateBranch, artifacts, analyzerSchemaVersion: artifacts[0]?.slice.version ?? 0 });
 
-  useEffect(() => { setPreflight(null); setReport(null); setError(null); setProgress(ready ? 'Checking that the selected features can be combined safely…' : 'Waiting for two selected features.'); }, [inputKey, ready]);
+  useEffect(() => { setPreflight(null); setReport(null); setError(null); setProgress(ready ? 'Checking source code and required dependencies.' : 'Select one branch-specific change from each live app.'); }, [inputKey, ready]);
   useEffect(() => {
     if (!ready || !base) return;
     const controller = new AbortController();
     void fetch('/api/candidate/preflight', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request()), signal: controller.signal })
-      .then(async response => { const value = await response.json(); if (!response.ok) throw new Error(value.error ?? response.statusText); setPreflight(value as CandidatePreflight); setProgress((value as CandidatePreflight).plan.status === 'ready' ? 'Ready to combine. Safety checks found no conflicts.' : 'These features need review before they can be combined.'); })
+      .then(async response => { const value = await response.json(); if (!response.ok) throw new Error(value.error ?? response.statusText); setPreflight(value as CandidatePreflight); setProgress((value as CandidatePreflight).plan.status === 'ready' ? 'Both selections passed the compatibility check.' : 'This selection cannot be combined safely.'); })
       .catch(value => { if ((value as Error).name !== 'AbortError') { setError(value instanceof Error ? value.message : String(value)); setProgress('The safety check could not finish.'); } });
     return () => controller.abort();
   }, [inputKey, ready, base]);
@@ -128,15 +128,17 @@ export function CandidatePanel({ inputs, onLaunch, onRevise }: { inputs: Generat
   }
 
   const failed = Boolean(report && report.status !== 'succeeded');
-  const blocked = !ready ? 'Select one supported feature from each version.' : !base ? 'The selected features do not share the same starting point.' : preflight?.plan.status === 'refused' ? 'The safety check found a conflict that needs review.' : null;
+  const blocked = !ready ? 'Select one branch-specific change from each live app.' : !base ? 'The selected changes do not share the same starting point.' : preflight?.plan.status === 'refused' ? 'This selection cannot be combined safely.' : null;
   return <section className="combine-tray" aria-label="Selected features and combine action">
-    <div className="tray-features">{slots.map((slot, index) => <div key={slot}><span>{index === 0 ? 'Version A' : 'Version B'}</span><strong>{featureLabel(inputs[index]?.artifact)}</strong></div>)}</div>
-    <div className={`tray-status ${failed ? 'is-failed' : ''}`} role="status" aria-live="polite"><span className={`status-dot ${preflight?.plan.status === 'ready' && !failed ? 'is-ready' : failed ? 'is-failed' : ''}`} /><span><strong>{failed ? 'No branch was created' : report?.status === 'succeeded' ? 'Combined branch verified' : preflight?.plan.status === 'ready' ? 'Safe to create' : 'Safety check'}</strong>{error ?? progress}</span></div>
+    <div className="tray-features">{slots.map((slot, index) => <div key={slot}><span>{index === 0 ? 'Navigation branch' : 'Activity branch'}</span><strong>{featureLabel(inputs[index]?.artifact)}</strong></div>)}</div>
+    <div className={`tray-status ${failed ? 'is-failed' : ''}`} role="status" aria-live="polite"><span className={`status-dot ${preflight?.plan.status === 'ready' && !failed ? 'is-ready' : failed ? 'is-failed' : ''}`} /><span><strong>{failed ? 'Review failure' : report?.status === 'succeeded' ? 'Verified branch created' : busy ? 'Creating and testing' : preflight?.plan.status === 'ready' ? 'Ready' : 'Next step'}</strong>{error ?? progress}</span></div>
     {!failed && report?.status !== 'succeeded' && <button className="primary-action" onClick={generateCandidate} disabled={Boolean(blocked) || !preflight || preflight.plan.status !== 'ready' || busy}>{busy ? 'Creating and verifying…' : 'Create verified branch'}</button>}
     {failed && <button className="primary-action revise-action" onClick={onRevise}>Change selected features</button>}
-    {report?.status === 'succeeded' && <button className="primary-action" onClick={() => onLaunch(report.repository.candidateBranch)}>Open verified result</button>}
+    {report?.status === 'succeeded' && <button className="primary-action" onClick={() => onLaunch(report.repository.candidateBranch)}>View combined app</button>}
     {blocked && <span className="tray-guidance">{blocked}</span>}
-    {report && <details className="generation-summary"><summary>Technical verification details</summary><p>{report.message}</p><ul>{report.verification.map(item => <li key={item.name}>{item.name}: <strong>{item.status}</strong></li>)}</ul><p>Cleanup: {report.cleanup.detail}</p></details>}
+    {report?.status === 'succeeded' && <div className="tray-result-summary"><strong><code>combined-result</code></strong><span>Includes both selected UI changes. Original branches changed: No.</span></div>}
+    {report && <button className="evidence-link" onClick={onEvidence}>{report.status === 'succeeded' ? 'View verification evidence' : 'View error details'}</button>}
+    {report && <details className="generation-summary"><summary>Verification summary</summary><p>{report.message}</p><ul>{report.verification.map(item => <li key={item.name}>{verificationLabels[item.name] ?? item.name}: <strong>{item.status}</strong></li>)}</ul><p>Cleanup: {report.cleanup.detail}</p></details>}
   </section>;
 }
 
@@ -154,29 +156,30 @@ function WorkflowStepper({ state }: { state: ComparisonState }) {
   return <nav className="workflow" aria-label="Guided workflow">{steps.map((step, index) => <div className={step.complete ? 'complete' : index === active ? 'active' : ''} aria-current={index === active ? 'step' : undefined} key={step.label}><span>{step.complete ? '✓' : index + 1}</span>{step.label}</div>)}</nav>;
 }
 
-function IntroScreen({ ready, status, expanded, onToggleDetails, onStart }: { ready: boolean; status: string; expanded: boolean; onToggleDetails: () => void; onStart: () => void }) {
+function IntroScreen({ ready, status, expanded, active, onToggleDetails, onStart, onStop }: { ready: boolean; status: string; expanded: boolean; active: boolean; onToggleDetails: () => void; onStart: () => void; onStop: () => void }) {
   return <main className="intro-screen">
-    <header className="intro-nav"><div className="brand-mark" aria-hidden="true">UM</div><strong>UI Merge Studio</strong><span>Controlled React proof</span></header>
+    <header className="intro-nav"><div className="brand-mark" aria-hidden="true">UM</div><strong>UI Merge Studio</strong><span>Controlled local proof</span></header>
     <section className="intro-hero">
       <div className="intro-copy">
-        <p className="intro-kicker">Visual feature integration, verified in code</p>
+        <p className="intro-kicker">Visual decisions, verified in code</p>
         <h1>{demoScenario.productName}</h1>
         <p className="intro-promise"><strong>{demoScenario.promise}</strong></p>
         <p className="intro-description">{demoScenario.description}</p>
         <div className="intro-actions">
-          <button className="primary-action hero-action" onClick={onStart} disabled={!ready}>Start guided comparison <span aria-hidden="true">→</span></button>
+          <button className="primary-action hero-action" onClick={onStart} disabled={!ready}>{active ? 'Resume sample demo' : 'Try sample demo'} <span aria-hidden="true">→</span></button>
           <button className="secondary-action" onClick={onToggleDetails} aria-expanded={expanded}>How it works</button>
+          {active && <button className="text-action stop-action" onClick={onStop}>Stop demo</button>}
         </div>
-        <p className="repository-readiness" role="status">{ready ? 'Local demo repository ready' : status}</p>
+        <p className="repository-readiness" role="status">{ready ? 'This guided demo uses a small local React project. Support for selecting arbitrary local repositories is the next validation milestone.' : status}</p>
       </div>
       <aside className="demo-brief">
         <p className="eyebrow">This guided demo</p>
         <h2>{demoScenario.sampleAppName}</h2>
         <p>{demoScenario.sampleAppDescription}</p>
         <div className="demo-pair">
-          <div><span>Take from Version A</span><strong>Collapsible navigation</strong></div>
+          <div><span>Navigation branch</span><strong>Collapsible navigation</strong></div>
           <span aria-hidden="true">+</span>
-          <div><span>Take from Version B</span><strong>Activity filters</strong></div>
+          <div><span>Activity branch</span><strong>Activity filters</strong></div>
         </div>
         <p className="demo-note">These are examples—not limits. The same workflow can evaluate many safely isolatable visible React features.</p>
       </aside>
@@ -185,7 +188,7 @@ function IntroScreen({ ready, status, expanded, onToggleDetails, onStart }: { re
       <div className="branch-base"><span>{demoScenario.branchRelationship.base.label}</span><code>{demoScenario.branchRelationship.base.ref}</code></div>
       <div className="branch-lines" aria-hidden="true"><span /><span /></div>
       <div className="branch-experiments">{demoScenario.branchRelationship.experiments.map(item => <div key={item.ref}><span>{item.label}</span><code>{item.ref}</code></div>)}</div>
-      <div className="branch-result"><span>UI Merge Studio creates only after every check passes</span><strong>{demoScenario.branchRelationship.result.label}</strong><code>{demoScenario.branchRelationship.result.ref}</code></div>
+      <div className="branch-result"><span>Created only after every check passes</span><strong>{demoScenario.branchRelationship.result.label}</strong><code>{demoScenario.branchRelationship.result.ref}</code></div>
     </section>
     <section className="trust-grid">
       <article><span>01</span><strong>Original branches stay untouched</strong><p>Every preview and proposed result runs in an isolated Git worktree.</p></article>
@@ -202,6 +205,30 @@ function IntroScreen({ ready, status, expanded, onToggleDetails, onStart }: { re
   </main>;
 }
 
+function ComparisonHelp({ onClose }: { onClose: () => void }) {
+  return <aside className="context-help" role="dialog" aria-label="What am I seeing?">
+    <div><strong>What am I seeing?</strong><button className="icon-button" onClick={onClose} aria-label="Close comparison explanation">×</button></div>
+    <p>Both panels are complete, interactive apps built from separate Git worktrees. UI Merge Studio keeps their route and sample data synchronized, highlights traceable branch changes, and maps your visual choice back to React source.</p>
+  </aside>;
+}
+
+function ResultSummary({ activeView, onView }: { activeView: 'left' | 'right' | 'result'; onView: (view: 'left' | 'right' | 'result') => void }) {
+  return <section className="result-workspace" aria-label="Verified combined result">
+    <div className="result-heading"><div><p className="eyebrow">Verified branch created</p><h2><code>combined-result</code></h2><p>Both selected changes coexist in one tested branch. The source branches remain unchanged.</p></div><button className="primary-action" onClick={() => onView('result')}>View combined app</button></div>
+    <div className="result-facts">
+      <div><span>Included</span><strong>Collapsible navigation · Activity filters</strong></div>
+      <div><span>Excluded</span><strong>Unrelated heading change · unrelated sorting change</strong></div>
+      <div><span>Verification</span><strong>TypeScript · feature tests · full tests · production build</strong></div>
+      <div><span>Original branches changed</span><strong>No</strong></div>
+    </div>
+    <nav className="result-tabs" aria-label="Result comparison views">
+      <button className={activeView === 'left' ? 'active' : ''} onClick={() => onView('left')}>Navigation experiment</button>
+      <button className={activeView === 'right' ? 'active' : ''} onClick={() => onView('right')}>Activity-filter experiment</button>
+      <button className={activeView === 'result' ? 'active' : ''} onClick={() => onView('result')}>Combined result</button>
+    </nav>
+  </section>;
+}
+
 function TechnicalDrawer({ open, onClose, state, operations, onSelectAncestor, onClear }: { open: boolean; onClose: () => void; state: ComparisonState; operations: Record<PreviewSlotId, PreviewOperation | null>; onSelectAncestor: (slot: PreviewSlotId, index: number) => void; onClear: (slot: PreviewSlotId) => void }) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -212,7 +239,7 @@ function TechnicalDrawer({ open, onClose, state, operations, onSelectAncestor, o
     return () => removeEventListener('keydown', escape);
   }, [open, onClose]);
   if (!open) return null;
-  return <div className="drawer-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><aside className="technical-drawer" role="dialog" aria-modal="true" aria-labelledby="technical-title"><header><div><p className="eyebrow">Evidence and diagnostics</p><h2 id="technical-title">Technical details</h2></div><button ref={closeRef} className="icon-button" onClick={onClose} aria-label="Close technical details">×</button></header>{slots.map(slot => { const preview = state.previews[slot]; const operation = operations[slot]; return <section className="drawer-version" key={slot}><h2>{slot === 'left' ? 'Version A' : 'Version B'} · {preview.branch}</h2>{operation && <details open><summary>Preview operation · {operation.state}</summary><ol className="phase-list">{operation.phases.map(item => <li key={item.phase}><strong>{item.phase}</strong><span>{item.detail}</span><code>{item.durationMs === null ? 'running' : `${item.durationMs} ms`}</code></li>)}</ol>{operation.error && <div className="error">{operation.error}</div>}</details>}<IdentityPanel title="Hovered boundary" identity={preview.hovered} /><IdentityPanel title="Selected boundary" identity={preview.selected?.identity ?? null} />{preview.selected && <section className="evidence-card"><h3>Eligible ancestors</h3>{preview.selected.ancestors.length ? preview.selected.ancestors.map((identity, index) => <button className="ancestor" key={identity.instanceId} onClick={() => onSelectAncestor(slot, index + 1)}>{identity.componentName ?? identity.repositoryRelativePath}</button>) : <p className="muted">No instrumented ancestor.</p>}<button className="text-action" onClick={() => onClear(slot)}>Clear selection</button></section>}<SlicePanel artifact={preview.analysis.artifact} status={preview.analysis.status} error={preview.analysis.error} /></section>; })}</aside></div>;
+  return <div className="drawer-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><aside className="technical-drawer" role="dialog" aria-modal="true" aria-labelledby="technical-title"><header><div><p className="eyebrow">Evidence and diagnostics</p><h2 id="technical-title">Technical details</h2></div><button ref={closeRef} className="icon-button" onClick={onClose} aria-label="Close technical details">×</button></header>{slots.map(slot => { const preview = state.previews[slot]; const operation = operations[slot]; return <section className="drawer-version" key={slot}><h2>{slot === 'left' ? 'Navigation experiment' : preview.branch === 'combined-result' ? 'Combined result' : 'Activity-filter experiment'} · {preview.branch}</h2>{operation && <details open><summary>Preview operation · {operation.state}</summary><ol className="phase-list">{operation.phases.map(item => <li key={item.phase}><strong>{item.phase}</strong><span>{item.detail}</span><code>{item.durationMs === null ? 'running' : `${item.durationMs} ms`}</code></li>)}</ol>{operation.error && <div className="error">{operation.error}</div>}</details>}<IdentityPanel title="Hovered boundary" identity={preview.hovered} /><IdentityPanel title="Selected boundary" identity={preview.selected?.identity ?? null} />{preview.selected && <section className="evidence-card"><h3>Eligible ancestors</h3>{preview.selected.ancestors.length ? preview.selected.ancestors.map((identity, index) => <button className="ancestor" key={identity.instanceId} onClick={() => onSelectAncestor(slot, index + 1)}>{identity.componentName ?? identity.repositoryRelativePath}</button>) : <p className="muted">No instrumented ancestor.</p>}<button className="text-action" onClick={() => onClear(slot)}>Clear selection</button></section>}<SlicePanel artifact={preview.analysis.artifact} status={preview.analysis.status} error={preview.analysis.error} /></section>; })}</aside></div>;
 }
 
 export function App() {
@@ -221,7 +248,11 @@ export function App() {
   const [technicalOpen, setTechnicalOpen] = useState(false);
   const [guidedStarted, setGuidedStarted] = useState(false);
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  const [comparisonHelpOpen, setComparisonHelpOpen] = useState(false);
   const [comparisonLayout, setComparisonLayout] = useState<'both' | PreviewSlotId>('both');
+  const [confirmedSelections, setConfirmedSelections] = useState<Record<PreviewSlotId, boolean>>({ left: false, right: false });
+  const [resultBranch, setResultBranch] = useState<string | null>(null);
+  const [resultView, setResultView] = useState<'left' | 'right' | 'result'>('result');
   const frames = useRef<Record<PreviewSlotId, HTMLIFrameElement | null>>({ left: null, right: null });
   const operationControllers = useRef<Partial<Record<PreviewSlotId, AbortController>>>({});
   const activeOperationIds = useRef<Partial<Record<PreviewSlotId, string>>>({});
@@ -331,7 +362,10 @@ export function App() {
       if (!response.ok) throw new Error(value.error ?? response.statusText);
       const artifact = value as FeatureSliceArtifact;
       const decision = guidedSelectionDecision(previewId, artifact);
-      if (decision.allowed) dispatch({ type: 'analysis-finished', previewId, artifact });
+      if (decision.allowed) {
+        dispatch({ type: 'analysis-finished', previewId, artifact });
+        setConfirmedSelections(current => ({ ...current, [previewId]: false }));
+      }
       else dispatch({ type: 'analysis-guidance-refused', previewId, artifact, error: decision.message });
     } catch (error) { dispatch({ type: 'analysis-failed', previewId, error: error instanceof Error ? error.message : String(error) }); }
   }
@@ -342,70 +376,100 @@ export function App() {
   }
 
   const readyCount = slots.filter(id => state.previews[id].status === 'ready').length;
-  const generationInputs = useMemo(() => slots.map(id => ({ artifact: state.previews[id].analysis.artifact, status: state.previews[id].analysis.status, sessionId: state.previews[id].session?.sessionId ?? null })), [state.previews.left.analysis, state.previews.right.analysis, state.previews.left.session, state.previews.right.session]);
+  const generationInputs = useMemo(() => slots.map(id => ({ artifact: state.previews[id].analysis.artifact, status: confirmedSelections[id] ? state.previews[id].analysis.status : 'awaiting-confirmation', sessionId: state.previews[id].session?.sessionId ?? null })), [state.previews.left.analysis, state.previews.right.analysis, state.previews.left.session, state.previews.right.session, confirmedSelections]);
   const workspaceStatus = readyCount === 2 ? 'Both versions are ready to compare' : readyCount === 1 ? 'One version is ready' : state.repositoryStatus;
   function reviseSelections() {
     for (const slot of slots) {
       send(slot, 'clear-selection');
       dispatch({ type: 'clear-selection', previewId: slot });
     }
+    setConfirmedSelections({ left: false, right: false });
   }
   function startGuidedComparison() {
     setGuidedStarted(true);
-    void startBoth();
+    if (!slots.some(slot => state.previews[slot].session || state.previews[slot].status === 'starting' || state.previews[slot].status === 'restarting')) void startBoth();
+  }
+  async function stopDemo() {
+    for (const controller of Object.values(operationControllers.current)) controller?.abort();
+    activeOperationIds.current = {};
+    await fetch('/api/preview', { method: 'DELETE' }).catch(() => undefined);
+    setOperations({ left: null, right: null });
+    setResultBranch(null);
+    setComparisonLayout('both');
+    setConfirmedSelections({ left: false, right: false });
+    dispatch({ type: 'reset-previews' });
+  }
+  function switchResultView(view: 'left' | 'right' | 'result') {
+    setResultView(view);
+    if (view === 'left') {
+      setComparisonLayout('left');
+      if (state.previews.left.branch !== demoScenario.versions.left.branch) {
+        dispatch({ type: 'set-branch', previewId: 'left', branch: demoScenario.versions.left.branch });
+        void startPreview('left', demoScenario.versions.left.branch);
+      }
+      return;
+    }
+    const branch = view === 'result' ? resultBranch ?? demoScenario.branchRelationship.result.ref : demoScenario.versions.right.branch;
+    setComparisonLayout('right');
+    if (state.previews.right.branch !== branch) {
+      dispatch({ type: 'set-branch', previewId: 'right', branch });
+      void startPreview('right', branch);
+    }
   }
 
-  if (!guidedStarted) return <IntroScreen ready={state.repositoryClean && slots.every(id => Boolean(state.previews[id].branch))} status={state.repositoryStatus} expanded={howItWorksOpen} onToggleDetails={() => setHowItWorksOpen(value => !value)} onStart={startGuidedComparison} />;
+  if (!guidedStarted) return <IntroScreen ready={state.repositoryClean && slots.every(id => Boolean(state.previews[id].branch))} status={state.repositoryStatus} expanded={howItWorksOpen} active={slots.some(slot => Boolean(state.previews[slot].session))} onToggleDetails={() => setHowItWorksOpen(value => !value)} onStart={startGuidedComparison} onStop={() => void stopDemo()} />;
 
   return <div className="studio workspace-studio">
     <header className="product-header">
-      <div className="workspace-brand"><div className="brand-mark" aria-hidden="true">UM</div><div><p className="eyebrow">Guided comparison · fake sample application</p><h1>{demoScenario.productName}</h1><p className="lede">{demoScenario.task}</p></div></div>
-      <div className="header-actions"><label>Preview fit<select aria-label="Preview size" value={state.viewport.preset} onChange={event => setViewport(event.target.value as keyof typeof viewportPresets)}><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="mobile">Mobile</option></select></label><button className="secondary-action" onClick={() => setTechnicalOpen(true)}>Technical details</button></div>
+      <div className="workspace-navigation"><button className="back-action" onClick={() => setGuidedStarted(false)}>← Back to overview</button><button className="product-name" onClick={() => setGuidedStarted(false)}><span className="brand-mark" aria-hidden="true">UM</span><span>{demoScenario.productName}</span></button></div>
+      <div className="header-actions"><label>Preview fit<select aria-label="Preview size" value={state.viewport.preset} onChange={event => setViewport(event.target.value as keyof typeof viewportPresets)}><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="mobile">Mobile</option></select></label></div>
     </header>
     <WorkflowStepper state={state} />
-    <section className="demo-strip" aria-label="Demo context">
-      <div><span>Sample app</span><strong>{demoScenario.sampleAppName}</strong><small>Beacon Ops is a fictional brand; every ticket is fake test data.</small></div>
-      <div><span>Compared versions</span><strong>Two experiments from the same starting code</strong><small>Navigation in A · activity filters in B</small></div>
-      <div><span>Verified output</span><strong>One tested combined branch</strong><small>Created only after every check passes.</small></div>
-      <span className="workspace-status" role="status">{workspaceStatus}</span>
-    </section>
+    {resultBranch && <ResultSummary activeView={resultView} onView={switchResultView} />}
     <section className="comparison-controls" aria-label="Comparison layout">
-      <div><strong>Compare the visible changes</strong><span>Choose the highlighted example feature from each version.</span></div>
+      <div><h1>{resultBranch ? 'Inspect the verified result' : 'Compare two live branches'}</h1><strong>These are two Git branches of the same React application. Each panel is the complete live app running from that branch.</strong><span>{resultBranch ? 'Switch between either source branch and the combined result.' : 'Choose one branch-specific UI change from each. Both branches started from '} {!resultBranch && <code>main</code>} <button className="evidence-link" onClick={() => setComparisonHelpOpen(true)}>What am I seeing?</button> <button className="evidence-link" onClick={() => setTechnicalOpen(true)}>How are changes identified?</button></span></div>
       <div className="segmented-control">
         <button className={comparisonLayout === 'both' ? 'active' : ''} onClick={() => setComparisonLayout('both')}>Side by side</button>
-        <button className={comparisonLayout === 'left' ? 'active' : ''} onClick={() => setComparisonLayout('left')}>Focus A</button>
-        <button className={comparisonLayout === 'right' ? 'active' : ''} onClick={() => setComparisonLayout('right')}>Focus B</button>
+        <button className={comparisonLayout === 'left' ? 'active' : ''} onClick={() => setComparisonLayout('left')}>Focus navigation branch</button>
+        <button className={comparisonLayout === 'right' ? 'active' : ''} onClick={() => setComparisonLayout('right')}>Focus {state.previews.right.branch === 'combined-result' ? 'combined result' : 'activity branch'}</button>
       </div>
     </section>
+    <div className="workspace-meta"><span className="workspace-status" role="status">{workspaceStatus}</span><span>Sample Support Dashboard · fictional ticket data</span></div>
+    {comparisonHelpOpen && <ComparisonHelp onClose={() => setComparisonHelpOpen(false)} />}
     <main className={`comparison focus-${comparisonLayout}`} aria-label="Version comparison">
       {slots.map(previewId => {
         const preview = state.previews[previewId];
         const presentation = demoScenario.versions[previewId];
         const operation = operations[previewId];
+        const combinedPreview = preview.branch === demoScenario.branchRelationship.result.ref;
+        const panelTitle = combinedPreview ? 'Combined result' : presentation.title;
+        const panelDescription = combinedPreview ? 'The verified output containing both selected UI changes.' : presentation.description;
         const guidedPolicyRefusal = preview.analysis.status === 'refused' && Boolean(preview.analysis.artifact);
         const selectedLabel = guidedPolicyRefusal ? 'Choose a narrower feature' : featureLabel(preview.analysis.artifact ?? preview.selected?.identity);
         return <article className="version-card" data-preview-id={previewId} key={previewId}>
-          <header className="version-header"><div><p className="eyebrow">{presentation.eyebrow}</p><h2>{presentation.title}</h2><p>{presentation.description}</p></div><span className={`version-status status-${preview.status}`}>{preview.status === 'ready' ? 'Ready' : readablePhase(operation)}</span></header>
-          <div className="version-toolbar"><label>Experiment source<select aria-label={`${presentation.eyebrow} source`} value={preview.branch} onChange={event => dispatch({ type: 'set-branch', previewId, branch: event.target.value })}>{state.branches.map(branch => <option key={branch} value={branch}>{branchLabel(branch)}</option>)}</select></label><button className="text-action" onClick={() => startPreview(previewId)} disabled={!preview.branch || !state.repositoryClean}>Restart version</button><span>{preview.context?.entity?.id ? `Sample ticket ${preview.context.entity.id}` : 'Sample ticket list'}</span></div>
+          <header className="version-header"><div><p className="eyebrow">Live app from this branch</p><h2>{panelTitle}</h2><p>{panelDescription}</p><code>{preview.branch}</code></div><span className={`version-status status-${preview.status}`}>{preview.status === 'ready' ? 'Live' : readablePhase(operation)}</span></header>
+          <div className="version-toolbar"><label className="branch-picker">Branch<select aria-label={`${presentation.eyebrow} source`} value={preview.branch} onChange={event => dispatch({ type: 'set-branch', previewId, branch: event.target.value })}>{!state.branches.includes(preview.branch) && <option value={preview.branch}>{branchLabel(preview.branch)}</option>}{state.branches.map(branch => <option key={branch} value={branch}>{branchLabel(branch)}</option>)}</select></label><span>{preview.context?.entity?.id ? `Synchronized sample ticket ${preview.context.entity.id}` : 'Synchronized sample route'}</span><button className="text-action" onClick={() => startPreview(previewId)} disabled={!preview.branch || !state.repositoryClean}>Restart live app</button></div>
           {preview.errors.runtime && <div className="error" role="alert"><strong>This version could not load.</strong> {preview.errors.runtime}<button onClick={() => startPreview(previewId)}>Try again</button></div>}
-          {preview.invalidation && <div className="warning-message"><strong>The previous choice was cleared.</strong><span>{preview.invalidation}</span></div>}
+          {!combinedPreview && preview.invalidation && <div className="warning-message"><strong>The previous choice was cleared.</strong><span>{preview.invalidation}</span></div>}
           {preview.errors.bridge && <div className="error" role="alert"><strong>A stale preview message was rejected.</strong> {preview.errors.bridge}</div>}
           {preview.errors.selection && <div className="error" role="alert"><strong>That area could not be selected.</strong> {preview.errors.selection.reason}</div>}
-          <div className="guided-selection">
+          {!combinedPreview && <div className="guided-selection">
             <div><span>{preview.analysis.status === 'loading' ? 'Checking selection…' : preview.analysis.status === 'resolved' ? 'Selected feature' : preview.analysis.status === 'refused' ? 'Selection needs attention' : presentation.selectionPrompt}</span><strong>{preview.analysis.status === 'loading' ? 'Finding its required source code' : selectedLabel}</strong>{preview.analysis.status === 'resolved' && preview.analysis.artifact && <small>Feature boundary verified · {preview.analysis.artifact.slice.includedChanges.length} supporting changes found</small>}</div>
             <button className={preview.selecting ? 'selection-active' : 'primary-action'} onClick={() => toggleSelection(previewId)} disabled={preview.status !== 'ready' || preview.analysis.status === 'loading'}>{preview.selecting ? 'Cancel choosing' : preview.selected ? 'Choose a different feature' : 'Choose a feature'}</button>
-          </div>
-          {preview.selecting && <div className="selection-instruction" role="status"><strong>{presentation.selectionPrompt}</strong><span>Selectable areas receive a violet outline. Click or keyboard-activate the focused control.</span></div>}
+          </div>}
+          {!combinedPreview && preview.selecting && <div className="selection-instruction" role="status"><strong>Highlighted areas are branch-specific UI changes that UI Merge Studio can trace to source.</strong><span><b>Recommended change</b> uses the signal-orange outline. Changed but broader, unchanged, unsupported, or ambiguous areas are stopped or explained after analysis.</span></div>}
+          {!combinedPreview && preview.analysis.status === 'resolved' && preview.analysis.artifact && <div className="selection-summary"><div><span>Selected</span><strong>{selectedLabel}</strong><small>From {presentation.branchLabel}</small></div><ul><li>Includes the selected behavior, required supporting code, related tests and styles.</li><li>Does not include unrelated changes from this branch.</li></ul><div><button className={confirmedSelections[previewId] ? 'confirmed-action' : 'primary-action'} onClick={() => setConfirmedSelections(current => ({ ...current, [previewId]: true }))} disabled={confirmedSelections[previewId]}>{confirmedSelections[previewId] ? 'Selection confirmed' : 'Confirm selection'}</button><button className="text-action" onClick={() => toggleSelection(previewId)}>Choose another</button><button className="evidence-link" onClick={() => setTechnicalOpen(true)}>View source evidence</button></div></div>}
           {preview.analysis.status === 'partial' && <div className="warning-message"><strong>This feature needs review.</strong><span>Its supporting code could not be separated completely. Open Technical details for the exact evidence.</span></div>}
           {preview.analysis.status === 'refused' && <div className="error" role="alert"><strong>{guidedPolicyRefusal ? 'This selection was stopped before branch creation.' : 'This source selection could not be analyzed safely.'}</strong> {preview.analysis.error ?? (guidedPolicyRefusal ? 'Choose the focused example feature instead.' : 'Choose another visible area or inspect the technical evidence.')}<button onClick={() => toggleSelection(previewId)}>Choose again</button></div>}
           <div className="frame-shell" style={{ maxWidth: state.viewport.width }}>
-            {preview.session ? <iframe ref={node => { frames.current[previewId] = node; }} title={`${presentation.title} preview`} src={preview.session.url} /> : <div className="placeholder"><span>{operation && !terminalPreviewStates.has(operation.state) ? readablePhase(operation) : 'Preparing this version…'}</span>{operation && !terminalPreviewStates.has(operation.state) && <progress aria-label={`${presentation.eyebrow} preparation progress`} />}</div>}
+            {preview.session ? <iframe ref={node => { frames.current[previewId] = node; }} title={`${panelTitle} live application`} src={preview.session.url} /> : <div className="placeholder"><span>{operation && !terminalPreviewStates.has(operation.state) ? readablePhase(operation) : 'Preparing this branch…'}</span>{operation && !terminalPreviewStates.has(operation.state) && <progress aria-label={`${panelTitle} preparation progress`} />}</div>}
           </div>
         </article>;
       })}
     </main>
     <section className="sync-summary" aria-label="Synchronization status"><span className={readyCount === 2 ? 'sync-ok' : ''}>↔</span><div><strong>{readyCount === 2 ? 'Versions linked' : 'Linking versions'}</strong><span>{state.synchronizationStatus}</span></div></section>
-    <CandidatePanel inputs={generationInputs} onRevise={reviseSelections} onLaunch={branch => { dispatch({ type: 'set-branch', previewId: 'right', branch }); void startPreview('right', branch); }} />
+    {!resultBranch && <CandidatePanel inputs={generationInputs} onRevise={reviseSelections} onEvidence={() => setTechnicalOpen(true)} onLaunch={branch => { setResultBranch(branch); setResultView('result'); setComparisonLayout('right'); dispatch({ type: 'set-branch', previewId: 'right', branch }); void startPreview('right', branch); }} />}
+    {resultBranch && <div className="result-actions"><button className="evidence-link" onClick={() => switchResultView('left')}>Compare sources</button><button className="evidence-link" onClick={() => setTechnicalOpen(true)}>View changed files and verification evidence</button><button className="evidence-link" onClick={() => void navigator.clipboard?.writeText(resultBranch)}>Copy branch name</button></div>}
     <TechnicalDrawer open={technicalOpen} onClose={() => setTechnicalOpen(false)} state={state} operations={operations} onSelectAncestor={(slot, index) => send(slot, 'select-ancestor', { index })} onClear={slot => { send(slot, 'clear-selection'); dispatch({ type: 'clear-selection', previewId: slot }); }} />
   </div>;
 }

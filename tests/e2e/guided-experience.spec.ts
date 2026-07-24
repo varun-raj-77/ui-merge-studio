@@ -5,7 +5,9 @@ test.afterEach(async ({ request }) => { await request.delete('/api/preview').cat
 test('keeps Guided Mode plain-language, responsive, and keyboard operable', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'UI Merge Studio' })).toBeVisible();
-  await expect(page.getByText(/Combine preferred UI features from different React branches/)).toBeVisible();
+  await expect(page.getByText(/Combine the best UI changes from different React branches/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /Try sample demo/ })).toBeVisible();
+  await expect(page.getByText(/arbitrary local repositories is the next validation milestone/)).toBeVisible();
   await expect(page.getByText(/fake customer-support application with sample ticket data/)).toBeVisible();
   await expect(page.getByText(/These are examples—not limits/)).toBeVisible();
   await expect(page.locator('iframe')).toHaveCount(0);
@@ -18,22 +20,36 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   ]) {
     await page.setViewportSize({ width, height });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-    await page.screenshot({ path: `docs/evidence/prompt-006b/intro-${width}x${height}.png`, fullPage: false });
+    await page.screenshot({ path: `docs/evidence/prompt-006c/homepage-${width}x${height}.png`, fullPage: false });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await page.getByRole('button', { name: /Try sample demo/ }).click();
   await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
   await expect(page.frameLocator('iframe').nth(0).getByRole('button', { name: /TCK-102/ })).toBeVisible();
   await expect(page.frameLocator('iframe').nth(1).getByRole('button', { name: /TCK-102/ })).toBeVisible();
-  await page.screenshot({ path: 'docs/evidence/prompt-006b/comparison-1440x900.png', fullPage: false });
+  await expect(page.getByText(/two Git branches of the same React application/)).toBeVisible();
+  await expect(page.getByText('Live app from this branch')).toHaveCount(2);
+  await expect(page.locator('.studio')).not.toContainText('Version A');
+  await expect(page.locator('.studio')).not.toContainText('Version B');
+  await page.screenshot({ path: 'docs/evidence/prompt-006c/comparison-1440x900.png', fullPage: false });
+  const leftSource = await page.locator('iframe').nth(0).getAttribute('src');
+  await page.getByRole('button', { name: '← Back to overview' }).click();
+  await expect(page.getByRole('button', { name: /Resume sample demo/ })).toBeVisible();
+  await page.getByRole('button', { name: /Resume sample demo/ }).click();
+  await expect(page.locator('iframe').nth(0)).toHaveAttribute('src', leftSource!);
+  await page.getByRole('button', { name: /UI Merge Studio/ }).click();
+  await expect(page.getByRole('button', { name: /Resume sample demo/ })).toBeVisible();
+  await page.getByRole('button', { name: /Resume sample demo/ }).click();
   for (const shell of await page.locator('.frame-shell').all()) expect(await shell.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
   await page.locator('[data-preview-id="left"]').getByRole('button', { name: 'Choose a feature' }).focus();
   await page.keyboard.press('Enter');
   const frame = page.frameLocator('iframe').nth(0);
   await frame.getByRole('button', { name: 'Collapse sidebar' }).focus();
   await frame.getByRole('button', { name: 'Collapse sidebar' }).press('Enter');
-  await expect(page.locator('[data-preview-id="left"]')).toContainText('Collapsible Sidebar', { timeout: 60_000 });
-  await page.getByRole('button', { name: 'Technical details' }).focus();
+  await expect(page.locator('[data-preview-id="left"]')).toContainText('Collapsible navigation', { timeout: 60_000 });
+  await expect(page.locator('.selection-summary')).toContainText('Does not include unrelated changes');
+  await page.screenshot({ path: 'docs/evidence/prompt-006c/selection-1440x900.png', fullPage: false });
+  await page.getByRole('button', { name: 'View source evidence' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: 'Close technical details' })).toBeFocused();
   await page.keyboard.press('Escape');
@@ -56,7 +72,7 @@ test('passes automated structural accessibility checks in initial and ready stat
   }
   await page.goto('/');
   expect(await audit()).toEqual({ h1: 1, unnamedButtons: 0, unnamedFrames: 0, duplicateIds: [] });
-  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await page.getByRole('button', { name: /Try sample demo/ }).click();
   await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
   expect(await audit()).toEqual({ h1: 1, unnamedButtons: 0, unnamedFrames: 0, duplicateIds: [] });
 });
@@ -65,7 +81,7 @@ test('stops a broad activity-feed selection before compatibility or branch creat
   let preflightRequests = 0;
   page.on('request', request => { if (request.url().endsWith('/api/candidate/preflight')) preflightRequests += 1; });
   await page.goto('/');
-  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await page.getByRole('button', { name: /Try sample demo/ }).click();
   await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
   const leftCard = page.locator('[data-preview-id="left"]');
   const rightCard = page.locator('[data-preview-id="right"]');
@@ -73,7 +89,7 @@ test('stops a broad activity-feed selection before compatibility or branch creat
   const right = page.frameLocator('iframe').nth(1);
   await leftCard.getByRole('button', { name: 'Choose a feature' }).click();
   await left.getByRole('button', { name: 'Collapse sidebar' }).click();
-  await expect(leftCard).toContainText('Collapsible Sidebar', { timeout: 60_000 });
+  await expect(leftCard).toContainText('Collapsible navigation', { timeout: 60_000 });
   await right.getByRole('button', { name: /TCK-102/ }).click();
   await rightCard.getByRole('button', { name: 'Choose a feature' }).click();
   await right.getByRole('heading', { name: 'Activity' }).click();

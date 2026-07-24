@@ -5,9 +5,9 @@ test.afterEach(async ({ request }) => { await request.delete('/api/preview').cat
 const card = (page: Page, id: 'left' | 'right') => page.locator(`[data-preview-id="${id}"]`);
 async function launchBoth(page: Page, left = 'branch-sidebar', right = 'branch-inspector') {
   await page.goto('/');
-  await page.getByRole('button', { name: /Start guided comparison/ }).click();
+  await page.getByRole('button', { name: /Try sample demo/ }).click();
   await expect(page.locator('.workspace-status')).toHaveText('Both versions are ready to compare', { timeout: 90_000 });
-  for (const [id, label, branch, expected] of [['left', 'Version A source', left, 'branch-sidebar'], ['right', 'Version B source', right, 'branch-inspector']] as const) {
+  for (const [id, label, branch, expected] of [['left', 'Navigation experiment source', left, 'branch-sidebar'], ['right', 'Activity-filter experiment source', right, 'branch-inspector']] as const) {
     if (branch === expected) continue;
     await page.getByLabel(label).selectOption(branch);
     await card(page, id).getByRole('button', { name: 'Restart version' }).click();
@@ -16,7 +16,7 @@ async function launchBoth(page: Page, left = 'branch-sidebar', right = 'branch-i
   return { left: page.frameLocator('iframe').nth(0), right: page.frameLocator('iframe').nth(1) };
 }
 async function openEvidence(page: Page) {
-  await page.getByRole('button', { name: 'Technical details' }).click();
+  await page.getByRole('button', { name: 'How are changes identified?' }).click();
   return page.getByRole('dialog', { name: 'Technical details' });
 }
 async function downloadSlice(page: Page, version: Locator) {
@@ -32,8 +32,8 @@ test('extracts deterministic dependency-aware slices from both guided visual sel
   await frames.left.getByRole('button', { name: 'Collapse sidebar' }).click();
   await card(page, 'right').getByRole('button', { name: 'Choose a feature' }).click();
   await frames.right.getByRole('button', { name: 'note' }).click();
-  await expect(card(page, 'left')).toContainText('Collapsible Sidebar', { timeout: 60_000 });
-  await expect(card(page, 'right')).toContainText('Activity Filters', { timeout: 60_000 });
+  await expect(card(page, 'left')).toContainText('Collapsible navigation', { timeout: 60_000 });
+  await expect(card(page, 'right')).toContainText('Activity filters', { timeout: 60_000 });
   const dialog = await openEvidence(page);
   const versions = dialog.locator('.drawer-version');
   await expect(versions.nth(0).getByRole('heading', { name: 'Feature slice · resolved' })).toBeVisible();

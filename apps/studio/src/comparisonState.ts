@@ -69,6 +69,7 @@ export type ComparisonAction =
   | { type: 'sync-status'; status: string; error?: string | null }
   | { type: 'canonical-context'; context: ComparisonContext }
   | { type: 'set-viewport'; viewport: ViewportContext }
+  | { type: 'reset-previews' }
   | { type: 'clear-selection'; previewId: PreviewSlotId }
   | { type: 'analysis-started'; previewId: PreviewSlotId }
   | { type: 'analysis-finished'; previewId: PreviewSlotId; artifact: FeatureSliceArtifact }
@@ -100,6 +101,15 @@ export function comparisonReducer(state: ComparisonState, action: ComparisonActi
   }
   if (action.type === 'canonical-context') return { ...state, canonicalContext: action.context };
   if (action.type === 'set-viewport') return { ...state, viewport: action.viewport };
+  if (action.type === 'reset-previews') return {
+    ...state,
+    previews: {
+      left: { ...slot('left'), branch: state.branches[0] ?? '' },
+      right: { ...slot('right'), branch: state.branches.find(item => item !== state.branches[0]) ?? state.branches[0] ?? '' }
+    },
+    canonicalContext: null,
+    synchronizationStatus: 'Start both previews to negotiate synchronization.'
+  };
   if (action.type === 'clear-selection') return updateSlot(state, action.previewId, current => ({ ...current, selected: null, hovered: null, analysis: current.analysis.artifact ? { ...current.analysis, status: 'stale', error: 'Analysis is stale because its selection was cleared.' } : current.analysis, errors: { ...current.errors, selection: null } }));
   if (action.type === 'analysis-started') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: 'loading', artifact: null, error: null } }));
   if (action.type === 'analysis-finished') return updateSlot(state, action.previewId, current => ({ ...current, analysis: { status: action.artifact.slice.status, artifact: action.artifact, error: null } }));

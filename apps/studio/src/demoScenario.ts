@@ -4,10 +4,10 @@ import type { SourceIdentity } from '../../../packages/shared/src/sourceIdentity
 export const demoScenario = {
   productName: 'UI Merge Studio',
   sampleAppName: 'Sample Support Dashboard',
-  promise: 'Combine preferred UI features from different React branches.',
-  description: 'UI Merge Studio runs multiple versions of the same React application, lets you click the visible features you prefer, finds their required source code, and creates one tested combined Git branch.',
+  promise: 'Combine the best UI changes from different React branches.',
+  description: 'Run branches as real interactive applications, click the visible changes you want, and create one tested combined Git branch.',
   sampleAppDescription: 'A fake customer-support application with sample ticket data. “Beacon Ops” is the fictional company shown inside the sample; the tickets and brand are demonstration content, not the product.',
-  task: 'Choose the navigation improvement from Version A and the activity-filter improvement from Version B.',
+  task: 'Choose the navigation improvement from the Navigation experiment and the activity-filter improvement from the Activity-filter experiment.',
   examples: ['Forms', 'Tables', 'Charts', 'Checkout flows', 'Search', 'Editors', 'Modals', 'Loading states', 'Validation', 'Accessibility improvements'],
   branchRelationship: {
     base: { ref: 'main', label: 'Shared starting branch' },
@@ -19,29 +19,29 @@ export const demoScenario = {
   },
   versions: {
     left: {
-      eyebrow: 'Version A',
+      eyebrow: 'Navigation experiment',
       branch: 'branch-sidebar',
       branchLabel: 'Navigation experiment',
-      title: 'Collapsible Sidebar Variant',
-      description: 'The shared support app plus a navigation improvement that gives agents more room.',
-      selectionPrompt: 'Choose the collapsible navigation.',
+      title: 'Navigation experiment',
+      description: 'A branch containing a navigation change and other edits.',
+      selectionPrompt: 'Choose the collapsible navigation change.',
       allowedSelectionComponents: ['AppSidebar', 'SidebarNavItem']
     },
     right: {
-      eyebrow: 'Version B',
+      eyebrow: 'Activity-filter experiment',
       branch: 'branch-inspector',
       branchLabel: 'Activity-filter experiment',
-      title: 'Activity Filters Variant',
-      description: 'The same shared support app plus focused activity filters for faster investigation.',
+      title: 'Activity-filter experiment',
+      description: 'A branch containing an activity-filter change and other edits.',
       selectionPrompt: 'Choose the activity-filter controls.',
       allowedSelectionComponents: ['ActivityFilters']
     }
   },
   featureLabels: {
-    AppSidebar: 'Collapsible Sidebar',
-    SidebarNavItem: 'Collapsible Sidebar',
-    ActivityFilters: 'Activity Filters',
-    TicketInspector: 'Activity Filters'
+    AppSidebar: 'Collapsible navigation',
+    SidebarNavItem: 'Collapsible navigation',
+    ActivityFilters: 'Activity filters',
+    TicketInspector: 'Activity filters'
   } as Record<string, string>
 } as const;
 
