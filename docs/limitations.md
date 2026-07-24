@@ -1,5 +1,11 @@
 # Limitations
 
+## Prompt 006B product boundary
+
+The polished experience remains a controlled-fixture product proof. Friendly experiment labels and guided target restrictions describe the Sample Support Dashboard scenario; they do not claim validated support for arbitrary repositories. Raw refs and technical evidence remain available through progressive disclosure.
+
+The no-horizontal-drag guarantee is covered for the controlled previews at the desktop, tablet, and mobile presets. Other applications may require repository-specific responsive work before they provide the same visual-selection experience.
+
 ## Prompt 006 limitations
 
 The improved startup numbers depend on a prepared exact-commit worktree in the same preview slot. A first launch still performs a real locked dependency install and remains machine/cache dependent. The operation API makes that wait responsive and truthful; it does not make package installation free. Prepared worktrees are local temporary resources and are removed on explicit stop or server shutdown.
