@@ -33,6 +33,20 @@ test('combines compatible declarations in one shared file and repeats with an id
   const second=await generator.generate(request);expect(second.status,second.message).toBe('succeeded');expect(second.repository).toMatchObject({candidateCommit:first.repository.candidateCommit,candidateTree:first.repository.candidateTree,idempotent:true});expect((await setup.repository.git(['worktree','list','--porcelain']))).not.toContain('ui-merge-studio-candidate-');
 },90_000);
 
+test('reconstructs exported arrow-function components from their complete variable declaration boundary',async()=>{
+  const base="export const Left=()=> <div>base left</div>\nexport const Right=()=> <div>base right</div>\n";
+  const root=createRepository({'.gitignore':'.ums/\n','src/Shared.tsx':base});
+  git(root,['switch','-c','feature-left']);writeFiles(root,{'src/Shared.tsx':"export const Left=()=> <div>LEFT</div>\nexport const Right=()=> <div>base right</div>\n"});const leftCommit=commit(root,'left arrow change');
+  git(root,['switch','main']);git(root,['switch','-c','feature-right']);writeFiles(root,{'src/Shared.tsx':"export const Left=()=> <div>base left</div>\nexport const Right=()=> <div>RIGHT</div>\n"});const rightCommit=commit(root,'right arrow change');
+  const analyzer=new FeatureSliceAnalyzer(root);const artifacts=await Promise.all([
+    analyzer.analyze({baseRef:'main',branchRef:'feature-left',expectedBranchCommit:leftCommit,selection:source('feature-left','Left',1)}),
+    analyzer.analyze({baseRef:'main',branchRef:'feature-right',expectedBranchCommit:rightCommit,selection:source('feature-right','Right',2)})
+  ]);
+  const repository=new GitSourceRepository(root);const report=await new CandidateGenerator(root,{verificationCommands:noOpVerification}).generate({repositoryRoot:root,baseRef:'main',expectedBaseCommit:await repository.resolveRef('main'),candidateBranch:'combined-result',artifacts,analyzerSchemaVersion:2});
+  expect(report.status,report.message).toBe('succeeded');
+  const output=await repository.readFile('combined-result','src/Shared.tsx');expect(output).toContain('<div>LEFT</div>');expect(output).toContain('<div>RIGHT</div>');
+});
+
 test('deduplicates identical declaration requirements while retaining both slice identities',async()=>{
   const same="export function Left(){return <div>SAME</div>}\nexport function Right(){return <div>base right</div>}\n";const setup=await analyzedPair(same,same,'Left');
   const plan=(await new CandidateGenerator(setup.root,{verificationCommands:noOpVerification}).preflight({repositoryRoot:setup.root,baseRef:'main',expectedBaseCommit:setup.base,candidateBranch:'combined-result',artifacts:setup.artifacts,analyzerSchemaVersion:2})).plan;
