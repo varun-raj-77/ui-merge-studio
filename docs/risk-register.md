@@ -49,3 +49,13 @@
 | Dynamic/custom test factories evade the AST unit model | Tests are silently omitted or misclassified | Record unsupported registration and refuse that test-file slice |
 | Branch moves after visual selection | Artifact describes a different source state | Bind preview session to a resolved commit and reject commit/session/location mismatch |
 | Deterministic artifact leaks runtime noise | Equivalent analysis hashes differ | Omit timestamps, sort every collection, and derive IDs from normalized slice JSON |
+# Prompt 011 public Showcase risks
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Evidence manifest drifts from committed artifacts | Hosted claims become stale | Typed schema, runtime validation, integrity tests, and candidate-report provenance |
+| Visual preview is mistaken for generated source | Visitor overestimates hosted behavior | Persistent “Visual preview — not a generated branch” and evidence-replay copy |
+| Recorded gates look like fake cloud execution | Credibility loss | Manual gate inspection, evidence source per gate, no timer, explicit local-run boundary |
+| Fixture presentation looks hardcoded | Engineer discounts real engine | Plan exposes exact source/dependency/exclusion evidence and links to code/evaluation |
+| Prompt archive becomes the first public proof | Product looks like a scripted AI artifact | Focused public links and explicit Development history label |
+| Prompt history on `main` distracts launch audience | Weak first impression | Decide before launch whether to move full history to a development-history branch |

@@ -37,3 +37,15 @@ Primary evidence is the Git tree/diff, report, verification output, tests, and r
 3. State the causal stop clearly: without a live instrumented FlowCraft element, there is no valid source seed, dependency slice, exclusion proof, or candidate plan.
 4. Confirm no FlowCraft refs or files changed and no `ui-merge/flowcraft-combined` branch exists.
 5. In the controlled demo, show the non-obstructing sticky action dock, grouped preview controls, and generated **Sample Support Desk** / **Demo application · Fake ticket data** branding.
+# Prompt 011 public demo script
+
+1. On the landing page, read the one-sentence definition and point out the hosted-replay/local-engine boundary.
+2. Choose **Explore the verified demo**.
+3. Compare the shared baseline with Branch A's outlined collapsible navigation and Branch B's outlined activity filters. No selection occurs here.
+4. Continue to Select. Add Branch A and observe the Result Preview gain navigation; add Branch B and observe activity filters appear; remove and restore either choice.
+5. Review the integration plan. Show the React boundary, source file, dependencies and their reasons, explicit unrelated exclusions, shared base, compatibility, and `combined-result`.
+6. Approve candidate generation. State that the hosted page is replaying a deterministic local run, then inspect each recorded gate individually.
+7. Open the result and compare baseline with the final selected feature set. Inspect included and excluded paths and follow the candidate evidence link.
+8. Use Back to plan and Back to selections to revise without changing selections accidentally. Restart clears the demo.
+
+The exact public claim is: “This hosted experience demonstrates the product workflow and replays committed source-integration evidence; local mode performs the actual repository operations.”

@@ -1,5 +1,14 @@
 # Decision log
 
+# Prompt 011 decisions
+
+- Replace the four-step decorative Showcase with a controlled `compare → select → plan → verify → result` state model. Comparison never selects; selection is reversible; plan approval and every verification transition are explicit.
+- Drive branch names, source boundaries, dependency reasons, exclusions, candidate identity, verification gates, and public links from the validated typed manifest in `apps/studio/src/showcaseManifest.ts`.
+- Bind the persistent Result Preview directly to selection state and label it as a visual preview, not a generated Git branch.
+- Replay the five gates from committed candidate report `045c4d7fbcadd33b` one at a time. No timer or simulated execution is evidence.
+- Keep prompt history on main for now, label it Development history, and never make numbered prompts a primary public path. Reassess placement before public launch.
+- Preserve local mode and all candidate generation, dependency slicing, source mapping, Git/worktree, verification, and server behavior unchanged.
+
 # Prompt 010 decisions
 
 - Keep Showcase navigation and selections in component memory only. Do not encode a phase or candidate in URL state, history, storage, cookies, or a server.

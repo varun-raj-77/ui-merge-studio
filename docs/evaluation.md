@@ -86,3 +86,10 @@ Final recommendation: **ABANDON**.
 FlowCraft is a real full-stack Next.js 14 repository using React 18, React Flow, Zustand, Socket.IO, Express, MongoDB, and npm. Its actual typecheck, 104 client tests, 53 server tests, server/client production build, and five mocked Playwright journeys pass. Existing feature history includes execution inspector, resizing, replay, node focus, and runtime insights.
 
 UI Merge Studio cannot begin the required causal chain against it. Preview launch is Vite-only, instrumentation is a Vite plugin, readiness is `/tickets`, and state compatibility is detected from the controlled ticket fixture. Adding the missing Next.js integration was prohibited. Therefore no FlowCraft validation branches, source mappings, dependency evidence, exclusion claims, candidate, or bounded merge refusal were created. The controlled demo remains green, but Prompt 007 falsifies generalization beyond its Vite fixture.
+# Prompt 011 evidence-driven hosted Showcase
+
+The hosted flow now proves that the visitor's selections causally update a combined visual preview and that the repository contains a previously executed local run connecting the controlled feature boundaries to source, supporting files, exclusions, candidate identity, and five passing verification gates. The Showcase renders those claims from a typed validated manifest.
+
+It does not prove browser-side Git execution or fresh verification. Candidate report `.ums/generation/045c4d7fbcadd33b/candidate-report.json` is replayed, including base `dc2f93c7e6b9`, candidate `combined-result`, selected `AppSidebar` and `ActivityFilters` boundaries, recorded exclusions, and install/typecheck/tests/focused-tests/build passes.
+
+The visual support-desk application remains fixture-specific presentation. The strongest anti-hardcoding evidence is outside that visual reconstruction: source identities from two schema-v2 analysis artifacts, deterministic plan operations, explicit dependency and exclusion reasons, verification records, automated manifest/UI tests, and the external Vite validation documented below.
