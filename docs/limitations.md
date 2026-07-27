@@ -1,5 +1,13 @@
 # Limitations
 
+## Prompt 010 completed-journey boundary
+
+Revision in Showcase Mode changes which committed controlled-sample features are represented in the replay; it does not mutate a hosted repository or generate a new Git candidate. The evidence panel reports the supported facts already documented for `combined-result` and links to repository evaluation evidence. It does not provide visitor-specific logs, timings, commit IDs, or newly executed results.
+
+Browser back and forward do not traverse internal Showcase phases because the app deliberately writes no history entries. Refresh and re-entry start at landing. The production-only `?mode=local` switch still requires the Node server and local APIs, as documented; arbitrary query parameters do not restore or advance Showcase state.
+
+Responsive and keyboard behavior is covered by component structure, CSS breakpoints, focus styling, and focused tests. This remains a controlled UI audit rather than formal assistive-technology or device-lab certification.
+
 ## Prompt 009 hosted showcase boundary
 
 Showcase Mode needs no repository because it presents interactive React reconstructions and committed evidence from the controlled sample. It does not execute Git, dependency slicing, candidate generation, or verification in Vercel's browser runtime. The progress sequence explains the real recorded gates; it is not a claim that those commands rerun for each visitor. Arbitrary repository onboarding, untrusted cloud execution, persistence, collaboration, and authentication remain outside this hosted surface.

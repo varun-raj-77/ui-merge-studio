@@ -10,7 +10,11 @@ UI Merge Studio is an open-source local developer tool for comparing multiple Re
 
 Showcase Mode is the static, Vercel-ready first-run experience for people who do not have a compatible repository locally. It presents the controlled sample's base branch, navigation experiment, activity-filter experiment, and combined result as interactive React UI.
 
-The one-click walkthrough teaches `Compare → Select → Combine → Verify` without setup. It is deliberately an evidence replay, not cloud execution: the verification summary comes from the committed controlled proof, and the browser does not claim to create Git worktrees, mutate a repository, or rerun tests. Use local mode to execute the real engine.
+The one-click walkthrough teaches `Compare → Select → Combine → Verify` without setup. On the result screen, `Back to selections` preserves the current pair so either highlighted feature can be toggled off, reselected, and regenerated. `Restart demo`, `View evidence`, `View source on GitHub`, and `Run locally` provide explicit next steps.
+
+Showcase state exists only in React memory. A root load, normal refresh, or later return starts at the landing page; selections are never written to web storage, cookies, query parameters, or browser history.
+
+The walkthrough is deliberately an evidence replay, not cloud execution: its progress labels and verification summary present the committed controlled proof. The browser does not create Git worktrees, mutate a repository, or rerun tests. Use local mode to execute the real engine.
 
 ```sh
 # Hosted-style showcase during development

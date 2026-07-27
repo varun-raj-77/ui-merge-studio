@@ -1,5 +1,15 @@
 # Decision log
 
+# Prompt 010 decisions
+
+- Keep Showcase navigation and selections in component memory only. Do not encode a phase or candidate in URL state, history, storage, cookies, or a server.
+- Model feature choices as independent booleans and make each highlighted control an `aria-pressed` toggle. Candidate generation is valid only when both required selections are active.
+- Treat Base, Navigation source, Activity source, and Combined result as inspection-only preview state. Changing those tabs never changes the candidate selection set.
+- Preserve selections when returning from the result to comparison; clear selections, phase, preview, progress, and evidence disclosure on restart or exit.
+- Label verification progress as a replay of committed gates. Keep the real Git and verification boundary in local engine mode.
+- Convert illustrative sample controls to styled text when they have no Showcase action. Keep only genuine actions as buttons or links.
+- Use an inline evidence panel backed by the repository's existing controlled-run claims and link to the evaluation document; do not invent run-specific cloud metrics.
+
 # Prompt 009 decisions
 
 - Make the static production build default to Showcase Mode while preserving the existing local engine UI in development and behind `?mode=local`.
