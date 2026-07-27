@@ -1,5 +1,13 @@
 # Phase 0 evaluation
 
+## Prompt 009 Vercel Showcase Mode
+
+**PASS for presentation, bounded to a hosted evidence replay.**
+
+The production build now defaults to a dedicated Showcase Mode requiring no local repository. A recruiter can understand the proposition in the first viewport, launch the sample in one click, compare two interactive branch views, select the navigation and activity-filter features, follow the five controlled verification gates, and inspect the base, both sources, and combined result.
+
+The hosted path does not call local repository APIs and does not claim that Git or tests execute in the browser. It identifies success as committed evidence from a real deterministic controlled run. Local mode and engine packages remain unchanged. Vercel serves the static Vite output with an SPA fallback.
+
 ## Prompt 008 external Vite candidate generation
 
 Final verdict: **PASS**, bounded to the inspected external repository and supported conventional static syntax.

@@ -1,6 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { ShowcaseApp } from './ShowcaseApp';
 import './studio.css';
 import './slice.css';
-createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+import './showcase.css';
+const query = new URLSearchParams(window.location.search);
+const showcase = query.get('mode') === 'showcase' || (import.meta.env.PROD && query.get('mode') !== 'local');
+createRoot(document.getElementById('root')!).render(<StrictMode>{showcase ? <ShowcaseApp /> : <App />}</StrictMode>);

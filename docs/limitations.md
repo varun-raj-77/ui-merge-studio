@@ -1,5 +1,9 @@
 # Limitations
 
+## Prompt 009 hosted showcase boundary
+
+Showcase Mode needs no repository because it presents interactive React reconstructions and committed evidence from the controlled sample. It does not execute Git, dependency slicing, candidate generation, or verification in Vercel's browser runtime. The progress sequence explains the real recorded gates; it is not a claim that those commands rerun for each visitor. Arbitrary repository onboarding, untrusted cloud execution, persistence, collaboration, and authentication remain outside this hosted surface.
+
 ## Prompt 008 external candidate boundary
 
 Prompt 008 proves the complete selection-to-candidate path on one unrelated npm-based React/TypeScript/Vite application. Its two enriched feature branches use conventional typed arrow/function declarations, relative static imports, shallow fully added dependency modules, and independent selected declarations. This is meaningful external evidence, but it is still a small validation sample.
