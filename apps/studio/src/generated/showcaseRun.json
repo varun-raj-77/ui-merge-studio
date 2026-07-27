@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "runId": "352e72c5bd76b7ef",
+  "generatedAt": "2026-07-27T20:35:00.529Z",
+  "fixture": "fixtures/generated/support-dashboard",
+  "engineVersion": 1,
+  "repository": {
+    "baseRef": "main",
+    "commonBaseCommit": "65450c9291d5058983f07991d48e326898e22a02",
+    "branchA": {
+      "name": "branch-sidebar",
+      "commit": "42ed6234adc6f6deaa1c0a7744d91b532baf8b7d"
+    },
+    "branchB": {
+      "name": "branch-inspector",
+      "commit": "e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9"
+    },
+    "candidateBranch": "combined-result",
+    "candidateCommit": "55cba9c628423492f9579212c86813a09e22811c",
+    "compatibility": "compatible"
+  },
+  "selectedFeatureIds": [
+    "navigation",
+    "activity"
+  ],
+  "features": [
+    {
+      "id": "navigation",
+      "name": "Collapsible navigation",
+      "summary": "Adds persistent collapse behavior and compact navigation.",
+      "branchLabel": "Branch A",
+      "branch": "branch-sidebar",
+      "branchCommit": "42ed6234adc6f6deaa1c0a7744d91b532baf8b7d",
+      "selectedBoundary": "AppSidebar",
+      "analyzedBoundary": "AppSidebar",
+      "sourceFile": "src/features/navigation/AppSidebar.tsx",
+      "supportingFiles": [
+        {
+          "path": "src/features/navigation/SidebarNavItem.tsx",
+          "reason": "SidebarNavItem is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/hooks/useSidebarState.ts",
+          "reason": "useSidebarState is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/styles/app.css",
+          "reason": "The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported."
+        },
+        {
+          "path": "src/test/sidebar.test.tsx",
+          "reason": "Only evidence-connected test units, support declarations, and import specifiers are required."
+        },
+        {
+          "path": "src/types/navigation.ts",
+          "reason": "sidebarStorageKey is a changed static dependency of the analyzed boundary."
+        }
+      ],
+      "excludedFiles": [
+        {
+          "path": "src/features/tickets/TicketPage.tsx",
+          "symbol": "TicketPage",
+          "reason": "The component’s connection to the analyzed feature already exists unchanged in the merge base; this branch delta does not create that integration edge."
+        },
+        {
+          "path": "src/types/navigation.ts",
+          "symbol": "SidebarState",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        }
+      ]
+    },
+    {
+      "id": "activity",
+      "name": "Activity filters",
+      "summary": "Adds All, Notes, and Replies filtering to ticket activity.",
+      "branchLabel": "Branch B",
+      "branch": "branch-inspector",
+      "branchCommit": "e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9",
+      "selectedBoundary": "ActivityFilters",
+      "analyzedBoundary": "TicketInspector",
+      "sourceFile": "src/features/tickets/ActivityFilters.tsx",
+      "supportingFiles": [
+        {
+          "path": "src/features/tickets/TicketActivityList.tsx",
+          "reason": "TicketActivityList is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/features/tickets/TicketHeader.tsx",
+          "reason": "TicketHeader is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/hooks/useActivityFilter.ts",
+          "reason": "useActivityFilter is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/hooks/useCopyReference.ts",
+          "reason": "useCopyReference is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/main.tsx",
+          "reason": "This changed module-level import registers the feature stylesheet on the application integration chain."
+        },
+        {
+          "path": "src/styles/inspector.css",
+          "reason": "The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported."
+        },
+        {
+          "path": "src/test/inspector.test.tsx",
+          "reason": "Only evidence-connected test units, support declarations, and import specifiers are required."
+        },
+        {
+          "path": "src/types/inspector.ts",
+          "reason": "CopyState is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/utils/severitySummary.ts",
+          "reason": "severitySummary is a changed static dependency of the analyzed boundary."
+        }
+      ],
+      "excludedFiles": [
+        {
+          "path": "src/features/tickets/TicketList.tsx",
+          "symbol": "TicketList",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/utils/sortTickets.ts",
+          "symbol": "sortTicketsNewestFirst",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        }
+      ]
+    }
+  ],
+  "verification": [
+    {
+      "id": "install",
+      "command": "npm ci --no-audit --no-fund",
+      "purpose": "Install exactly the dependencies recorded by the fixture lockfile.",
+      "exitCode": 0,
+      "result": "passed",
+      "evidenceReference": "run-report.json#/verification/install"
+    },
+    {
+      "id": "typecheck",
+      "command": "npm run typecheck",
+      "purpose": "Check the generated candidate with TypeScript.",
+      "exitCode": 0,
+      "result": "passed",
+      "evidenceReference": "run-report.json#/verification/typecheck"
+    },
+    {
+      "id": "tests",
+      "command": "npm test",
+      "purpose": "Run the complete controlled-fixture test suite.",
+      "exitCode": 0,
+      "result": "passed",
+      "evidenceReference": "run-report.json#/verification/tests"
+    },
+    {
+      "id": "focused-feature-tests",
+      "command": "npm test -- src/test/sidebar.test.tsx src/test/inspector.test.tsx",
+      "purpose": "Run the selected navigation and activity-filter tests.",
+      "exitCode": 0,
+      "result": "passed",
+      "evidenceReference": "run-report.json#/verification/focused-feature-tests"
+    },
+    {
+      "id": "production-build",
+      "command": "npm run build",
+      "purpose": "Compile the generated candidate as a production Vite application.",
+      "exitCode": 0,
+      "result": "passed",
+      "evidenceReference": "run-report.json#/verification/production-build"
+    }
+  ],
+  "commands": [
+    "npm run showcase:prepare",
+    "npm ci --no-audit --no-fund",
+    "npm run typecheck",
+    "npm test",
+    "npm test -- src/test/sidebar.test.tsx src/test/inspector.test.tsx",
+    "npm run build"
+  ],
+  "result": "succeeded",
+  "artifacts": [
+    {
+      "id": "baseline",
+      "label": "Baseline",
+      "ref": "main",
+      "commit": "65450c9291d5058983f07991d48e326898e22a02",
+      "path": "/showcase-runs/352e72c5bd76b7ef/baseline/",
+      "sha256": "c0575297a8b1231464259af057ad0336e17dd39dfdee1391cd0f9dc9ad09042b"
+    },
+    {
+      "id": "branch-a",
+      "label": "Branch A",
+      "ref": "branch-sidebar",
+      "commit": "42ed6234adc6f6deaa1c0a7744d91b532baf8b7d",
+      "path": "/showcase-runs/352e72c5bd76b7ef/branch-a/",
+      "sha256": "93817066fe91f60eee27e96f15f67c0e6324089b375fbd2abb378194f52af7f1"
+    },
+    {
+      "id": "branch-b",
+      "label": "Branch B",
+      "ref": "branch-inspector",
+      "commit": "e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9",
+      "path": "/showcase-runs/352e72c5bd76b7ef/branch-b/",
+      "sha256": "ba4505d6b53647a6aa015aa6ac4190d1b81bb0118a083576483f775de89f8bbc"
+    },
+    {
+      "id": "combined-result",
+      "label": "Combined result",
+      "ref": "combined-result",
+      "commit": "55cba9c628423492f9579212c86813a09e22811c",
+      "path": "/showcase-runs/352e72c5bd76b7ef/combined-result/",
+      "sha256": "4d9ecd3c0b72ad4e1f205f0ce783ba95ec68cd3c83a14edd86a2b63f1c68648e"
+    }
+  ],
+  "links": {
+    "report": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/evidence/showcase/latest/run-report.json",
+    "completion": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/completion-report-012.md",
+    "evaluation": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/evaluation.md",
+    "architecture": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/adr/0010-recorded-real-artifact-showcase.md",
+    "limitations": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/limitations.md",
+    "source": "https://github.com/varun-raj-77/ui-merge-studio",
+    "localSetup": "https://github.com/varun-raj-77/ui-merge-studio#run-the-controlled-demo"
+  },
+  "manifestSha256": "c1495661ecc64a89033c8e984aa79dfe9a7f53db357314b3b9a4a1b5a8b9b2f1"
+}

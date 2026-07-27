@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx apps/studio/server.ts",
+    "preview:showcase": "vite preview -c apps/studio/vite.config.ts --host 127.0.0.1 --port 4310",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:instrumentation": "vitest run tests/source-instrumentation",
@@ -17,7 +18,9 @@
     "test:candidate-generation": "vitest run tests/candidate-generation/candidatePlanner.test.ts tests/candidate-generation/candidateFailure.test.ts tests/studio/CandidatePanel.test.tsx",
     "test:candidate-integration": "vitest run tests/candidate-generation/candidateIntegration.test.ts",
     "test:e2e": "playwright test -c apps/studio/playwright.config.ts",
-    "build": "vite build -c apps/studio/vite.config.ts",
+    "showcase:prepare": "tsx scripts/prepare-showcase.ts",
+    "showcase:validate": "tsx scripts/validate-showcase.ts",
+    "build": "npm run showcase:validate && vite build -c apps/studio/vite.config.ts",
     "fixture:create": "tsx scripts/create-phase0-fixture.ts",
     "fixture:verify": "tsx scripts/verify-phase0-fixture.ts",
     "fixture:test": "tsx scripts/run-fixture-branches.ts test",

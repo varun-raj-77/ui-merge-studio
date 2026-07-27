@@ -1,5 +1,9 @@
 # Decision log
 
+## 2026-07-27 — Generate the hosted Showcase from a real local run
+
+Accepted ADR 0010. The hosted product is a static, hash-validated evidence viewer. Preparation reuses `FeatureSliceAnalyzer` and `CandidateGenerator`; production builds never generate candidates. A generated sanitized report is the single source of public claims.
+
 # Prompt 011 decisions
 
 - Replace the four-step decorative Showcase with a controlled `compare → select → plan → verify → result` state model. Comparison never selects; selection is reversible; plan approval and every verification transition are explicit.

@@ -1,5 +1,14 @@
 # Prompt 006C controlled product-shell demo
 
+## Real recorded run
+
+1. State that all four visible applications are compiled outputs and the browser is not running Git or tests.
+2. Compare baseline, Branch A collapsible navigation, and Branch B activity filters.
+3. Select only one feature and show that the two-feature candidate remains locked.
+4. Select both and review source, supporting dependency reasons, and unrelated exclusions.
+5. Inspect the exact baseline and generated candidate beside immutable recorded verification.
+6. Point skeptical engineers to the sanitized report, ADR 0010, evaluation, limitations, and local reproduction command.
+
 1. Run `npm run fixture:verify`, then `npm run dev` and open `http://127.0.0.1:4310`.
 2. On the overview, identify the generic product promise, the honest arbitrary-repository limitation, the fictional Sample Support Dashboard, the two experiment branches, and the verified result.
 3. Choose **Try sample demo**. Point out that each panel is the complete live application from one Git branch, not a screenshot or code excerpt.

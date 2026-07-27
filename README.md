@@ -1,5 +1,11 @@
 # UI Merge Studio
 
+## Real-artifact Showcase
+
+The hosted Showcase is a static inspection of a genuine controlled local run. `npm run showcase:prepare` validates the fixture, analyzes both selected React boundaries, invokes the existing candidate generator, runs its verification gates, builds baseline/Branch A/Branch B/the generated candidate, exports those builds, sanitizes the evidence, and generates the frontend manifest. `npm run build` validates the report, manifest, artifact presence, and SHA-256 hashes before building Studio.
+
+Vercel only deploys those static outputs. It does not run Git, create worktrees, generate a branch, or execute tests. Use local mode for live repository operations.
+
 UI Merge Studio compares running React branches, traces selected UI boundaries to source and dependencies, and creates a verified candidate from the exact shared base.
 
 Public evidence: [Source code](https://github.com/varun-raj-77/ui-merge-studio) · [Architecture](docs/adr/) · [Evaluation evidence](docs/evaluation.md) · [Local setup](#run-the-controlled-demo) · [Limitations](docs/limitations.md) · [Development history](docs/codex-prompts/)

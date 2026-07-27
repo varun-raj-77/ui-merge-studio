@@ -1,5 +1,9 @@
 # Product brief
 
+## Recorded real-artifact proof
+
+The public proof compares four actual compiled applications from one controlled repository run: baseline, Branch A, Branch B, and the verified combined candidate. Both recorded feature boundaries are required before the candidate is revealed. Partial selections are explanatory state and continue to show baseline; they are not presented as generated subsets.
+
 ## Prompt 006 product experience
 
 The primary user is a developer or technical evaluator who needs to understand the proof in roughly five seconds and complete it without DevTools or source-file coaching. The default experience is a four-step Guided Mode: Compare two named running versions, select one visible feature in each, create one combined branch, and verify the result. Source paths, boundary identities, schema terminology, merge-base evidence, test slices, and detailed plans remain available in a secondary technical drawer.

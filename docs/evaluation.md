@@ -1,5 +1,9 @@
 # Phase 0 evaluation
 
+## Real-artifact Showcase evaluation
+
+Run `352e72c5bd76b7ef` exports independently loadable production builds for commits `65450c9291d5058983f07991d48e326898e22a02`, `42ed6234adc6f6deaa1c0a7744d91b532baf8b7d`, `e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9`, and candidate `55cba9c628423492f9579212c86813a09e22811c`. The public report records selected boundaries, dependencies, exclusions, five passing verification gates, artifact locations, and hashes. The hosted UI does not infer or mutate those results.
+
 ## Prompt 010 Showcase journey completion
 
 The hosted journey now covers landing, launch, two toggle selections, candidate evidence replay, combined-result inspection, evidence disclosure, revision, regeneration, restart, exit, repository source, and local-run guidance. Returning to selections preserves the selected pair; removing either feature immediately invalidates generation until it is reselected. Variant tabs are explicitly inspection-only.

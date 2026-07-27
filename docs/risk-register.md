@@ -1,5 +1,7 @@
 # Risk register
 
+Build validation mitigates recorded Showcase drift: `npm run build` fails on a missing report, missing artifact, malformed schema, local absolute path, stale generated manifest, or mismatched artifact/manifest hash. The remaining risk is fixture specificity; controlled refs must be regenerated when they change.
+
 | Risk | Consequence | Response |
 | --- | --- | --- |
 | External repository configuration becomes hidden component mapping | A demo passes without general source resolution | Configuration accepts only repository execution/ref/route/verification data; names and paths occur only in post-resolution test assertions |

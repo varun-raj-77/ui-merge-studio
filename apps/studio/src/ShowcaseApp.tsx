@@ -1,156 +1,90 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { showcaseManifest, type ShowcaseFeatureId } from './showcaseManifest';
 
-type Stage = 'compare' | 'select' | 'plan' | 'verify' | 'result';
+type Stage = 'compare' | 'select' | 'plan' | 'result';
 type Selection = Record<ShowcaseFeatureId, boolean>;
-const emptySelection: Selection = { navigation: false, activity: false };
-const stages: readonly { id: Stage; label: string }[] = [
-  { id: 'compare', label: 'Compare' },
-  { id: 'select', label: 'Select' },
-  { id: 'plan', label: 'Plan' },
-  { id: 'verify', label: 'Verify' },
-  { id: 'result', label: 'Result' }
+const none: Selection = { navigation: false, activity: false };
+const steps: { id: Stage; label: string }[] = [
+  { id: 'compare', label: 'Compare actual builds' }, { id: 'select', label: 'Select features' },
+  { id: 'plan', label: 'Review source plan' }, { id: 'result', label: 'Inspect verified candidate' }
 ];
+const artifact = (id: string) => showcaseManifest.artifacts.find(item => item.id === id)!;
 
-function ProductPreview({ selection, label, branchFeature, selectable, onToggle }: {
-  selection: Selection;
-  label: string;
-  branchFeature?: ShowcaseFeatureId;
-  selectable?: boolean;
-  onToggle?: (feature: ShowcaseFeatureId) => void;
-}) {
-  const navigation = selection.navigation;
-  const activity = selection.activity;
-  const feature = branchFeature && showcaseManifest.features.find(item => item.id === branchFeature);
-  return <div className="product-preview" aria-label={label}>
-    <div className="preview-chrome"><span /><span /><span /><b>Sample Support Desk</b></div>
-    <div className="support-app">
-      <aside className={navigation ? 'has-change' : ''}>
-        <div className="support-logo">S</div>
-        <nav aria-label={`${label} navigation`}>
-          <strong>Workspace</strong><span className="active">Tickets <i>12</i></span><span>Customers</span><span>Reports</span>
-        </nav>
-        {navigation && <button
-          type="button"
-          className="feature-control"
-          disabled={!selectable}
-          aria-pressed={selectable ? selection.navigation : undefined}
-          onClick={() => selectable && onToggle?.('navigation')}
-        ><b>‹</b><span>Collapse navigation</span></button>}
-      </aside>
-      <section>
-        <header><div><small>Support operations</small><strong>Ticket activity</strong></div><span className="avatar">RK</span></header>
-        <main>
-          <div className="tickets"><strong>Open tickets</strong>{['Login issue on mobile', 'Update billing address', 'Export is taking too long'].map((ticket, index) =>
-            <article className={index === 0 ? 'active' : ''} key={ticket}><i>{index === 0 ? 'AM' : 'JL'}</i><p><b>{ticket}</b><small>{index + 2} min ago</small></p></article>)}</div>
-          <div className="activity">
-            <header><div><small>#1042 · Priority</small><strong>Login issue on mobile</strong></div><em>Open</em></header>
-            {activity && <button
-              type="button"
-              className="activity-filter feature-control"
-              disabled={!selectable}
-              aria-pressed={selectable ? selection.activity : undefined}
-              onClick={() => selectable && onToggle?.('activity')}
-            ><b>All</b><span>Notes</span><span>Replies</span></button>}
-            <article><i /><p><b>Rekha replied</b><small>Thanks — I can reproduce this on iOS.</small></p></article>
-            <article><i /><p><b>Internal note</b><small>Escalated to the identity team.</small></p></article>
-          </div>
-        </main>
-      </section>
-    </div>
-    {feature && <div className="change-caption"><span>{feature.branchLabel} · {feature.branch}</span><b>{feature.name}</b></div>}
+function ArtifactFrame({ id, title }: { id: 'baseline' | 'branch-a' | 'branch-b' | 'combined-result'; title?: string }) {
+  const item = artifact(id);
+  return <div className="artifact-shell">
+    <div className="artifact-label"><strong>{title ?? item.label}</strong><code>{item.commit.slice(0, 8)}</code></div>
+    <iframe title={`${item.label} actual compiled application`} src={`${item.path}index.html`} loading="eager" sandbox="allow-scripts allow-same-origin" />
   </div>;
 }
-
+function Header({ stage, restart }: { stage: Stage; restart: () => void }) {
+  const current = steps.findIndex(item => item.id === stage);
+  return <header className="showcase-header">
+    <button className="brand" onClick={restart} aria-label="Restart"><b>UM</b><span>UI Merge Studio</span></button>
+    <nav aria-label="Recorded run stages">{steps.map((item, index) => <span key={item.id} className={index === current ? 'active' : index < current ? 'done' : ''}><i>{index + 1}</i>{item.label}</span>)}</nav>
+    <span className="recorded-badge">Recorded local run</span>
+  </header>;
+}
 function Landing({ start }: { start: () => void }) {
-  const { links } = showcaseManifest;
   return <main className="showcase landing">
-    <header className="site-header"><a className="brand" href="/"><b>UM</b><span>UI Merge Studio</span></a><a href={links.source.href}>View source ↗</a></header>
-    <section className="hero">
-      <div className="hero-copy">
-        <p className="eyebrow">Dependency-aware React feature integration</p>
-        <h1>Choose visible features.<br /><em>Trace the code. Verify the result.</em></h1>
-        <p>UI Merge Studio compares two running React branches, maps selected UI to source and dependencies, then builds one verified candidate from their shared base.</p>
-        <div className="hero-actions"><button className="primary" onClick={start}>Explore the verified demo <span>→</span></button><a href={links.source.href}>View source</a></div>
-        <div className="boundary-note"><b>Hosted showcase</b> replays committed evidence. <b>Local engine</b> runs Git, source analysis, candidate generation, and verification.</div>
+    <header className="landing-nav"><span className="brand"><b>UM</b><span>UI Merge Studio</span></span><span className="recorded-badge">Static inspection · real local evidence</span></header>
+    <section className="landing-hero">
+      <div>
+        <p className="eyebrow">Real compiled applications · recorded engine evidence</p>
+        <h1>See two branch features become one verified React build.</h1>
+        <p className="lede">Compare real branch builds, select two visible React features, inspect their source and dependency plan, and view the actual verified combined build.</p>
+        <div className="actions"><button className="primary" onClick={start}>Inspect the real recorded run <span>→</span></button><a href={showcaseManifest.links.source}>View source</a></div>
+        <div className="truth-note"><strong>What is real here</strong><span>All four applications are actual compiled artifacts. Evidence came from a genuine local engine run. This browser is not running Git or tests; local mode performs the live repository operation.</span></div>
       </div>
-      <div className="hero-preview">
-        <ProductPreview selection={{ navigation: true, activity: true }} label="Verified combined result preview" />
-        <div className="proof-chip"><b>✓ Verified candidate</b><span>2 selected boundaries · dependencies traced</span></div>
-      </div>
+      <ArtifactFrame id="combined-result" title="Actual verified combined build" />
     </section>
-    <section className="workflow" aria-label="Product workflow">{['Compare branches', 'Select visible features', 'Trace source + dependencies', 'Review the plan', 'Verify one candidate'].map((item, index) => <div key={item}><span>{index + 1}</span><b>{item}</b></div>)}</section>
-    <section className="credibility" aria-labelledby="credibility-title"><div><p className="eyebrow">Repository-backed proof</p><h2 id="credibility-title">A visual decision connected to engineering evidence.</h2></div><ul><li>Deterministic candidate generation</li><li>Unrelated edits explicitly excluded</li><li>Source and dependency trace recorded</li><li>Typecheck, tests, and build passed</li><li>Unsafe combinations can be refused</li><li>External React/Vite validation documented</li></ul></section>
   </main>;
 }
-
-function Progress({ stage }: { stage: Stage }) {
-  const current = stages.findIndex(item => item.id === stage);
-  return <nav className="stage-nav" aria-label="Showcase workflow">{stages.map((item, index) => <span key={item.id} aria-current={index === current ? 'step' : undefined} className={index < current ? 'complete' : index === current ? 'current' : ''}><b>{index < current ? '✓' : index + 1}</b>{item.label}</span>)}</nav>;
+function SourceTrace({ feature }: { feature: typeof showcaseManifest.features[number] }) {
+  return <article className="trace-card" id={`trace-${feature.id}`} tabIndex={-1}>
+    <header><span>{feature.branchLabel}</span><h3>{feature.name}</h3><code>{feature.branch}@{feature.branchCommit.slice(0, 8)}</code></header>
+    <dl><div><dt>Selected boundary</dt><dd>{feature.selectedBoundary}</dd></div><div><dt>Analyzed boundary</dt><dd>{feature.analyzedBoundary}</dd></div><div><dt>Source</dt><dd><code>{feature.sourceFile}</code></dd></div></dl>
+    <h4>Supporting source and dependencies</h4>
+    <ul>{feature.supportingFiles.map(item => <li key={item.path}><code>{item.path}</code><span>{item.reason}</span></li>)}</ul>
+    <h4>Unrelated changes excluded</h4>
+    <ul className="excluded">{feature.excludedFiles.map(item => <li key={`${item.path}:${item.symbol}`}><code>{item.path}{item.symbol ? `#${item.symbol}` : ''}</code><span>{item.reason}</span></li>)}</ul>
+  </article>;
 }
-
-function ResultPreview({ selection }: { selection: Selection }) {
-  const count = Number(selection.navigation) + Number(selection.activity);
-  return <aside className="result-preview" aria-labelledby="result-preview-title">
-    <header><div><p className="eyebrow">Visual preview — not a generated branch</p><h2 id="result-preview-title">Result Preview</h2></div><span aria-live="polite">{count ? `${count} feature${count > 1 ? 's' : ''} selected` : 'Baseline'}</span></header>
-    <ProductPreview selection={selection} label="Visual preview of the currently selected feature set" />
-    <div className="selection-legend"><span className={selection.navigation ? 'on' : ''}>A · Navigation</span><span className={selection.activity ? 'on' : ''}>B · Activity filters</span></div>
-  </aside>;
-}
-
 export function ShowcaseApp() {
   const [started, setStarted] = useState(false);
   const [stage, setStage] = useState<Stage>('compare');
-  const [selected, setSelected] = useState<Selection>(emptySelection);
-  const [gateIndex, setGateIndex] = useState(0);
-  const features = showcaseManifest.features;
-  const selectedFeatures = useMemo(() => features.filter(feature => selected[feature.id]), [selected, features]);
-  const valid = selectedFeatures.length > 0;
-  const toggle = (id: ShowcaseFeatureId) => setSelected(value => ({ ...value, [id]: !value[id] }));
-  const restart = () => { setStarted(false); setStage('compare'); setSelected(emptySelection); setGateIndex(0); };
-  const goTo = (next: Stage) => setStage(next);
+  const [selected, setSelected] = useState<Selection>(none);
+  const complete = selected.navigation && selected.activity;
+  const restart = () => { setStarted(false); setStage('compare'); setSelected(none); };
+  const toggle = (id: ShowcaseFeatureId) => {
+    setSelected(value => ({ ...value, [id]: !value[id] }));
+    if (stage === 'plan' || stage === 'result') setStage('select');
+  };
   if (!started) return <Landing start={() => setStarted(true)} />;
-
   return <main className="showcase demo">
-    <header className="demo-header"><button className="brand" onClick={restart} aria-label="Restart UI Merge Studio showcase"><b>UM</b><span>UI Merge Studio</span></button><Progress stage={stage} /><span className="replay-badge">Hosted evidence replay</span></header>
-
-    {stage === 'compare' && <section className="stage-content">
-      <div className="stage-intro"><p className="eyebrow">Stage 1 · Compare</p><h1>One shared baseline. Two unmistakable branch changes.</h1><p>Inspect what each running implementation adds before choosing anything. Selection is disabled in this stage.</p></div>
-      <div className="comparison">
-        <article><header><span>Shared baseline</span><code>main</code><p>Neither experiment exists yet.</p></header><ProductPreview selection={emptySelection} label="Baseline application before either feature" /></article>
-        {features.map(feature => <article className={`branch-card ${feature.id}`} key={feature.id}><header><span>{feature.branchLabel}</span><code>{feature.branch}</code><p>{feature.summary}</p></header><ProductPreview selection={{ ...emptySelection, [feature.id]: true }} branchFeature={feature.id} label={`${feature.branchLabel}: ${feature.name}`} /></article>)}
-      </div>
-      <div className="stage-action"><p>Shared content remains constant; outlined regions are branch-owned changes.</p><button className="primary" onClick={() => goTo('select')}>I understand the comparison <span>→</span></button></div>
+    <Header stage={stage} restart={restart} />
+    {stage === 'compare' && <section className="stage">
+      <div className="stage-copy"><p className="eyebrow">Stage 1 — Compare actual builds</p><h1>One exact base. Two independently compiled branches.</h1><p>The labels and annotations belong to the Showcase; every application surface below comes from its Git commit and production Vite build.</p></div>
+      <div className="artifact-grid three"><article><p><strong>Baseline</strong> has the support dashboard without either selected experiment.</p><ArtifactFrame id="baseline" /></article><article><p><strong>Branch A</strong> visibly adds collapsible navigation.</p><ArtifactFrame id="branch-a" /></article><article><p><strong>Branch B</strong> visibly adds activity filters.</p><ArtifactFrame id="branch-b" /></article></div>
+      <div className="stage-actions"><button className="primary" onClick={() => setStage('select')}>Continue to feature selection →</button></div>
     </section>}
-
-    {stage === 'select' && <section className="stage-content split">
-      <div><div className="stage-intro"><p className="eyebrow">Stage 2 · Select</p><h1>Select the visible features to carry forward.</h1><p>Selections are explicit and reversible. The preview updates causally with every choice.</p></div>
-        <div className="feature-choices">{features.map(feature => <button className={selected[feature.id] ? 'selected' : ''} aria-pressed={selected[feature.id]} onClick={() => toggle(feature.id)} key={feature.id}><span>{feature.branchLabel} · <code>{feature.branch}</code></span><b>{feature.name}</b><p>{feature.summary}</p><em>{selected[feature.id] ? '✓ Selected — choose to remove' : '+ Add to candidate preview'}</em></button>)}</div>
-        <div className="stage-action"><button onClick={() => goTo('compare')}>Back to comparison</button><button className="primary" disabled={!valid} onClick={() => goTo('plan')}>Review integration plan <span>→</span></button></div>
-      </div><ResultPreview selection={selected} />
+    {stage === 'select' && <section className="stage">
+      <div className="stage-copy"><p className="eyebrow">Stage 2 — Select features</p><h1>Select the exact recorded combination.</h1><p>Both repository-backed boundaries are required. Until both are selected, the preview remains the actual baseline—not a pretend generated subset.</p></div>
+      <div className="selection-layout"><div className="feature-options">{showcaseManifest.features.map(feature => <button key={feature.id} className={selected[feature.id] ? 'feature selected' : 'feature'} aria-pressed={selected[feature.id]} onClick={() => toggle(feature.id)}><span>{feature.branchLabel} · {feature.branch}</span><strong>{feature.name}</strong><code>{feature.selectedBoundary} · {feature.sourceFile}</code><em>{selected[feature.id] ? 'Selected — remove' : 'Select recorded feature'}</em></button>)}</div>
+      <aside className="selection-preview"><header><div><p className="eyebrow">{complete ? 'Exact recorded set complete' : 'Explanatory selection state'}</p><h2>{complete ? 'Actual combined candidate' : 'Actual baseline'}</h2></div><span>{Number(selected.navigation) + Number(selected.activity)}/2 selected</span></header><ArtifactFrame id={complete ? 'combined-result' : 'baseline'} />{!complete && <p className="lock-copy">The recorded two-feature candidate stays locked. No subset candidate was generated for this public proof.</p>}</aside></div>
+      <div className="stage-actions"><button onClick={() => setStage('compare')}>Back to comparison</button><button className="primary" disabled={!complete} onClick={() => setStage('plan')}>Review recorded source plan →</button></div>
     </section>}
-
-    {stage === 'plan' && valid && <section className="stage-content">
-      <div className="stage-intro"><p className="eyebrow">Stage 3 · Integration plan</p><h1>Review the source work before approving it.</h1><p>This plan replays the recorded local analysis for the selected boundaries. It is source integration, not visual compositing.</p></div>
-      <div className="plan-summary"><div><small>Common base</small><code>{showcaseManifest.repository.commonBaseCommit.slice(0, 12)}</code></div><div><small>Candidate branch</small><code>{showcaseManifest.repository.candidateBranch}</code></div><div><small>Compatibility</small><b className="compatible">✓ {showcaseManifest.repository.compatibility}</b></div></div>
-      <div className="plan-grid">{selectedFeatures.map(feature => <article key={feature.id}><header><span>{feature.branchLabel} · {feature.branch}</span><h2>{feature.name}</h2></header><dl><div><dt>React boundary</dt><dd><code>{feature.boundary}</code></dd></div><div><dt>Source file</dt><dd><code>{feature.sourceFile}</code></dd></div></dl><h3>Supporting files</h3><ul>{feature.supportingFiles.map(file => <li key={file.path}><code>{file.path}</code><span>{file.reason}</span></li>)}</ul><h3>Unrelated changes excluded</h3><ul className="excluded">{feature.excludedFiles.map(file => <li key={file.path}><code>{file.path}</code><span>{file.reason}</span></li>)}</ul></article>)}</div>
-      <div className="stage-action"><button onClick={() => goTo('select')}>Back to selections</button><button className="primary" onClick={() => { setGateIndex(0); goTo('verify'); }}>Approve candidate generation <span>→</span></button></div>
+    {stage === 'plan' && complete && <section className="stage">
+      <div className="stage-copy"><p className="eyebrow">Stage 3 — Review source plan</p><h1>Trace each visible feature to selected source and dependencies.</h1><p>Common base <code>{showcaseManifest.repository.commonBaseCommit}</code> · candidate <code>{showcaseManifest.repository.candidateBranch}</code> · compatibility <strong>{showcaseManifest.repository.compatibility}</strong>.</p></div>
+      <div className="trace-grid">{showcaseManifest.features.map(feature => <SourceTrace key={feature.id} feature={feature} />)}</div>
+      <div className="stage-actions"><button onClick={() => setStage('select')}>Back to selections</button><button className="primary" onClick={() => setStage('result')}>Inspect recorded run →</button></div>
     </section>}
-
-    {stage === 'plan' && !valid && <section className="stage-content invalid-state"><h1>No valid integration plan</h1><p>Select at least one evidence-backed feature before opening a plan.</p><button className="primary" onClick={() => goTo('select')}>Back to selections</button></section>}
-
-    {stage === 'verify' && <section className="stage-content verify">
-      <div className="stage-intro"><p className="eyebrow">Stage 4 · Verify</p><h1>Inspect each recorded verification gate.</h1><p><b>No checks are running in this browser.</b> The hosted version replays evidence from a previously executed deterministic local run.</p></div>
-      <ol className="gate-list">{showcaseManifest.gates.map((gate, index) => <li className={index < gateIndex ? 'reviewed' : index === gateIndex ? 'active' : ''} key={gate.id}><span>{index < gateIndex ? '✓' : index + 1}</span><div><h2>{gate.name}</h2><p>{gate.checks}</p>{index <= gateIndex && <small><b>Recorded status: {gate.status}</b> · {gate.evidenceSource}</small>}</div></li>)}</ol>
-      <div className="stage-action"><button onClick={() => goTo('plan')}>Back to plan</button>{gateIndex < showcaseManifest.gates.length - 1 ? <button className="primary" onClick={() => setGateIndex(index => index + 1)}>Inspect next gate <span>→</span></button> : <button className="primary" onClick={() => goTo('result')}>Open verified result <span>→</span></button>}</div>
-    </section>}
-
-    {stage === 'result' && <section className="stage-content">
-      <div className="stage-intro"><p className="eyebrow">Stage 5 · Result</p><h1>Baseline versus the verified candidate.</h1><p>The final preview contains only the selected features and their traced dependencies.</p></div>
-      <div className="final-grid"><article><header><span>Before</span><h2>Shared baseline</h2></header><ProductPreview selection={emptySelection} label="Baseline before selected features" /></article><article className="final"><header><span>After · <code>{showcaseManifest.repository.candidateBranch}</code></span><h2>Verified combined result</h2></header><ProductPreview selection={selected} label="Final result with selected features" /><div className="final-features">{selectedFeatures.map(feature => <span key={feature.id}>✓ {feature.name} · {feature.branch}</span>)}</div></article></div>
-      <div className="result-evidence"><article><h2>Included source + dependencies</h2>{selectedFeatures.flatMap(feature => [feature.sourceFile, ...feature.supportingFiles.map(file => file.path)]).map(path => <code key={path}>{path}</code>)}</article><article><h2>Excluded unrelated changes</h2>{selectedFeatures.flatMap(feature => feature.excludedFiles.map(file => file.path)).map(path => <code key={path}>{path}</code>)}</article><article><h2>Verification summary</h2><p>{showcaseManifest.gates.length} recorded gates passed in the deterministic local run.</p><a href={showcaseManifest.links.candidateEvidence.href}>Inspect candidate evidence ↗</a></article></div>
-      <nav className="result-actions" aria-label="Result actions"><button onClick={() => goTo('plan')}>Back to plan</button><button onClick={() => goTo('select')}>Back to selections</button><button onClick={restart}>Restart demo</button><a href={showcaseManifest.links.source.href}>View repository ↗</a><a href={showcaseManifest.links.localSetup.href}>Read local setup ↗</a></nav>
-      <footer className="public-links">{Object.values(showcaseManifest.links).filter(link => link !== showcaseManifest.links.candidateEvidence).map(link => <a href={link.href} key={link.label}>{link.label}</a>)}</footer>
+    {stage === 'result' && complete && <section className="stage">
+      <div className="stage-copy"><p className="eyebrow">Stage 4 — Inspect verified candidate</p><h1>The actual generated candidate, beside its exact baseline.</h1><p>Candidate commit <code>{showcaseManifest.repository.candidateCommit}</code>. These checks ran during the recorded local candidate-generation run. The hosted site is displaying committed evidence; it is not executing Git or tests in your browser.</p></div>
+      <div className="artifact-grid result"><ArtifactFrame id="baseline" title="Actual baseline" /><ArtifactFrame id="combined-result" title="Actual verified combined result" /></div>
+      <section className="verification" aria-labelledby="verification-title"><header><p className="eyebrow">Inspect recorded verification</p><h2 id="verification-title">Immutable results from the local run</h2></header><div>{showcaseManifest.verification.map(gate => <details key={gate.id}><summary><span className="pass">Passed</span><strong>{gate.id}</strong><code>exit {gate.exitCode}</code></summary><p>{gate.purpose}</p><pre>{gate.command}</pre><a href={showcaseManifest.links.report}>{gate.evidenceReference} ↗</a></details>)}</div></section>
+      <div className="final-trace">{showcaseManifest.features.map(feature => <a key={feature.id} href={`#trace-${feature.id}`} onClick={event => { event.preventDefault(); setStage('plan'); setTimeout(() => document.getElementById(`trace-${feature.id}`)?.focus(), 0); }}><strong>{feature.name}</strong><span>{feature.branch} → {feature.selectedBoundary} → {feature.sourceFile}</span></a>)}</div>
+      <div className="stage-actions wrap"><button onClick={() => setStage('plan')}>Back to source plan</button><button onClick={() => setStage('select')}>Back to selections</button><button onClick={restart}>Restart</button><a href={showcaseManifest.links.source}>View source</a><a href={showcaseManifest.links.architecture}>Read architecture</a><a href={showcaseManifest.links.localSetup}>Run locally</a></div>
     </section>}
   </main>;
 }

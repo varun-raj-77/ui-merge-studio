@@ -1,5 +1,12 @@
 # Limitations
 
+## Hosted Showcase boundary
+
+- The Showcase proves one exact controlled two-feature combination; it does not support arbitrary repositories or unrecorded subsets.
+- Iframes contain real compiled applications, but source annotations remain outside the artifacts because the static builds expose no element-to-source messaging bridge.
+- Timestamps are volatile. The stable run ID and normalized manifest hash derive from exact commits and stable evidence.
+- Vercel performs no Git operation, candidate generation, verification, or repository mutation.
+
 ## Prompt 010 completed-journey boundary
 
 Revision in Showcase Mode changes which committed controlled-sample features are represented in the replay; it does not mutate a hosted repository or generate a new Git candidate. The evidence panel reports the supported facts already documented for `combined-result` and links to repository evaluation evidence. It does not provide visitor-specific logs, timings, commit IDs, or newly executed results.
