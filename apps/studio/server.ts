@@ -11,12 +11,11 @@ import { samePreviewIdentity } from '../../packages/shared/src/bridge';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
 import type { CandidateGenerationRequest, CandidateGenerationReport } from '../../packages/candidate-generation/src/types';
 import type { FeatureSliceArtifact } from '../../packages/source-analysis/src/types';
+import { loadRepositoryConfiguration } from './repositoryConfig';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
-const fixturePath = process.env.UI_MERGE_REPOSITORY_PATH ?? process.env.UI_MERGE_FIXTURE_PATH ?? resolve(workspaceRoot, 'fixtures/generated/support-dashboard');
-const baseRef = process.env.UI_MERGE_BASE_REF ?? 'main';
-const previewPath = process.env.UI_MERGE_PREVIEW_ROUTE ?? '/tickets';
-const preferredBranches = [process.env.UI_MERGE_LEFT_BRANCH, process.env.UI_MERGE_RIGHT_BRANCH].filter((value): value is string => Boolean(value));
+const configuration = loadRepositoryConfiguration(workspaceRoot);
+const { repositoryPath: fixturePath, baseRef, previewPath, preferredBranches, candidateBranch, verificationCommands } = configuration;
 const host = '127.0.0.1';
 const port = Number(process.env.UI_MERGE_STUDIO_PORT ?? 4310);
 const repository = new RepositoryController(fixturePath);
@@ -24,7 +23,7 @@ const previews = new PreviewController(repository, resolve(import.meta.dirname, 
 const previewOperations = new PreviewOperationManager(previews);
 const analyzer = new FeatureSliceAnalyzer(fixturePath, workspaceRoot);
 let candidateProgress: { status: 'idle' | 'running' | 'succeeded' | 'refused' | 'failed'; stage: string | null; message: string; sliceId?: string; path?: string; verification?: string } = { status:'idle',stage:null,message:'No candidate generation is running.' };
-const candidateGenerator = new CandidateGenerator(fixturePath,{artifactRoot:workspaceRoot,onProgress:event=>{candidateProgress={status:'running',...event};}});
+const candidateGenerator = new CandidateGenerator(fixturePath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',...event};}});
 const vite = await createViteServer({ configFile: resolve(import.meta.dirname, 'vite.config.ts'), server: { middlewareMode: true }, appType: 'spa' });
 
 async function body(request: import('node:http').IncomingMessage) { const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown; }
@@ -37,7 +36,7 @@ function generationArtifactRoute(url: string | undefined) { const match = url?.m
 function candidateRequest(value:unknown):CandidateGenerationRequest { if(!value||typeof value!=='object')throw new Error('A candidate generation request object is required.');const item=value as {expectedBaseCommit?:unknown;candidateBranch?:unknown;artifacts?:unknown;analyzerSchemaVersion?:unknown};if(typeof item.expectedBaseCommit!=='string'||typeof item.candidateBranch!=='string'||!Array.isArray(item.artifacts)||typeof item.analyzerSchemaVersion!=='number')throw new Error('Candidate generation requires expected base, branch, schema version, and slice artifacts.');return{repositoryRoot:fixturePath,baseRef,expectedBaseCommit:item.expectedBaseCommit,candidateBranch:item.candidateBranch,artifacts:item.artifacts as FeatureSliceArtifact[],analyzerSchemaVersion:item.analyzerSchemaVersion};}
 const server = createServer(async (request, response) => {
   try {
-    if (request.url === '/api/repository' && request.method === 'GET') { const inspected = await repository.inspect(); return json(response, 200, { branches: inspected.branches, preferredBranches, clean: inspected.clean, sessions: previews.sessions() }); }
+    if (request.url === '/api/repository' && request.method === 'GET') { const inspected = await repository.inspect(); return json(response, 200, { branches: inspected.branches, preferredBranches, candidateBranch, clean: inspected.clean, sessions: previews.sessions() }); }
     const analysisPreviewId = analysisPreviewRoute(request.url);
     if (analysisPreviewId && request.method === 'POST') {
       const session = previews.session(analysisPreviewId); if (!session) return json(response, 409, { error: 'The preview session is not running.' });

@@ -2,6 +2,13 @@
 
 | Risk | Consequence | Response |
 | --- | --- | --- |
+| External repository configuration becomes hidden component mapping | A demo passes without general source resolution | Configuration accepts only repository execution/ref/route/verification data; names and paths occur only in post-resolution test assertions |
+| Source index and transformer use different AST boundaries | Valid declarations fail hash checks or transform the wrong text | Normalize reconstruction to the complete declaration-statement range and regression-test typed exported arrow components |
+| Purpose-built external branches overstate generality | One successful repository is presented as universal support | Preserve exact fixture provenance, list validation-specific traits, and require a second unrelated repository with its own tests as the next experiment |
+| External repository has no test suite | Verification misses regressions that browser checks do not cover | State the absence explicitly; require typecheck, lint, build, runtime assertions, and do not claim external tests passed |
+| Baseline framework warnings are mistaken for candidate regressions | Proof fails on pre-existing noise or suppresses real errors | Exclude only recognizable Ant Design warning-prefixed messages in the E2E assertion; continue failing on other console errors |
+| Rich external branch includes unrelated visible edits | Candidate leaks decorative branch changes | Require exact planned path equality, explicit exclusion evidence, candidate diff audit, and combined-runtime absence assertions |
+| Two external slices reconstruct one declaration differently | Last writer silently wins | Detect `overlapping-declaration` during read-only preflight and prove no branch/worktree mutation |
 | Async acknowledgement is mistaken for readiness | User acts on an unavailable runtime | Keep acknowledgement and terminal readiness distinct; poll the operation and wait for the validated bridge handshake |
 | Polling overlaps or survives a restart | Excess requests or stale UI mutation | Await every poll, bound backoff, cancel per-slot controllers, reject stale operation IDs, and stop on all terminal states |
 | Superseded launch races its replacement | Wrong worktree is removed or wrong session wins | Serialize work within each preview slot; abort and finish predecessor cleanup before replacement work |

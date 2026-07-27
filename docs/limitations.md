@@ -1,5 +1,19 @@
 # Limitations
 
+## Prompt 008 external candidate boundary
+
+Prompt 008 proves the complete selection-to-candidate path on one unrelated npm-based React/TypeScript/Vite application. Its two enriched feature branches use conventional typed arrow/function declarations, relative static imports, shallow fully added dependency modules, and independent selected declarations. This is meaningful external evidence, but it is still a small validation sample.
+
+The original external branches were too trivial for honest dependency-generation validation. Descendant refs added one direct and one transitive module plus one unrelated visible edit per side. Those additions are intentionally bounded fixtures and are not evidence that arbitrary existing product histories will slice as cleanly.
+
+The external package declares no `test` script and contains no test files. Candidate verification therefore used locked install, TypeScript project build, lint, production build, and a real browser journey. No claim is made that Prompt 008 externally proved application-owned test slicing.
+
+Unsupported patterns remain as documented for Prompts 004/005: path aliases, dynamic imports, HOCs, render props, class components, CSS-in-JS, ambiguous shared side effects, deletions, modified partially owned styles, and complex/custom test factories. One real conflicting declaration was correctly refused; this does not enumerate all unsafe interactions.
+
+Candidate generation is local and executes repository commands with user privileges. It is not a sandbox for untrusted code. Cold proof runtime is dominated by repeated locked installs in isolated worktrees. Normal cleanup passed, but an abrupt machine or process failure may require manual process termination and `git worktree prune`.
+
+Existing Ant Design deprecation messages are emitted through `console.error` by the baseline external application. The focused journey ignores only messages beginning with the library's warning prefix and continues to fail on other console errors; the warnings themselves remain technical debt in the external application.
+
 ## Prompt 007 real-repository result
 
 The first real-repository target, FlowCraft at commit `261ab0f`, is Next.js 14. UI Merge Studio’s current preview controller always starts Vite from `node_modules/vite/bin/vite.js`; rendered-source instrumentation exists only as a Vite `transform`/`transformIndexHtml` plugin; readiness is fixed to `/tickets`; and synchronization reads `src/state/ticketSelection.ts`. Under Prompt 007’s explicit ban on adding Next.js support, FlowCraft cannot reach the first valid visual-selection event.

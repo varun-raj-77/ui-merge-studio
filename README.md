@@ -57,6 +57,12 @@ Proven externally:
 - two feature branches launched in separate worktrees and processes;
 - rendered UI regions were selected through the Studio;
 - generic runtime instrumentation mapped those regions to source;
+- Git/AST analysis included direct and transitive static dependencies;
+- unrelated visible branch edits were excluded;
+- a six-file candidate was generated directly from the exact common base;
+- install, TypeScript, lint, production build, and combined runtime verification passed;
+- repeated generation recognized the exact candidate tree as idempotent;
+- a competing edit to the same declaration was refused before mutation;
 - no repository-specific component names drove the mapping;
 - source branches remained unchanged;
 - preview processes and temporary worktrees were cleaned up.
@@ -65,13 +71,13 @@ Observed mappings:
 
 ```text
 PageContent
-→ src/components/layout/contentbar.tsx:25:7
+→ src/components/layout/contentbar.tsx:26:7
 
 RevenueTrendChart
-→ src/views/dashboard/index.tsx:26:7
+→ src/views/dashboard/index.tsx:27:7
 ```
 
-External dependency slicing and candidate generation are the next validation milestone.
+The verified external candidate is one commit directly above base `8223897` and has deterministic tree `1d0165457f9471908539f6660f17574b1f89dfe8`. This is evidence for one unrelated Vite repository, not universal Vite or React support.
 
 ## Product workflow
 
@@ -162,9 +168,9 @@ npm run fixture:verify
 npm run build
 ```
 
-The latest controlled product run reported 85 passing tests, 27 focused Studio tests, successful typechecking, a successful production build, successful fixture verification, and four focused Playwright scenarios.
+The Prompt 008 regression run reported 90 passing Studio tests, successful typechecking, a successful production build, and successful fixture verification.
 
-The external Vite source-mapping validation reported 23 focused instrumentation/runtime tests and one successful external Playwright journey.
+The Prompt 008 external validation reported three focused integration tests and one successful six-minute Playwright journey. The external repository has no application test script, so no external unit-test result is claimed.
 
 ## Generated data
 
@@ -204,7 +210,7 @@ UI Merge Studio does not currently claim support for:
 
 FlowCraft was evaluated as a validation target but uses Next.js 14 App Router, outside the current Vite-only scope. No FlowCraft integration is claimed.
 
-Candidate generation has been fully demonstrated on the controlled repository. External Vite execution and generic runtime-to-source mapping have also been demonstrated. Full candidate generation on the external Vite repository remains pending.
+Candidate generation has been demonstrated on the controlled repository and one unrelated Vite repository. The external proof uses conventional relative static imports and a small dependency graph; broader repository and dependency patterns remain unproven.
 
 Correct refusal is considered a product capability.
 

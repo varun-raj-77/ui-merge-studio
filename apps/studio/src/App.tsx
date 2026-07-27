@@ -9,7 +9,7 @@ import { compareCapabilities, comparisonReducer, initialComparisonState, planCon
 import { demoScenario, featureLabel, guidedSelectionDecision } from './demoScenario';
 import { pollPreviewOperation } from './operationPolling';
 
-interface RepositoryResponse { branches: string[]; preferredBranches?: string[]; clean: boolean; sessions: PreviewSession[] }
+interface RepositoryResponse { branches: string[]; preferredBranches?: string[]; candidateBranch?: string; clean: boolean; sessions: PreviewSession[] }
 const slots: PreviewSlotId[] = ['left', 'right'];
 const terminalPreviewStates = new Set(['ready', 'failed', 'cancelled', 'superseded']);
 function synchronizationId() { return globalThis.crypto?.randomUUID?.() ?? `sync-${Date.now()}-${Math.random()}`; }
@@ -65,13 +65,12 @@ function failedCandidateMessage(report: CandidateGenerationReport) {
   const gate = failed ? verificationLabels[failed.name] ?? 'A verification check' : 'A verification check';
   return `${gate} did not pass, so UI Merge Studio discarded the proposed result. No combined branch was created, both source branches are unchanged, and the temporary workspace was cleaned.`;
 }
-export function CandidatePanel({ inputs, onLaunch, onRevise, onEvidence }: { inputs: GenerationInput[]; onLaunch: (branch: string) => void; onRevise?: () => void; onEvidence?: () => void }) {
+export function CandidatePanel({ inputs, candidateBranch = 'combined-result', onLaunch, onRevise, onEvidence }: { inputs: GenerationInput[]; candidateBranch?: string; onLaunch: (branch: string) => void; onRevise?: () => void; onEvidence?: () => void }) {
   const [preflight, setPreflight] = useState<CandidatePreflight | null>(null);
   const [report, setReport] = useState<CandidateGenerationReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('Waiting for two selected features.');
   const [error, setError] = useState<string | null>(null);
-  const candidateBranch = 'combined-result';
   const inputKey = inputs.map(item => `${item.artifact?.analysisId ?? 'none'}:${item.status}:${item.sessionId ?? 'none'}`).join('|');
   const artifacts = inputs.map(item => item.artifact).filter((item): item is FeatureSliceArtifact => Boolean(item));
   const ready = inputs.length === 2 && artifacts.length === 2 && inputs.every(item => item.status === 'resolved') && artifacts.every(item => item.slice.status === 'resolved');
@@ -215,13 +214,13 @@ function ComparisonHelp({ onClose }: { onClose: () => void }) {
   </aside>;
 }
 
-function ResultSummary({ activeView, onView }: { activeView: 'left' | 'right' | 'result'; onView: (view: 'left' | 'right' | 'result') => void }) {
+function ResultSummary({ activeView, branch, included, excluded, onView }: { activeView: 'left' | 'right' | 'result'; branch: string; included: string; excluded: string; onView: (view: 'left' | 'right' | 'result') => void }) {
   return <section className="result-workspace" aria-label="Verified combined result">
-    <div className="result-heading"><div><p className="eyebrow">Verified combined result</p><h2>Both selected changes, together</h2><p><code>combined-result</code> passed every check. The source branches remain unchanged.</p></div><button className="primary-action" onClick={() => onView('result')}>Open combined result</button></div>
+    <div className="result-heading"><div><p className="eyebrow">Verified combined result</p><h2>Both selected changes, together</h2><p><code>{branch}</code> passed every configured check. The source branches remain unchanged.</p></div><button className="primary-action" onClick={() => onView('result')}>Open combined result</button></div>
     <div className="result-facts">
-      <div><span>Included</span><strong>Collapsible navigation · Activity filters</strong></div>
-      <div><span>Excluded</span><strong>Unrelated heading change · unrelated sorting change</strong></div>
-      <div><span>Verification</span><strong>TypeScript · feature tests · full tests · production build</strong></div>
+      <div><span>Included</span><strong>{included}</strong></div>
+      <div><span>Excluded</span><strong>{excluded}</strong></div>
+      <div><span>Verification</span><strong>Configured repository checks · live result launch</strong></div>
       <div><span>Original branches changed</span><strong>No</strong></div>
     </div>
     <nav className="result-tabs" aria-label="Result comparison views">
@@ -255,6 +254,7 @@ export function App() {
   const [comparisonLayout, setComparisonLayout] = useState<'both' | PreviewSlotId>('both');
   const [confirmedSelections, setConfirmedSelections] = useState<Record<PreviewSlotId, boolean>>({ left: false, right: false });
   const [resultBranch, setResultBranch] = useState<string | null>(null);
+  const [candidateBranch, setCandidateBranch] = useState<string>(demoScenario.branchRelationship.result.ref);
   const [resultView, setResultView] = useState<'left' | 'right' | 'result'>('result');
   const frames = useRef<Record<PreviewSlotId, HTMLIFrameElement | null>>({ left: null, right: null });
   const operationControllers = useRef<Partial<Record<PreviewSlotId, AbortController>>>({});
@@ -265,6 +265,7 @@ export function App() {
     fetch('/api/repository', { signal: controller.signal }).then(response => response.json()).then((value: RepositoryResponse) => {
       const preferred = value.preferredBranches?.length ? value.preferredBranches : [demoScenario.versions.left.branch, demoScenario.versions.right.branch];
       const ordered = [...preferred, ...value.branches.filter(branch => !preferred.includes(branch))];
+      setCandidateBranch(value.candidateBranch ?? demoScenario.branchRelationship.result.ref);
       dispatch({ type: 'repository-loaded', branches: ordered, clean: value.clean });
     }).catch(error => { if ((error as Error).name !== 'AbortError') dispatch({ type: 'repository-failed', error: String(error) }); });
     return () => controller.abort();
@@ -381,6 +382,8 @@ export function App() {
 
   const readyCount = slots.filter(id => state.previews[id].status === 'ready').length;
   const generationInputs = useMemo(() => slots.map(id => ({ artifact: state.previews[id].analysis.artifact, status: confirmedSelections[id] ? state.previews[id].analysis.status : 'awaiting-confirmation', sessionId: state.previews[id].session?.sessionId ?? null })), [state.previews.left.analysis, state.previews.right.analysis, state.previews.left.session, state.previews.right.session, confirmedSelections]);
+  const selectedFeatureSummary = slots.map(slot => featureLabel(state.previews[slot].analysis.artifact ?? state.previews[slot].selected?.identity)).join(' · ');
+  const excludedChangeSummary = [...new Set(slots.flatMap(slot => state.previews[slot].analysis.artifact?.slice.excludedChanges.map(change => change.path) ?? []))].join(' · ') || 'No unrelated branch changes were identified.';
   const workspaceStatus = readyCount === 2 ? 'Both live apps are ready to compare' : readyCount === 1 ? 'One live app is ready' : state.repositoryStatus;
   function reviseSelections() {
     for (const slot of slots) {
@@ -407,13 +410,14 @@ export function App() {
     setResultView(view);
     if (view === 'left') {
       setComparisonLayout('left');
-      if (state.previews.left.branch !== demoScenario.versions.left.branch) {
-        dispatch({ type: 'set-branch', previewId: 'left', branch: demoScenario.versions.left.branch });
-        void startPreview('left', demoScenario.versions.left.branch);
+      const branch = state.branches[0] ?? demoScenario.versions.left.branch;
+      if (state.previews.left.branch !== branch) {
+        dispatch({ type: 'set-branch', previewId: 'left', branch });
+        void startPreview('left', branch);
       }
       return;
     }
-    const branch = view === 'result' ? resultBranch ?? demoScenario.branchRelationship.result.ref : demoScenario.versions.right.branch;
+    const branch = view === 'result' ? resultBranch ?? candidateBranch : state.branches[1] ?? demoScenario.versions.right.branch;
     setComparisonLayout('right');
     if (state.previews.right.branch !== branch) {
       dispatch({ type: 'set-branch', previewId: 'right', branch });
@@ -439,7 +443,7 @@ export function App() {
         <button className="help-action" onClick={() => setComparisonHelpOpen(value => !value)} aria-label="Comparison help">?</button>
       </div>
     </header>
-    {resultBranch && <ResultSummary activeView={resultView} onView={switchResultView} />}
+    {resultBranch && <ResultSummary activeView={resultView} branch={resultBranch} included={selectedFeatureSummary} excluded={excludedChangeSummary} onView={switchResultView} />}
     <section className="comparison-controls" aria-label="Comparison layout">
       <div><h1>{resultBranch ? 'Inspect the verified result' : 'Compare branches'}</h1><strong>{resultBranch ? 'Switch between either source and the verified combined result.' : 'These are two live Git branches of the same React application. Select one branch-specific UI change from each.'}</strong><span><button className="evidence-link" onClick={() => setComparisonHelpOpen(true)}>What am I seeing?</button><button className="evidence-link" onClick={() => setTechnicalOpen(true)}>How are changes identified?</button></span></div>
     </section>
@@ -450,7 +454,7 @@ export function App() {
         const preview = state.previews[previewId];
         const presentation = demoScenario.versions[previewId];
         const operation = operations[previewId];
-        const combinedPreview = preview.branch === demoScenario.branchRelationship.result.ref;
+        const combinedPreview = preview.branch === candidateBranch;
         const panelTitle = combinedPreview ? 'Combined result' : presentation.title;
         const panelDescription = combinedPreview ? 'The verified output containing both selected UI changes.' : presentation.description;
         const guidedPolicyRefusal = preview.analysis.status === 'refused' && Boolean(preview.analysis.artifact);
@@ -476,7 +480,7 @@ export function App() {
       })}
     </main>
     <section className="sync-summary" aria-label="Synchronization status"><span className={readyCount === 2 ? 'sync-ok' : ''}>↔</span><div><strong>{readyCount === 2 ? 'Live apps linked' : 'Linking live apps'}</strong><span>{state.synchronizationStatus}</span></div></section>
-    {!resultBranch && <CandidatePanel inputs={generationInputs} onRevise={reviseSelections} onEvidence={() => setTechnicalOpen(true)} onLaunch={branch => { setResultBranch(branch); setResultView('result'); setComparisonLayout('right'); dispatch({ type: 'set-branch', previewId: 'right', branch }); void startPreview('right', branch); }} />}
+    {!resultBranch && <CandidatePanel inputs={generationInputs} candidateBranch={candidateBranch} onRevise={reviseSelections} onEvidence={() => setTechnicalOpen(true)} onLaunch={branch => { setResultBranch(branch); setResultView('result'); setComparisonLayout('right'); dispatch({ type: 'set-branch', previewId: 'right', branch }); void startPreview('right', branch); }} />}
     {resultBranch && <div className="result-actions"><button className="evidence-link" onClick={() => switchResultView('left')}>Compare sources</button><button className="evidence-link" onClick={() => setTechnicalOpen(true)}>View changed files and verification evidence</button><button className="evidence-link" onClick={() => void navigator.clipboard?.writeText(resultBranch)}>Copy branch name</button></div>}
     <TechnicalDrawer open={technicalOpen} onClose={() => setTechnicalOpen(false)} state={state} operations={operations} onSelectAncestor={(slot, index) => send(slot, 'select-ancestor', { index })} onClear={slot => { send(slot, 'clear-selection'); dispatch({ type: 'clear-selection', previewId: slot }); }} />
   </div>;
