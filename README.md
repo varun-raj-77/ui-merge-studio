@@ -1,5 +1,13 @@
 # UI Merge Studio
 
+UI Merge Studio compares running React branches, traces selected UI boundaries to source and dependencies, and creates a verified candidate from the exact shared base.
+
+Public evidence: [Source code](https://github.com/varun-raj-77/ui-merge-studio) · [Architecture](docs/adr/) · [Evaluation evidence](docs/evaluation.md) · [Local setup](#run-the-controlled-demo) · [Limitations](docs/limitations.md) · [Development history](docs/codex-prompts/)
+
+The hosted Showcase is an interactive replay of committed controlled-run evidence. It does not run Git, create branches, execute tests, or mutate a repository in the visitor's browser. Those operations remain in local engine mode.
+
+`docs/codex-prompts/` is development history: structured implementation briefs, acceptance criteria, test requirements, completion-report contracts, and scope-control records. It documents the engineering process; it is not runtime product evidence and is not used as a primary Showcase link.
+
 **Visually select preferred features from multiple running React branches and create one verified combined branch.**
 
 UI Merge Studio is an open-source local developer tool for comparing multiple React and TypeScript Git branches as live applications. Developers can select preferred rendered UI regions, trace those selections to React source and supporting dependencies, generate a deterministic candidate branch, and verify the result with typechecks, tests, builds, and runtime checks.

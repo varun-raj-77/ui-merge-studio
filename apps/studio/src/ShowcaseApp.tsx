@@ -1,230 +1,156 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { showcaseManifest, type ShowcaseFeatureId } from './showcaseManifest';
 
-type Feature = 'navigation' | 'activity';
-type View = 'base' | 'navigation' | 'activity' | 'combined';
-type Phase = 'select' | 'verifying' | 'verified';
+type Stage = 'compare' | 'select' | 'plan' | 'verify' | 'result';
+type Selection = Record<ShowcaseFeatureId, boolean>;
+const emptySelection: Selection = { navigation: false, activity: false };
+const stages: readonly { id: Stage; label: string }[] = [
+  { id: 'compare', label: 'Compare' },
+  { id: 'select', label: 'Select' },
+  { id: 'plan', label: 'Plan' },
+  { id: 'verify', label: 'Verify' },
+  { id: 'result', label: 'Result' }
+];
 
-const repositoryUrl = 'https://github.com/varun-raj-77/ui-merge-studio';
-const evidenceUrl = `${repositoryUrl}/blob/main/docs/evaluation.md#prompt-009-vercel-showcase-mode`;
-const localUrl = `${repositoryUrl}#run-the-controlled-demo`;
-const checks = ['Dependencies', 'TypeScript', 'Full tests', 'Feature tests', 'Production build'];
-const emptySelections: Record<Feature, boolean> = { navigation: false, activity: false };
-
-function SampleApp({
-  view,
-  target,
-  selected,
-  onSelect
-}: {
-  view: View;
-  target?: Feature;
-  selected?: boolean;
-  onSelect?: () => void;
+function ProductPreview({ selection, label, branchFeature, selectable, onToggle }: {
+  selection: Selection;
+  label: string;
+  branchFeature?: ShowcaseFeatureId;
+  selectable?: boolean;
+  onToggle?: (feature: ShowcaseFeatureId) => void;
 }) {
-  const navigation = view === 'navigation' || view === 'combined';
-  const activity = view === 'activity' || view === 'combined';
-  const selectionLabel = selected ? 'Remove' : 'Select';
-
-  return <div className="sample-app" aria-label={`${view} sample application preview`}>
-    <aside className="sample-side">
-      <b>S</b>
-      <nav aria-label="Illustrative sample navigation">
-        <span className="active">⌂ Tickets</span><span>Customers</span><span>Reports</span>
-      </nav>
-      {navigation && (onSelect
-        ? <button
-            className={`${target === 'navigation' ? 'target' : ''} ${selected ? 'picked' : ''}`}
-            aria-pressed={selected}
-            aria-label={`${selectionLabel} collapsible navigation feature`}
-            onClick={onSelect}
-          >‹ Collapse</button>
-        : <span className="sample-control" aria-label="Collapsed navigation shown in this preview">‹ Collapse</span>)}
-    </aside>
-    <section className="sample-content">
-      <header><div><small>Sample Support Desk</small><strong>Ticket activity</strong></div><i>RK</i></header>
-      <div className="sample-title"><b>Open tickets</b><span className="sample-action">+ New ticket</span></div>
-      <main>
-        <div className="ticket-list">{['Login issue on mobile', 'Update billing address', 'Export is taking too long'].map((item, index) =>
-          <p className={index ? '' : 'active'} key={item}><i>{index ? 'JL' : 'AM'}</i><span><b>{item}</b><small>{index + 2} min ago</small></span></p>)}
-        </div>
-        <article>
-          <header><div><small>#1042 · Priority</small><b>Login issue on mobile</b></div><em>Open</em></header>
-          {activity && (onSelect
-            ? <button
-                className={`filters ${target === 'activity' ? 'target' : ''} ${selected ? 'picked' : ''}`}
-                aria-pressed={selected}
-                aria-label={`${selectionLabel} activity filters feature`}
-                onClick={onSelect}
-              ><b>All</b><span>Notes</span><span>Replies</span></button>
-            : <div className="filters sample-control" aria-label="Activity filters shown in this preview"><b>All</b><span>Notes</span><span>Replies</span></div>)}
-          <p className="event"><i /><span><b>Rekha replied</b><small>Thanks — I can reproduce this on iOS.</small></span></p>
-          <p className="event"><i /><span><b>Internal note</b><small>Escalated to the identity team.</small></span></p>
-        </article>
-      </main>
-    </section>
+  const navigation = selection.navigation;
+  const activity = selection.activity;
+  const feature = branchFeature && showcaseManifest.features.find(item => item.id === branchFeature);
+  return <div className="product-preview" aria-label={label}>
+    <div className="preview-chrome"><span /><span /><span /><b>Sample Support Desk</b></div>
+    <div className="support-app">
+      <aside className={navigation ? 'has-change' : ''}>
+        <div className="support-logo">S</div>
+        <nav aria-label={`${label} navigation`}>
+          <strong>Workspace</strong><span className="active">Tickets <i>12</i></span><span>Customers</span><span>Reports</span>
+        </nav>
+        {navigation && <button
+          type="button"
+          className="feature-control"
+          disabled={!selectable}
+          aria-pressed={selectable ? selection.navigation : undefined}
+          onClick={() => selectable && onToggle?.('navigation')}
+        ><b>‹</b><span>Collapse navigation</span></button>}
+      </aside>
+      <section>
+        <header><div><small>Support operations</small><strong>Ticket activity</strong></div><span className="avatar">RK</span></header>
+        <main>
+          <div className="tickets"><strong>Open tickets</strong>{['Login issue on mobile', 'Update billing address', 'Export is taking too long'].map((ticket, index) =>
+            <article className={index === 0 ? 'active' : ''} key={ticket}><i>{index === 0 ? 'AM' : 'JL'}</i><p><b>{ticket}</b><small>{index + 2} min ago</small></p></article>)}</div>
+          <div className="activity">
+            <header><div><small>#1042 · Priority</small><strong>Login issue on mobile</strong></div><em>Open</em></header>
+            {activity && <button
+              type="button"
+              className="activity-filter feature-control"
+              disabled={!selectable}
+              aria-pressed={selectable ? selection.activity : undefined}
+              onClick={() => selectable && onToggle?.('activity')}
+            ><b>All</b><span>Notes</span><span>Replies</span></button>}
+            <article><i /><p><b>Rekha replied</b><small>Thanks — I can reproduce this on iOS.</small></p></article>
+            <article><i /><p><b>Internal note</b><small>Escalated to the identity team.</small></p></article>
+          </div>
+        </main>
+      </section>
+    </div>
+    {feature && <div className="change-caption"><span>{feature.branchLabel} · {feature.branch}</span><b>{feature.name}</b></div>}
   </div>;
 }
 
-function Landing({ launch }: { launch: () => void }) {
-  return <main className="sc-landing">
-    <nav className="sc-nav" aria-label="Showcase navigation">
-      <a href="/" className="sc-brand"><b>UM</b> UI Merge Studio</a>
-      <div><a href="#how">How it works</a><a href={repositoryUrl} target="_blank" rel="noreferrer">GitHub ↗</a></div>
-    </nav>
-    <section className="sc-hero">
-      <div className="sc-copy">
-        <p className="pill"><i /> Interactive product showcase</p>
-        <h1>Choose the best UI.<em>Keep the working code.</em></h1>
-        <p>Compare live React branches, select the features you want, and create one dependency-aware result that must pass verification.</p>
-        <div><button className="sc-primary" onClick={launch}>Launch Interactive Demo <span>→</span></button><a href="#how">See how it works</a></div>
-        <footer><span>✓ No setup required</span><span>✓ Interactive sample UI</span><span>✓ Committed verification evidence</span></footer>
+function Landing({ start }: { start: () => void }) {
+  const { links } = showcaseManifest;
+  return <main className="showcase landing">
+    <header className="site-header"><a className="brand" href="/"><b>UM</b><span>UI Merge Studio</span></a><a href={links.source.href}>View source ↗</a></header>
+    <section className="hero">
+      <div className="hero-copy">
+        <p className="eyebrow">Dependency-aware React feature integration</p>
+        <h1>Choose visible features.<br /><em>Trace the code. Verify the result.</em></h1>
+        <p>UI Merge Studio compares two running React branches, maps selected UI to source and dependencies, then builds one verified candidate from their shared base.</p>
+        <div className="hero-actions"><button className="primary" onClick={start}>Explore the verified demo <span>→</span></button><a href={links.source.href}>View source</a></div>
+        <div className="boundary-note"><b>Hosted showcase</b> replays committed evidence. <b>Local engine</b> runs Git, source analysis, candidate generation, and verification.</div>
       </div>
-      <div className="hero-window" aria-label="Illustration of the showcase workflow">
-        <header><span>● ● ●</span><b>Compare branches</b><small>SHOWCASE</small></header>
-        <nav><b>✓</b> Compare <i /> <b>2</b> Select <i /> <b>3</b> Combine <i /> <b>4</b> Verify</nav>
-        <main><div><strong>Navigation experiment</strong><SampleApp view="navigation" /></div><div><strong>Activity filter experiment</strong><SampleApp view="activity" /></div></main>
-        <footer><span><b>2 features</b> ready to combine</span><span className="sample-cta">Generate candidate</span></footer>
-        <aside>✓ <span><b>All checks passed</b><small>Recorded candidate evidence</small></span></aside>
+      <div className="hero-preview">
+        <ProductPreview selection={{ navigation: true, activity: true }} label="Verified combined result preview" />
+        <div className="proof-chip"><b>✓ Verified candidate</b><span>2 selected boundaries · dependencies traced</span></div>
       </div>
     </section>
-    <section className="sc-features" id="how">
-      <article><span>01</span><h2>Compare in context</h2><p>Run complete branches side by side, not isolated screenshots or code diffs.</p></article>
-      <article><span>02</span><h2>Select visually</h2><p>Click the rendered feature. Source mapping traces it back to its implementation.</p></article>
-      <article><span>03</span><h2>Verify before trust</h2><p>Only a candidate that passes configured checks becomes a combined branch when the engine runs locally.</p></article>
-    </section>
-    <p className="sc-disclosure">The hosted showcase replays committed evidence from the controlled sample. It does not run Git or tests. Repository execution remains local.</p>
+    <section className="workflow" aria-label="Product workflow">{['Compare branches', 'Select visible features', 'Trace source + dependencies', 'Review the plan', 'Verify one candidate'].map((item, index) => <div key={item}><span>{index + 1}</span><b>{item}</b></div>)}</section>
+    <section className="credibility" aria-labelledby="credibility-title"><div><p className="eyebrow">Repository-backed proof</p><h2 id="credibility-title">A visual decision connected to engineering evidence.</h2></div><ul><li>Deterministic candidate generation</li><li>Unrelated edits explicitly excluded</li><li>Source and dependency trace recorded</li><li>Typecheck, tests, and build passed</li><li>Unsafe combinations can be refused</li><li>External React/Vite validation documented</li></ul></section>
   </main>;
 }
 
-function EvidencePanel({ selected }: { selected: Record<Feature, boolean> }) {
-  const selectedLabels = [
-    selected.navigation && 'Collapsible navigation',
-    selected.activity && 'Activity filters'
-  ].filter(Boolean).join(', ');
+function Progress({ stage }: { stage: Stage }) {
+  const current = stages.findIndex(item => item.id === stage);
+  return <nav className="stage-nav" aria-label="Showcase workflow">{stages.map((item, index) => <span key={item.id} aria-current={index === current ? 'step' : undefined} className={index < current ? 'complete' : index === current ? 'current' : ''}><b>{index < current ? '✓' : index + 1}</b>{item.label}</span>)}</nav>;
+}
 
-  return <section className="evidence-panel" aria-labelledby="evidence-title">
-    <header><div><small>COMMITTED CONTROLLED-RUN EVIDENCE</small><h2 id="evidence-title">What the hosted result proves</h2></div><span>✓ Passed</span></header>
-    <dl>
-      <div><dt>Selected features</dt><dd>{selectedLabels}</dd></div>
-      <div><dt>Candidate branch</dt><dd><code>combined-result</code></dd></div>
-      <div><dt>Verification gates</dt><dd>{checks.join(' · ')}</dd></div>
-      <div><dt>Source and dependencies</dt><dd>The recorded source-mapping run traced the navigation and activity-filter selections to their implementation boundaries and included their supported dependencies before candidate verification.</dd></div>
-    </dl>
-    <p>This is a replay of repository evidence from a previously verified deterministic run. No branch, worktree, test process, or repository mutation is created for this visitor.</p>
-    <a href={evidenceUrl} target="_blank" rel="noreferrer">Open repository evaluation evidence ↗</a>
-  </section>;
+function ResultPreview({ selection }: { selection: Selection }) {
+  const count = Number(selection.navigation) + Number(selection.activity);
+  return <aside className="result-preview" aria-labelledby="result-preview-title">
+    <header><div><p className="eyebrow">Visual preview — not a generated branch</p><h2 id="result-preview-title">Result Preview</h2></div><span aria-live="polite">{count ? `${count} feature${count > 1 ? 's' : ''} selected` : 'Baseline'}</span></header>
+    <ProductPreview selection={selection} label="Visual preview of the currently selected feature set" />
+    <div className="selection-legend"><span className={selection.navigation ? 'on' : ''}>A · Navigation</span><span className={selection.activity ? 'on' : ''}>B · Activity filters</span></div>
+  </aside>;
 }
 
 export function ShowcaseApp() {
-  const [launched, setLaunched] = useState(false);
-  const [selected, setSelected] = useState<Record<Feature, boolean>>(emptySelections);
-  const [phase, setPhase] = useState<Phase>('select');
-  const [progress, setProgress] = useState(-1);
-  const [view, setView] = useState<View>('combined');
-  const [evidenceOpen, setEvidenceOpen] = useState(false);
-  const both = selected.navigation && selected.activity;
+  const [started, setStarted] = useState(false);
+  const [stage, setStage] = useState<Stage>('compare');
+  const [selected, setSelected] = useState<Selection>(emptySelection);
+  const [gateIndex, setGateIndex] = useState(0);
+  const features = showcaseManifest.features;
+  const selectedFeatures = useMemo(() => features.filter(feature => selected[feature.id]), [selected, features]);
+  const valid = selectedFeatures.length > 0;
+  const toggle = (id: ShowcaseFeatureId) => setSelected(value => ({ ...value, [id]: !value[id] }));
+  const restart = () => { setStarted(false); setStage('compare'); setSelected(emptySelection); setGateIndex(0); };
+  const goTo = (next: Stage) => setStage(next);
+  if (!started) return <Landing start={() => setStarted(true)} />;
 
-  useEffect(() => {
-    if (phase !== 'verifying') return;
-    const timer = window.setInterval(() => setProgress(value => {
-      if (value === checks.length - 1) {
-        clearInterval(timer);
-        setPhase('verified');
-        setView('combined');
-        return value;
-      }
-      return value + 1;
-    }), 120);
-    return () => clearInterval(timer);
-  }, [phase]);
+  return <main className="showcase demo">
+    <header className="demo-header"><button className="brand" onClick={restart} aria-label="Restart UI Merge Studio showcase"><b>UM</b><span>UI Merge Studio</span></button><Progress stage={stage} /><span className="replay-badge">Hosted evidence replay</span></header>
 
-  const restart = () => {
-    setSelected(emptySelections);
-    setPhase('select');
-    setProgress(-1);
-    setView('combined');
-    setEvidenceOpen(false);
-    setLaunched(false);
-  };
-
-  const backToSelections = () => {
-    setPhase('select');
-    setProgress(-1);
-    setEvidenceOpen(false);
-  };
-
-  const toggleFeature = (feature: Feature) => {
-    setSelected(current => ({ ...current, [feature]: !current[feature] }));
-  };
-
-  if (!launched) return <Landing launch={() => setLaunched(true)} />;
-
-  const step = phase === 'verified' || phase === 'verifying' ? 4 : both ? 3 : 2;
-  return <main className="sc-demo">
-    <header className="demo-bar">
-      <button className="sc-brand" onClick={restart} aria-label="UI Merge Studio home; clear current demo"><b>UM</b> UI Merge Studio</button>
-      <nav aria-label="Showcase progress">{['Compare', 'Select', 'Combine', 'Verify'].map((label, index) =>
-        <span className={index + 1 < step || phase === 'verified' ? 'done' : index + 1 === step ? 'current' : ''} key={label}>
-          <b>{index + 1 < step || phase === 'verified' ? '✓' : index + 1}</b>{label}
-        </span>)}
-      </nav>
-      <em>HOSTED EVIDENCE REPLAY</em>
-    </header>
-    <section className="demo-heading">
-      <div><small>Built-in sample workspace</small><h1>{phase === 'verified' ? 'Inspect the combined result' : 'Compare two UI experiments'}</h1>
-        <p>{phase === 'verified'
-          ? 'Inspecting the preview tabs does not change your selected candidate.'
-          : 'Select or remove the highlighted improvement from each branch. Both are required to generate.'}</p>
+    {stage === 'compare' && <section className="stage-content">
+      <div className="stage-intro"><p className="eyebrow">Stage 1 · Compare</p><h1>One shared baseline. Two unmistakable branch changes.</h1><p>Inspect what each running implementation adds before choosing anything. Selection is disabled in this stage.</p></div>
+      <div className="comparison">
+        <article><header><span>Shared baseline</span><code>main</code><p>Neither experiment exists yet.</p></header><ProductPreview selection={emptySelection} label="Baseline application before either feature" /></article>
+        {features.map(feature => <article className={`branch-card ${feature.id}`} key={feature.id}><header><span>{feature.branchLabel}</span><code>{feature.branch}</code><p>{feature.summary}</p></header><ProductPreview selection={{ ...emptySelection, [feature.id]: true }} branchFeature={feature.id} label={`${feature.branchLabel}: ${feature.name}`} /></article>)}
       </div>
-      <button onClick={restart}>Exit demo</button>
-    </section>
+      <div className="stage-action"><p>Shared content remains constant; outlined regions are branch-owned changes.</p><button className="primary" onClick={() => goTo('select')}>I understand the comparison <span>→</span></button></div>
+    </section>}
 
-    {phase !== 'verified'
-      ? <section className="compare-grid">{([
-          ['navigation', 'Navigation experiment', 'branch-sidebar', 'Collapsible navigation'],
-          ['activity', 'Activity filter experiment', 'branch-inspector', 'Activity filters']
-        ] as const).map(([feature, title, branch, label]) =>
-          <article className={selected[feature] ? 'chosen' : ''} key={feature}>
-            <header><div><small>Experiment {feature === 'navigation' ? 'A' : 'B'}</small><h2>{title}</h2><code>{branch}</code></div><span>● Interactive sample</span></header>
-            <div className="select-note"><span>{selected[feature] ? '✓ Selected — click again to remove' : 'Click the highlighted control to select'}</span><b>{label}</b></div>
-            <SampleApp view={feature} target={feature} selected={selected[feature]} onSelect={() => toggleFeature(feature)} />
-          </article>)}
-        </section>
-      : <>
-          <section className="result-grid">
-            <aside><small>✓ PREVIOUSLY VERIFIED CANDIDATE</small><h2>Both features.<br />One working result.</h2>
-              <p>The committed controlled engine run created <code>combined-result</code> from the exact shared base. The hosted page is displaying that evidence; it is not creating a branch now.</p>
-              <div>{checks.map(check => <span key={check}><b>✓</b>{check}<small>Passed</small></span>)}</div>
-              <footer><b>Evidence replay, not cloud execution</b><p>Git operations and verification run only in local engine mode.</p></footer>
-            </aside>
-            <main>
-              <div className="inspection-label"><b>Preview inspection</b><span>These tabs only change what you inspect. Candidate selections remain unchanged.</span></div>
-              <nav aria-label="Inspect candidate variants">{(['base', 'navigation', 'activity', 'combined'] as View[]).map(item =>
-                <button className={view === item ? 'active' : ''} aria-pressed={view === item} onClick={() => setView(item)} key={item}>
-                  {item === 'activity' ? 'Activity source' : item === 'navigation' ? 'Navigation source' : item === 'combined' ? 'Combined result' : 'Base'}
-                </button>)}
-              </nav>
-              <SampleApp view={view} />
-            </main>
-          </section>
-          <nav className="result-actions" aria-label="Combined result actions">
-            <button className="sc-primary" onClick={backToSelections}>Back to selections</button>
-            <button onClick={restart}>Restart demo</button>
-            <button aria-expanded={evidenceOpen} aria-controls="showcase-evidence" onClick={() => setEvidenceOpen(open => !open)}>View evidence</button>
-            <a href={repositoryUrl} target="_blank" rel="noreferrer">View source on GitHub ↗</a>
-            <a href={localUrl} target="_blank" rel="noreferrer">Run locally ↗</a>
-          </nav>
-          {evidenceOpen && <div id="showcase-evidence"><EvidencePanel selected={selected} /></div>}
-        </>}
+    {stage === 'select' && <section className="stage-content split">
+      <div><div className="stage-intro"><p className="eyebrow">Stage 2 · Select</p><h1>Select the visible features to carry forward.</h1><p>Selections are explicit and reversible. The preview updates causally with every choice.</p></div>
+        <div className="feature-choices">{features.map(feature => <button className={selected[feature.id] ? 'selected' : ''} aria-pressed={selected[feature.id]} onClick={() => toggle(feature.id)} key={feature.id}><span>{feature.branchLabel} · <code>{feature.branch}</code></span><b>{feature.name}</b><p>{feature.summary}</p><em>{selected[feature.id] ? '✓ Selected — choose to remove' : '+ Add to candidate preview'}</em></button>)}</div>
+        <div className="stage-action"><button onClick={() => goTo('compare')}>Back to comparison</button><button className="primary" disabled={!valid} onClick={() => goTo('plan')}>Review integration plan <span>→</span></button></div>
+      </div><ResultPreview selection={selected} />
+    </section>}
 
-    {phase !== 'verified' && <aside className="action-tray" aria-label="Candidate selection summary">
-      <div><small>Selected features</small><b>{selected.navigation ? 'Collapsible navigation' : 'Choose navigation'} + {selected.activity ? 'Activity filters' : 'Choose filters'}</b></div>
-      {phase === 'verifying'
-        ? <div className="progress" aria-live="polite"><i><span style={{ width: `${((progress + 1) / checks.length) * 100}%` }} /></i><b>{progress < 0 ? 'Loading recorded verification…' : `Replaying verified gate: ${checks[progress]}`}</b><small>No tests are running in this browser.</small></div>
-        : <div><small>Selection set</small><b>{both ? '✓ Ready to replay candidate evidence' : 'Waiting for 2 selections'}</b></div>}
-      <button className="sc-primary" disabled={!both || phase === 'verifying'} onClick={() => { setProgress(-1); setPhase('verifying'); }}>
-        {phase === 'verifying' ? 'Replaying verification evidence…' : 'Generate candidate'} <span>→</span>
-      </button>
-    </aside>}
+    {stage === 'plan' && valid && <section className="stage-content">
+      <div className="stage-intro"><p className="eyebrow">Stage 3 · Integration plan</p><h1>Review the source work before approving it.</h1><p>This plan replays the recorded local analysis for the selected boundaries. It is source integration, not visual compositing.</p></div>
+      <div className="plan-summary"><div><small>Common base</small><code>{showcaseManifest.repository.commonBaseCommit.slice(0, 12)}</code></div><div><small>Candidate branch</small><code>{showcaseManifest.repository.candidateBranch}</code></div><div><small>Compatibility</small><b className="compatible">✓ {showcaseManifest.repository.compatibility}</b></div></div>
+      <div className="plan-grid">{selectedFeatures.map(feature => <article key={feature.id}><header><span>{feature.branchLabel} · {feature.branch}</span><h2>{feature.name}</h2></header><dl><div><dt>React boundary</dt><dd><code>{feature.boundary}</code></dd></div><div><dt>Source file</dt><dd><code>{feature.sourceFile}</code></dd></div></dl><h3>Supporting files</h3><ul>{feature.supportingFiles.map(file => <li key={file.path}><code>{file.path}</code><span>{file.reason}</span></li>)}</ul><h3>Unrelated changes excluded</h3><ul className="excluded">{feature.excludedFiles.map(file => <li key={file.path}><code>{file.path}</code><span>{file.reason}</span></li>)}</ul></article>)}</div>
+      <div className="stage-action"><button onClick={() => goTo('select')}>Back to selections</button><button className="primary" onClick={() => { setGateIndex(0); goTo('verify'); }}>Approve candidate generation <span>→</span></button></div>
+    </section>}
+
+    {stage === 'plan' && !valid && <section className="stage-content invalid-state"><h1>No valid integration plan</h1><p>Select at least one evidence-backed feature before opening a plan.</p><button className="primary" onClick={() => goTo('select')}>Back to selections</button></section>}
+
+    {stage === 'verify' && <section className="stage-content verify">
+      <div className="stage-intro"><p className="eyebrow">Stage 4 · Verify</p><h1>Inspect each recorded verification gate.</h1><p><b>No checks are running in this browser.</b> The hosted version replays evidence from a previously executed deterministic local run.</p></div>
+      <ol className="gate-list">{showcaseManifest.gates.map((gate, index) => <li className={index < gateIndex ? 'reviewed' : index === gateIndex ? 'active' : ''} key={gate.id}><span>{index < gateIndex ? '✓' : index + 1}</span><div><h2>{gate.name}</h2><p>{gate.checks}</p>{index <= gateIndex && <small><b>Recorded status: {gate.status}</b> · {gate.evidenceSource}</small>}</div></li>)}</ol>
+      <div className="stage-action"><button onClick={() => goTo('plan')}>Back to plan</button>{gateIndex < showcaseManifest.gates.length - 1 ? <button className="primary" onClick={() => setGateIndex(index => index + 1)}>Inspect next gate <span>→</span></button> : <button className="primary" onClick={() => goTo('result')}>Open verified result <span>→</span></button>}</div>
+    </section>}
+
+    {stage === 'result' && <section className="stage-content">
+      <div className="stage-intro"><p className="eyebrow">Stage 5 · Result</p><h1>Baseline versus the verified candidate.</h1><p>The final preview contains only the selected features and their traced dependencies.</p></div>
+      <div className="final-grid"><article><header><span>Before</span><h2>Shared baseline</h2></header><ProductPreview selection={emptySelection} label="Baseline before selected features" /></article><article className="final"><header><span>After · <code>{showcaseManifest.repository.candidateBranch}</code></span><h2>Verified combined result</h2></header><ProductPreview selection={selected} label="Final result with selected features" /><div className="final-features">{selectedFeatures.map(feature => <span key={feature.id}>✓ {feature.name} · {feature.branch}</span>)}</div></article></div>
+      <div className="result-evidence"><article><h2>Included source + dependencies</h2>{selectedFeatures.flatMap(feature => [feature.sourceFile, ...feature.supportingFiles.map(file => file.path)]).map(path => <code key={path}>{path}</code>)}</article><article><h2>Excluded unrelated changes</h2>{selectedFeatures.flatMap(feature => feature.excludedFiles.map(file => file.path)).map(path => <code key={path}>{path}</code>)}</article><article><h2>Verification summary</h2><p>{showcaseManifest.gates.length} recorded gates passed in the deterministic local run.</p><a href={showcaseManifest.links.candidateEvidence.href}>Inspect candidate evidence ↗</a></article></div>
+      <nav className="result-actions" aria-label="Result actions"><button onClick={() => goTo('plan')}>Back to plan</button><button onClick={() => goTo('select')}>Back to selections</button><button onClick={restart}>Restart demo</button><a href={showcaseManifest.links.source.href}>View repository ↗</a><a href={showcaseManifest.links.localSetup.href}>Read local setup ↗</a></nav>
+      <footer className="public-links">{Object.values(showcaseManifest.links).filter(link => link !== showcaseManifest.links.candidateEvidence).map(link => <a href={link.href} key={link.label}>{link.label}</a>)}</footer>
+    </section>}
   </main>;
 }
