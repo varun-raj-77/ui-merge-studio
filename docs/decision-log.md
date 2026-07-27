@@ -1,5 +1,14 @@
 # Decision log
 
+# Prompt 009 decisions
+
+- Make the static production build default to Showcase Mode while preserving the existing local engine UI in development and behind `?mode=local`.
+- Keep the hosted boundary explicit: it replays a committed successful controlled run and never claims to create worktrees, branches, or verification processes in the browser.
+- Use interactive React reconstructions of the sample base, navigation experiment, activity-filter experiment, and combined result. Screenshots are not used as the interaction.
+- Reuse the established Compare → Select → Combine → Verify information architecture and controlled sample labels.
+- Keep candidate generation, dependency slicing, merge, and verification packages untouched.
+- Use a static Vite artifact plus Vercel SPA fallback, requiring no hosted repository access or secrets.
+
 # Prompt 008 decisions
 
 - Treat the original external validation branches as insufficient for dependency-generation evidence because each was only a three-line literal change. Preserve them and create bounded descendants with one direct dependency, one transitive dependency, and one unrelated visible edit each.

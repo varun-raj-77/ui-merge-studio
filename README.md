@@ -6,6 +6,23 @@ UI Merge Studio is an open-source local developer tool for comparing multiple Re
 
 > Current scope: local React + TypeScript + Vite repositories using npm, pnpm, or yarn.
 
+## Showcase Mode
+
+Showcase Mode is the static, Vercel-ready first-run experience for people who do not have a compatible repository locally. It presents the controlled sample's base branch, navigation experiment, activity-filter experiment, and combined result as interactive React UI.
+
+The one-click walkthrough teaches `Compare → Select → Combine → Verify` without setup. It is deliberately an evidence replay, not cloud execution: the verification summary comes from the committed controlled proof, and the browser does not claim to create Git worktrees, mutate a repository, or rerun tests. Use local mode to execute the real engine.
+
+```sh
+# Hosted-style showcase during development
+npm run dev
+# open http://127.0.0.1:4310/?mode=showcase
+
+# Production builds default to Showcase Mode
+npm run build
+```
+
+Add `?mode=local` to a production-served build only when it is paired with the Node server and local repository APIs.
+
 ![UI Merge Studio external Vite mapping](docs/evidence/prompt-007b/external-vite-mapping.png)
 
 ## Why it exists
