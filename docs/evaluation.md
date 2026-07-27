@@ -1,5 +1,13 @@
 # Phase 0 evaluation
 
+## Prompt 008 external Vite candidate generation
+
+Final verdict: **PASS**, bounded to the inspected external repository and supported conventional static syntax.
+
+Two selections made through running external previews resolved generically to `PageContent` and `RevenueTrendChart`. Git/AST analysis included each selected declaration plus a direct and transitive relative dependency, excluded two unrelated visible branch edits, and produced a six-path read-only plan from exact base `8223897`. Candidate `f294a4f` has that base as its only parent and tree `1d0165457f9471908539f6660f17574b1f89dfe8`. Install, TypeScript build, lint, production build, combined runtime, focused browser assertions, repeat idempotence, source-ref preservation, and cleanup passed.
+
+The external repository has no test script, so Prompt 008 does not establish external test slicing or application-owned unit-test preservation. A real competing `PageContent` edit was refused as `overlapping-declaration` before mutation. This result proves neither universal Vite support nor arbitrary React integration.
+
 ## Prompt 006 product-experience result
 
 Prompt 006 is evaluated separately from the engine proof. PASS requires immediate task clarity, fixture context, one guided happy path, API acknowledgement below one second, truthful operation progress, bounded non-overlapping polling, cold dual readiness below 20 seconds on the controlled measured setup, warm dual and restart readiness below 10 seconds, technical evidence preservation, keyboard operation, responsive layouts, and no regression in Prompt 001–005 behavior.

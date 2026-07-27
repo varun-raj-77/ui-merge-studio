@@ -1,5 +1,15 @@
 # Decision log
 
+# Prompt 008 decisions
+
+- Treat the original external validation branches as insufficient for dependency-generation evidence because each was only a three-line literal change. Preserve them and create bounded descendants with one direct dependency, one transitive dependency, and one unrelated visible edit each.
+- Configure repository path, refs, preview route, candidate ref, and verification commands through validated environment input. Component names, source paths, labels, and expected files remain absent from production configuration.
+- Keep the visual selection causal: runtime source identity feeds the existing Git/AST analyzer; its resolved slices are the only generator inputs.
+- Reconstruct typed arrow components from the complete variable declaration statement. The prior mismatch between indexed `VariableDeclarator` offsets and transformation `VariableDeclaration` offsets caused a valid external candidate to refuse; the fix is generic and regression-tested.
+- Retain the successful external candidate for review. Repeated identical generation must recognize the same tree, while an existing divergent tree remains protected.
+- Use a real alternate edit of `PageContent` for failure evidence. Preflight refuses the competing declaration before any candidate worktree or ref mutation.
+- Do not invent an external test command. Record the absence of an application test suite and use its real typecheck, lint, production build, and browser behavior gates.
+
 - Prompt 006 makes Guided Mode the default information architecture: Compare → Select → Combine → Verify. Technical evidence remains complete but moves into a focus-managed drawer.
 - Preview launch is an acknowledged operation, not a request held open until Vite is ready. Operations have explicit pending/running/ready/failed/cancelled/superseded states and measured phase events.
 - A slot reuses only its own unchanged detached worktree. This preserves checkout and dependency isolation while reducing warm dual restart from roughly 22 seconds to under 4 seconds on the measured machine.
