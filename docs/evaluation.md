@@ -1,5 +1,13 @@
 # Phase 0 evaluation
 
+## Prompt 010 Showcase journey completion
+
+The hosted journey now covers landing, launch, two toggle selections, candidate evidence replay, combined-result inspection, evidence disclosure, revision, regeneration, restart, exit, repository source, and local-run guidance. Returning to selections preserves the selected pair; removing either feature immediately invalidates generation until it is reselected. Variant tabs are explicitly inspection-only.
+
+The state boundary is intentionally ephemeral. Showcase state is not persisted or represented in browser history, cookies, query parameters, `localStorage`, or `sessionStorage`, so a default entry or refresh constructs the landing state. The production `mode` query continues only to select Showcase versus local engine surfaces; it does not restore a Showcase phase.
+
+Visible actions were audited: landing anchors have valid destinations, result links point to repository/source guidance, selection controls are semantic toggle buttons, evidence is a real disclosure, and non-functional sample-app actions render as non-interactive illustration. Keyboard focus, pressed/expanded state, reduced motion, wrapping result actions, mobile stacking, and a non-covering mobile tray are included.
+
 ## Prompt 009 Vercel Showcase Mode
 
 **PASS for presentation, bounded to a hosted evidence replay.**
