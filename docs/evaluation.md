@@ -10,7 +10,7 @@ The success evidence is run `3788f05dfefcd572`: base `cccd7116646d0cc59d4795478e
 
 The hosted browser replays committed artifacts and evidence; it does not run Git or verification. The unsafe path calls the real capability comparison with the controlled query/path contracts and accurately reports preview-synchronization refusal. It is not represented as part of run `3788f05dfefcd572` or as candidate-generation failure.
 
-Final focused validation passed TypeScript, 38 Studio/bridge tests, 42 multi-preview capability/refusal tests, Showcase schema/hash validation, the production build, controlled fixture verification, and 8/8 public Playwright journeys. Manual review covered 1440×900, 1280×720, and 390×844 with 16 screenshots under `docs/evidence/prompt-013/`.
+Final focused validation passed TypeScript, 38 Studio/bridge tests, 42 multi-preview capability/refusal tests, Showcase schema/hash validation, the production build, controlled fixture verification, and 8/8 public Playwright journeys. Manual review covered 1440×900, 1280×720, and 390×844 with 16 screenshots under `docs/evidence/merge-lab-redesign/`.
 
 ## Real-artifact Showcase evaluation
 

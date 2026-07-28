@@ -10,7 +10,8 @@ export function validateShowcasePackage() {
     if (actual !== artifact.sha256) throw new Error(`Stale or tampered artifact ${artifact.id}: expected ${artifact.sha256}, received ${actual}.`);
   }
   if (!existsSync(generatedManifestPath)) throw new Error('Missing generated Showcase manifest.');
-  if (readFileSync(generatedManifestPath, 'utf8') !== normalizedJson(report)) throw new Error('Stale generated Showcase manifest. Run npm run showcase:prepare.');
+  const generatedManifest = JSON.parse(readFileSync(generatedManifestPath, 'utf8')) as unknown;
+  if (normalizedJson(generatedManifest) !== normalizedJson(report)) throw new Error('Stale generated Showcase manifest. Run npm run showcase:prepare.');
   console.log(`PASS: Showcase package ${report.runId} validated (${report.repository.candidateCommit}).`);
   return report;
 }

@@ -17,6 +17,7 @@ export const showcaseRefusalEvidence = {
   rightContract: pathCapabilities.routeSync!.contract,
   route: '/tickets/:ticketId',
   reason: compareCapabilities(queryCapabilities, pathCapabilities).reason,
+  publicReason: 'These versions store the selected ticket in incompatible URL formats. UI Merge Studio cannot keep their runtime state synchronized safely, so it stopped before candidate creation.',
   evidence: 'tests/e2e/multi-preview.spec.ts · branch-incompatible-route',
   next: 'Align the route contract manually, then rerun compatibility analysis.'
 } as const;

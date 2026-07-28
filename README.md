@@ -43,7 +43,7 @@ npm run build
 
 Add `?mode=local` to a production-served build only when it is paired with the Node server and local repository APIs.
 
-![UI Merge Studio recruiter-facing Showcase](docs/evidence/prompt-013/01-landing-hero.png)
+![UI Merge Studio recruiter-facing Showcase](docs/evidence/merge-lab-redesign/01-landing-hero.png)
 
 ## Why it exists
 

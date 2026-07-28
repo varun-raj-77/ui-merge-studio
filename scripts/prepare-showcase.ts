@@ -114,7 +114,7 @@ export async function prepareShowcase() {
       commands: ['npm run showcase:prepare', ...commands], result: 'succeeded', artifacts,
       links: {
         report: `${publicRepository}/blob/main/docs/evidence/showcase/latest/run-report.json`,
-        completion: `${publicRepository}/blob/main/docs/completion-report-012.md`,
+        completion: `${publicRepository}/blob/main/docs/reports/recorded-artifact-showcase.md`,
         evaluation: `${publicRepository}/blob/main/docs/evaluation.md`,
         architecture: `${publicRepository}/blob/main/docs/adr/0010-recorded-real-artifact-showcase.md`,
         limitations: `${publicRepository}/blob/main/docs/limitations.md`,

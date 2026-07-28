@@ -24,7 +24,7 @@ describe('recruiter-facing landing', () => {
   it('shows the visible-selection, dependency, exclusion, verification, and refusal story', () => {
     render(<ShowcaseApp />);
     for (const heading of ['Choose visible features, not filenames.', 'Carry the source that feature needs.', 'Exclude changes you did not choose.', 'Verify the result—or refuse it.']) expect(screen.getByRole('heading', { name: heading })).toBeVisible();
-    expect(screen.getByText('Operations Command Center heading')).toBeVisible();
+    expect(screen.getAllByText('Operations Command Center heading')).not.toHaveLength(0);
     expect(screen.getByText('Newest-first ticket sorting')).toBeVisible();
   });
 });
@@ -35,12 +35,16 @@ describe('interactive Merge Lab', () => {
     expect(screen.getAllByTitle(/compiled support desk application/i)).toHaveLength(1);
     expect(screen.getByRole('tab', { name: /version a/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: /version b/i })).toBeVisible();
+    const navigationCallout = screen.getByText('Mapped React boundary: AppSidebar').closest('.behavior-callout');
+    expect(navigationCallout).toHaveTextContent('Collapsible navigation');
     selectFocus();
     expect(screen.getByRole('button', { name: /selected from version a/i })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText(/focus mode source evidence/i)).toHaveTextContent(showcaseManifest.features[0].sourceFile);
     openActivity();
     expect(screen.getByRole('tab', { name: /version b/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTitle(/branch b compiled support desk application/i)).toBeInTheDocument();
+    const activityCallout = screen.getByText('Mapped React boundary: ActivityFilters').closest('.behavior-callout');
+    expect(activityCallout).toHaveTextContent('Activity filters');
   });
 
   it('preserves both selections while switching versions and enables the real candidate replay', () => {
@@ -57,10 +61,15 @@ describe('interactive Merge Lab', () => {
     expect(screen.getByRole('button', { name: /selected from version a/i })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(build);
     expect(screen.getByRole('heading', { name: /selected source in/i })).toBeVisible();
-    expect(screen.getByText('Operations Command Center heading')).toBeVisible();
-    expect(screen.getByText('Newest-first ticket sorting')).toBeVisible();
+    expect(screen.getAllByText('Operations Command Center heading')).not.toHaveLength(0);
+    expect(screen.getAllByText('Newest-first sorting change')).not.toHaveLength(0);
     expect(screen.getByText('src/features/navigation/AppSidebar.tsx')).toBeVisible();
     expect(screen.getByText('src/features/tickets/ActivityFilters.tsx')).toBeVisible();
+    const resultProof = screen.getByLabelText('Combined result composition');
+    expect(resultProof).toHaveTextContent('Collapsible navigation');
+    expect(resultProof).toHaveTextContent('Activity filters');
+    expect(resultProof).toHaveTextContent('Operations Command Center heading');
+    expect(resultProof).toHaveTextContent('Newest-first sorting change');
     expect(screen.getByRole('heading', { name: /one app. both selected features/i }).closest('.combined-section')).toBeTruthy();
     expect(screen.getByTitle(/combined result compiled support desk application/i)).toBeInTheDocument();
   });
@@ -77,12 +86,17 @@ describe('interactive Merge Lab', () => {
   it('replays the separately tested route-contract refusal without claiming generation ran', () => {
     render(<ShowcaseApp />); openLab(); selectBoth(); fireEvent.click(screen.getByRole('button', { name: /build combined result/i }));
     fireEvent.click(screen.getByRole('button', { name: /try an unsafe combination/i }));
-    expect(screen.getByText('ticket-query-v1')).toBeVisible(); expect(screen.getByText('ticket-path-v1')).toBeVisible();
+    expect(screen.getByText('These versions represent the selected ticket in different URL formats.')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: /check compatibility/i }));
     expect(screen.getByRole('alert')).toHaveTextContent('Preview synchronization refused');
     expect(screen.getByRole('alert')).toHaveTextContent('No candidate was attempted or created');
-    expect(screen.getByRole('alert')).toHaveTextContent('contracts differ');
+    expect(screen.getByRole('alert')).toHaveTextContent('incompatible URL formats');
+    expect(screen.getByRole('alert')).not.toHaveTextContent(/ticket-query-v1|ticket-path-v1/);
     expect(screen.getByRole('alert')).not.toHaveTextContent(/candidate generation failed|merge conflict/i);
+    fireEvent.click(screen.getByText('Technical details'));
+    expect(screen.getByText('ticket-query-v1')).toBeVisible();
+    expect(screen.getByText('ticket-path-v1')).toBeVisible();
+    expect(screen.getByText(/Route synchronization unavailable: contracts differ/)).toBeVisible();
   });
 
   it('restores valid history state and restart resets the lab', () => {

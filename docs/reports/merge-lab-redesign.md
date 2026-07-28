@@ -19,7 +19,7 @@ The public product is now a five-second landing page plus a focused Merge Lab. L
 - Social preview: `apps/studio/public/og.png`
 - Tests: `tests/studio/ShowcaseApp.test.tsx`, `tests/preview-runtime/fixtureAdapter.test.ts`, `tests/e2e/showcase-evidence.spec.ts`
 - Documentation: `README.md`, `docs/product-brief.md`, `docs/decision-log.md`, `docs/limitations.md`, `docs/evaluation.md`, `docs/demo-script.md`, `docs/risk-register.md`, and this report
-- Evidence: 16 PNGs under `docs/evidence/prompt-013/`
+- Evidence: 16 PNGs under `docs/evidence/merge-lab-redesign/`
 
 Generated report, manifest, compiled run artifacts, fixture source, engine packages, and merge algorithms were not changed.
 

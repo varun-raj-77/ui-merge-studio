@@ -27,6 +27,17 @@ async function expectWithinViewportWidth(page: Page, locator: Locator) {
   expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
 }
 
+async function expectBehaviorTargetContains(page: Page, target: 'navigation' | 'activity', control: Locator) {
+  const targetBox = await page.locator(`[data-behavior-target="${target}"]`).boundingBox();
+  const controlBox = await control.boundingBox();
+  expect(targetBox, `${target} callout target should have a layout box`).not.toBeNull();
+  expect(controlBox, `${target} control should have a layout box`).not.toBeNull();
+  expect(controlBox!.x).toBeGreaterThanOrEqual(targetBox!.x - 4);
+  expect(controlBox!.y).toBeGreaterThanOrEqual(targetBox!.y - 4);
+  expect(controlBox!.x + controlBox!.width).toBeLessThanOrEqual(targetBox!.x + targetBox!.width + 4);
+  expect(controlBox!.y + controlBox!.height).toBeLessThanOrEqual(targetBox!.y + targetBox!.height + 4);
+}
+
 async function expectOneContainedArtifact(page: Page, label: RegExp) {
   const preview = compiledPreview(page);
   await expect(preview).toHaveCount(1);
@@ -124,10 +135,18 @@ test.describe('premium public Showcase', () => {
     await page.goto(showcaseUrl);
     await openLab(page);
     await expect(activeApp(page).getByLabel('Sample Support Desk')).toBeVisible();
-    await expect(page.getByText('Changed in Version A')).toBeVisible();
-    await expect(page.getByText('AppSidebar', { exact: true })).toBeVisible();
+    await expect(page.getByText('Visible behavior')).toBeVisible();
+    await expect(page.locator('.behavior-callout')).toContainText('Collapsible navigation');
+    await expect(page.getByText('Mapped React boundary: AppSidebar')).toBeVisible();
     await expectWithinViewportWidth(page, page.getByRole('button', { name: 'Select Focus Mode', exact: true }));
     expect((await compiledPreview(page).boundingBox())!.width).toBeGreaterThanOrEqual(700);
+    const branchNavigation = activeApp(page).getByRole('navigation', { name: 'Primary' });
+    const collapse = activeApp(page).getByRole('button', { name: 'Collapse sidebar', exact: true });
+    await expectBehaviorTargetContains(page, 'navigation', collapse);
+    await expectBehaviorTargetContains(page, 'navigation', branchNavigation.getByText('Tickets', { exact: true }));
+    await collapse.click();
+    await expect(activeApp(page).getByRole('button', { name: 'Expand sidebar', exact: true })).toBeVisible();
+    await activeApp(page).getByRole('button', { name: 'Expand sidebar', exact: true }).click();
 
     // Selection is completed through the authoritative parent control; no iframe click is needed.
     await selectFocusMode(page);
@@ -141,8 +160,14 @@ test.describe('premium public Showcase', () => {
     await page.getByRole('tab', { name: /version b/i }).click();
     await expectOneContainedArtifact(page, /Branch B compiled Support Desk application/i);
     await expect(activeApp(page).getByText('Sample Support Desk', { exact: true })).toBeVisible();
-    await expect(page.getByText('Changed in Version B')).toBeVisible();
-    await expect(page.getByText('ActivityFilters', { exact: true })).toBeVisible();
+    await expect(page.locator('.behavior-callout')).toContainText('Activity filters');
+    await expect(page.getByText('Mapped React boundary: ActivityFilters')).toBeVisible();
+    const branchFilters = activeApp(page).getByLabel('Activity filters');
+    await expectBehaviorTargetContains(page, 'activity', branchFilters);
+    await branchFilters.getByRole('button', { name: 'note', exact: true }).click();
+    await expect(branchFilters.getByRole('button', { name: 'note', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(activeApp(page).getByText('Escalated to platform operations.')).toBeVisible();
+    await expect(activeApp(page).getByText('Customer reported intermittent timeouts.')).toBeHidden();
     await page.getByRole('button', { name: 'Select Activity Lens', exact: true }).click();
     const activityEvidence = page.getByLabel('Activity Lens source evidence');
     await expect(activityEvidence).toContainText('ActivityFilters');
@@ -185,8 +210,15 @@ test.describe('premium public Showcase', () => {
     await expect(integration).toContainText('src/features/navigation/AppSidebar.tsx');
     await expect(integration).toContainText('src/features/tickets/ActivityFilters.tsx');
     await expect(integration).toContainText('Operations Command Center heading');
-    await expect(integration).toContainText('Newest-first ticket sorting');
+    await expect(integration).toContainText('Newest-first sorting change');
     await expect(integration).toContainText('sortTickets.ts');
+    const resultProof = page.getByLabel('Combined result composition');
+    await expect(resultProof).toContainText('Collapsible navigation');
+    await expect(resultProof).toContainText('Version A');
+    await expect(resultProof).toContainText('Activity filters');
+    await expect(resultProof).toContainText('Version B');
+    await expect(resultProof).toContainText('Operations Command Center heading');
+    await expect(resultProof).toContainText('Newest-first sorting change');
 
     const combined = activeApp(page);
     await expect(combined.getByLabel('Sample Support Desk')).toBeVisible();
@@ -244,19 +276,23 @@ test.describe('premium public Showcase', () => {
     await buildCombinedResult(page);
 
     await page.getByRole('button', { name: 'Try an unsafe combination', exact: true }).click();
-    await expect(page.getByText('ticket-query-v1', { exact: true })).toBeVisible();
-    await expect(page.getByText('ticket-path-v1', { exact: true })).toBeVisible();
+    await expect(page.getByText('These versions represent the selected ticket in different URL formats.')).toBeVisible();
+    await expect(page.getByText('ticket-query-v1', { exact: true })).toBeHidden();
+    await expect(page.getByText('ticket-path-v1', { exact: true })).toBeHidden();
     await page.getByRole('button', { name: 'Check compatibility', exact: true }).click();
 
     const refusal = page.getByRole('alert');
     await expect(refusal).toContainText('Preview synchronization refused');
     await expect(refusal).toContainText('No candidate was attempted or created.');
-    await expect(refusal).toContainText('Route synchronization unavailable: contracts differ (ticket-query-v1 vs ticket-path-v1).');
-    await expect(refusal).toContainText('/tickets/:ticketId');
+    await expect(refusal).toContainText('These versions store the selected ticket in incompatible URL formats.');
+    await expect(refusal).not.toContainText(/ticket-query-v1|ticket-path-v1/);
     await expect(refusal).toContainText('Align the route contract manually, then rerun compatibility analysis.');
     await expect(refusal).not.toContainText(/candidate generation failed|merge conflict|something went wrong/i);
-    await refusal.getByText('View refusal evidence').click();
-    await expect(refusal).toContainText(/multi-preview\.spec\.ts.*branch-incompatible-route/);
+    await page.getByText('Technical details', { exact: true }).click();
+    await expect(page.getByText('ticket-query-v1', { exact: true })).toBeVisible();
+    await expect(page.getByText('ticket-path-v1', { exact: true })).toBeVisible();
+    await expect(page.locator('.contract-details')).toContainText('Route synchronization unavailable: contracts differ (ticket-query-v1 vs ticket-path-v1).');
+    await expect(page.locator('.contract-details')).toContainText(/multi-preview\.spec\.ts.*branch-incompatible-route/);
     await expect(compiledPreview(page)).toHaveCount(1);
     assertNoErrors();
   });
