@@ -1,0 +1,3 @@
+apps/studio/public/showcase-runs/**/*.css text eol=lf
+apps/studio/public/showcase-runs/**/*.html text eol=lf
+apps/studio/public/showcase-runs/**/*.js text eol=lf

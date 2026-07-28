@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { validatePublicShowcaseReport } from '../../packages/showcase-evidence/src/schema';
-import { generatedManifestPath, hashDirectory, manifestHash, publicRoot, readAndValidateReport } from '../../scripts/showcase-lib';
+import { canonicalArtifactBytes, generatedManifestPath, hashArtifactBytes, hashDirectory, manifestHash, publicRoot, readAndValidateReport } from '../../scripts/showcase-lib';
 
 describe('prepared Showcase package', () => {
   it('validates the sanitized report, generated manifest, commits, and four artifact hashes', () => {
@@ -22,5 +22,16 @@ describe('prepared Showcase package', () => {
     expect(() => validatePublicShowcaseReport({ ...report, repository: { ...report.repository, candidateCommit: '' } })).toThrow(/commit/i);
     expect(() => validatePublicShowcaseReport({ ...report, fixture: 'C:\\Users\\person\\fixture' })).toThrow();
     expect(manifestHash({ ...report, repository: { ...report.repository, candidateBranch: 'stale-result' } })).not.toBe(report.manifestSha256);
+  });
+  it('canonically hashes text artifact line endings while preserving content changes', () => {
+    const lf = Buffer.from('<main>Showcase</main>\n');
+    const crlf = Buffer.from('<main>Showcase</main>\r\n');
+    expect(hashArtifactBytes('index.html', crlf)).toBe(hashArtifactBytes('index.html', lf));
+    expect(hashArtifactBytes('index.html', Buffer.from('<main>Changed</main>\n'))).not.toBe(hashArtifactBytes('index.html', lf));
+  });
+  it('does not newline-normalize binary artifacts', () => {
+    const binary = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    expect(canonicalArtifactBytes('preview.png', binary)).toEqual(binary);
+    expect(hashArtifactBytes('preview.png', binary)).not.toBe(hashArtifactBytes('preview.png', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0a, 0x1a, 0x0a])));
   });
 });

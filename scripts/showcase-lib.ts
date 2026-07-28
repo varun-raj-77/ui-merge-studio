@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { resolve, relative } from 'node:path';
+import { extname, resolve, relative } from 'node:path';
 import { validatePublicShowcaseReport, type PublicShowcaseReport } from '../packages/showcase-evidence/src/schema';
 
 export const repositoryRoot = resolve(import.meta.dirname, '..');
@@ -10,6 +10,14 @@ export const generatedManifestPath = resolve(repositoryRoot, 'apps/studio/src/ge
 
 export function normalizedJson(value: unknown) { return `${JSON.stringify(value, null, 2)}\n`; }
 export function hashBuffer(value: Buffer | string) { return createHash('sha256').update(value).digest('hex'); }
+const textArtifactExtensions = new Set(['.css', '.html', '.js']);
+export function canonicalArtifactBytes(path: string, value: Buffer) {
+  if (!textArtifactExtensions.has(extname(path).toLowerCase())) return value;
+  return Buffer.from(value.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8');
+}
+export function hashArtifactBytes(path: string, value: Buffer) {
+  return hashBuffer(canonicalArtifactBytes(path, value));
+}
 export function hashDirectory(root: string) {
   if (!existsSync(root) || !statSync(root).isDirectory()) throw new Error(`Missing artifact directory: ${relative(repositoryRoot, root)}`);
   const files: string[] = [];
@@ -23,7 +31,7 @@ export function hashDirectory(root: string) {
   if (!files.some(path => path.endsWith('index.html'))) throw new Error(`Artifact has no index.html: ${relative(repositoryRoot, root)}`);
   const hash = createHash('sha256');
   for (const path of files) {
-    hash.update(relative(root, path).replaceAll('\\', '/')); hash.update('\0'); hash.update(readFileSync(path)); hash.update('\0');
+    hash.update(relative(root, path).replaceAll('\\', '/')); hash.update('\0'); hash.update(canonicalArtifactBytes(path, readFileSync(path))); hash.update('\0');
   }
   return hash.digest('hex');
 }

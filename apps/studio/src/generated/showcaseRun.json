@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runId": "352e72c5bd76b7ef",
-  "generatedAt": "2026-07-27T20:35:00.529Z",
+  "generatedAt": "2026-07-27T23:56:26.606Z",
   "fixture": "fixtures/generated/support-dashboard",
   "engineVersion": 1,
   "repository": {
@@ -189,7 +189,7 @@
       "ref": "main",
       "commit": "65450c9291d5058983f07991d48e326898e22a02",
       "path": "/showcase-runs/352e72c5bd76b7ef/baseline/",
-      "sha256": "c0575297a8b1231464259af057ad0336e17dd39dfdee1391cd0f9dc9ad09042b"
+      "sha256": "12da799d138b8501648bcd007a31c5a2540e48d720fb981761ffa4af64ddbe85"
     },
     {
       "id": "branch-a",
@@ -197,7 +197,7 @@
       "ref": "branch-sidebar",
       "commit": "42ed6234adc6f6deaa1c0a7744d91b532baf8b7d",
       "path": "/showcase-runs/352e72c5bd76b7ef/branch-a/",
-      "sha256": "93817066fe91f60eee27e96f15f67c0e6324089b375fbd2abb378194f52af7f1"
+      "sha256": "eaa0fa9262e59c2744788eeb686c98d7bc5aae13e23cedf48d1a474292cbe1bc"
     },
     {
       "id": "branch-b",
@@ -205,7 +205,7 @@
       "ref": "branch-inspector",
       "commit": "e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9",
       "path": "/showcase-runs/352e72c5bd76b7ef/branch-b/",
-      "sha256": "ba4505d6b53647a6aa015aa6ac4190d1b81bb0118a083576483f775de89f8bbc"
+      "sha256": "29c19f903ae847bdadfeb325572217dfab15fff584095e7e51f141b93c783678"
     },
     {
       "id": "combined-result",
@@ -213,7 +213,7 @@
       "ref": "combined-result",
       "commit": "55cba9c628423492f9579212c86813a09e22811c",
       "path": "/showcase-runs/352e72c5bd76b7ef/combined-result/",
-      "sha256": "4d9ecd3c0b72ad4e1f205f0ce783ba95ec68cd3c83a14edd86a2b63f1c68648e"
+      "sha256": "c07bd4d7fc37a45f8694b5c07bfa3a29f89c3eaaca963184ce811e6f9d436bc7"
     }
   ],
   "links": {
@@ -225,5 +225,5 @@
     "source": "https://github.com/varun-raj-77/ui-merge-studio",
     "localSetup": "https://github.com/varun-raj-77/ui-merge-studio#run-the-controlled-demo"
   },
-  "manifestSha256": "c1495661ecc64a89033c8e984aa79dfe9a7f53db357314b3b9a4a1b5a8b9b2f1"
+  "manifestSha256": "018a559b42f8ba5e567a436b2285e253f6b268e8289eccbdd91d9245f8a47359"
 }
