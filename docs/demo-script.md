@@ -1,4 +1,18 @@
-# Prompt 006C controlled product-shell demo
+# Prompt 013 recruiter-facing public demo
+
+1. Open the landing page. Read the headline, point to Version A and Version B converging into one result, and state the boundary: this is an interactive replay of a real verified local run, not browser-side Git execution.
+2. Open the Merge Lab. Show that one readable compiled Support Desk application is active and switch among Version A, Version B, and Baseline.
+3. In Version A, select **Focus Mode** with the parent-page control. Open its evidence and connect the visible collapsible navigation to `AppSidebar`, `src/features/navigation/AppSidebar.tsx`, and five recorded supporting files.
+4. Switch to Version B. Confirm the first selection persists, then select **Activity Lens**. Connect the visible filters to `ActivityFilters`, `src/features/tickets/ActivityFilters.tsx`, and nine recorded supporting files.
+5. Use the 2/2 composition tray to build the recorded result. In the integration proof, show the shared base, both selected source paths, required support sets, and the explicit exclusion of the Operations Command Center heading and newest-first sorting.
+6. In the actual compiled combined artifact, collapse the sidebar and switch the activity filter between note and email. Point out that the unselected heading and sorting changes remain absent.
+7. Open verification evidence. Explain that the public rows—TypeScript, full fixture tests, focused feature tests, and production build—come from run `3788f05dfefcd572`; the browser is not rerunning them. Show the developer handoff.
+8. Try the unsafe combination and compare `ticket-query-v1` with `ticket-path-v1`. Run the check and read the precise outcome: **Preview synchronization refused** and **No candidate was attempted or created.**
+9. Demonstrate that back/forward and refresh preserve valid Lab state, then use **Restart Lab** to return to a clean selection state.
+
+The exact public claim is: “The hosted public experience is an interactive replay of a real verified local run. It does not claim to execute arbitrary Git operations in the browser.”
+
+# Prompt 006C controlled product-shell demo (historical)
 
 ## Real recorded run
 
@@ -46,7 +60,7 @@ Primary evidence is the Git tree/diff, report, verification output, tests, and r
 3. State the causal stop clearly: without a live instrumented FlowCraft element, there is no valid source seed, dependency slice, exclusion proof, or candidate plan.
 4. Confirm no FlowCraft refs or files changed and no `ui-merge/flowcraft-combined` branch exists.
 5. In the controlled demo, show the non-obstructing sticky action dock, grouped preview controls, and generated **Sample Support Desk** / **Demo application · Fake ticket data** branding.
-# Prompt 011 public demo script
+# Prompt 011 public demo script (historical)
 
 1. On the landing page, read the one-sentence definition and point out the hosted-replay/local-engine boundary.
 2. Choose **Explore the verified demo**.

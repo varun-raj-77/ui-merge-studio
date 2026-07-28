@@ -1,10 +1,22 @@
 # Product brief
 
+## Prompt 013 recruiter-facing Merge Lab
+
+The public product now has two layers: a concise landing page for immediate understanding and an interactive Merge Lab for proof. The landing page communicates that a visitor chooses visible React features from alternate branches and receives one verified result. The Lab keeps one large compiled Support Desk application active at a time and uses parent-page controls for all required feature selection.
+
+The two public feature concepts are **Focus Mode** (the collapsible workspace navigation from `branch-sidebar`) and **Activity Lens** (filterable ticket activity from `branch-inspector`). Selecting either feature reveals its generated React boundary, source file, branch identity, and supporting-file count. Exact dependency reasons remain available through progressive disclosure. The composition tray enables the recorded candidate only after both selections exist.
+
+Run `3788f05dfefcd572` is the evidence source for the successful path. The final view presents its actual prebuilt `combined-result` artifact, explicit inclusion and exclusion decisions, four developer-facing verification rows backed by the report, and a developer handoff. The separately tested `branch-incompatible-route` fixture demonstrates only route-synchronization refusal; it is not described as candidate-generator or merge-conflict evidence.
+
+The hosted public experience is an interactive replay of a real verified local run. It does not claim to execute arbitrary Git operations in the browser.
+
+The main public experience demonstrates the causal chain from visible selection to source evidence, dependency inclusion, candidate result, verification, and safe refusal.
+
 ## Recorded real-artifact proof
 
-The public proof compares four actual compiled applications from one controlled repository run: baseline, Branch A, Branch B, and the verified combined candidate. Both recorded feature boundaries are required before the candidate is revealed. Partial selections are explanatory state and continue to show baseline; they are not presented as generated subsets.
+The public proof contains four actual compiled applications from one controlled repository run: baseline, Branch A, Branch B, and the verified combined candidate. Only one is mounted at a time. Both recorded feature boundaries are required before the candidate is revealed. Partial selections retain the currently active real branch preview; they are not presented as generated subsets.
 
-## Prompt 006 product experience
+## Prompt 006 product experience (historical)
 
 The primary user is a developer or technical evaluator who needs to understand the proof in roughly five seconds and complete it without DevTools or source-file coaching. The default experience is a four-step Guided Mode: Compare two named running versions, select one visible feature in each, create one combined branch, and verify the result. Source paths, boundary identities, schema terminology, merge-base evidence, test slices, and detailed plans remain available in a secondary technical drawer.
 

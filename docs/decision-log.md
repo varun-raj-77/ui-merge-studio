@@ -1,5 +1,16 @@
 # Decision log
 
+## 2026-07-28 — Make the public proof causal and recruiter-readable
+
+- “The hosted public experience is an interactive replay of a real verified local run. It does not claim to execute arbitrary Git operations in the browser.”
+- “The main public experience demonstrates the causal chain from visible selection to source evidence, dependency inclusion, candidate result, verification, and safe refusal.”
+- Separate the five-second landing explanation from the interactive Merge Lab. Keep the landing free of application iframes and mount exactly one large compiled artifact in the Lab.
+- Make parent-page controls authoritative for selecting Focus Mode and Activity Lens. Derive source paths, boundaries, dependencies, exclusions, commits, and verification from the generated manifest for run `3788f05dfefcd572`.
+- Persist valid Lab state in `history.state` at `?mode=showcase&view=lab` so refresh and browser history remain useful without introducing storage or a routing dependency. This supersedes Prompt 010’s component-memory-only decision.
+- Replay the actual compiled candidate only after both recorded features are selected. Do not imply that the hosted browser creates a fresh branch.
+- Present `branch-incompatible-route` as a separately tested preview route-synchronization refusal. The supported evidence proves incompatible contracts (`ticket-query-v1` versus `ticket-path-v1`) and that synchronization stops; it does not prove a candidate-generator refusal or merge conflict.
+- Keep the generated report, manifest, artifact trees, engine, and controlled fixture unchanged. Add only a bounded `/tickets` replay shell so iframe history remains contained after reload in Vite preview and Vercel.
+
 ## 2026-07-27 — Generate the hosted Showcase from a real local run
 
 Accepted ADR 0010. The hosted product is a static, hash-validated evidence viewer. Preparation reuses `FeatureSliceAnalyzer` and `CandidateGenerator`; production builds never generate candidates. A generated sanitized report is the single source of public claims.

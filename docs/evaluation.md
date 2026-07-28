@@ -1,14 +1,26 @@
 # Phase 0 evaluation
 
+## Prompt 013 recruiter-facing Merge Lab
+
+**APPROVE locally, bounded to hosted evidence replay.**
+
+The public experience now makes the complete causal chain inspectable: a visitor switches between one large active compiled branch preview, selects Focus Mode and Activity Lens through parent controls, opens generated source/dependency evidence, sees explicit included and excluded changes, reveals the real compiled candidate, interacts with both selected behaviors, inspects supported verification, and triggers the separately tested route-contract refusal.
+
+The success evidence is run `3788f05dfefcd572`: base `cccd7116646d0cc59d4795478e1783580c249966`, Branch A `2b5365a560eb0867f33ff73a29da579a7eca099b`, Branch B `3e7249400d6fa2e08336b7fff308c794af53aecd`, and candidate `ede2b13e9b5016b1abcabfd4996ece6d52ed138c`. The report records install, typecheck, full tests, focused feature tests, and production build as passed. The public panel intentionally surfaces only the latter four developer-facing checks.
+
+The hosted browser replays committed artifacts and evidence; it does not run Git or verification. The unsafe path calls the real capability comparison with the controlled query/path contracts and accurately reports preview-synchronization refusal. It is not represented as part of run `3788f05dfefcd572` or as candidate-generation failure.
+
+Final focused validation passed TypeScript, 38 Studio/bridge tests, 42 multi-preview capability/refusal tests, Showcase schema/hash validation, the production build, controlled fixture verification, and 8/8 public Playwright journeys. Manual review covered 1440×900, 1280×720, and 390×844 with 16 screenshots under `docs/evidence/prompt-013/`.
+
 ## Real-artifact Showcase evaluation
 
-Run `352e72c5bd76b7ef` exports independently loadable production builds for commits `65450c9291d5058983f07991d48e326898e22a02`, `42ed6234adc6f6deaa1c0a7744d91b532baf8b7d`, `e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9`, and candidate `55cba9c628423492f9579212c86813a09e22811c`. The public report records selected boundaries, dependencies, exclusions, five passing verification gates, artifact locations, and hashes. The hosted UI does not infer or mutate those results.
+Run `3788f05dfefcd572` exports independently loadable production builds for base `cccd7116646d0cc59d4795478e1783580c249966`, Branch A `2b5365a560eb0867f33ff73a29da579a7eca099b`, Branch B `3e7249400d6fa2e08336b7fff308c794af53aecd`, and candidate `ede2b13e9b5016b1abcabfd4996ece6d52ed138c`. The public report records selected boundaries, dependencies, exclusions, five passing verification gates, artifact locations, and hashes. The hosted UI does not infer or mutate those results.
 
 ## Prompt 010 Showcase journey completion
 
 The hosted journey now covers landing, launch, two toggle selections, candidate evidence replay, combined-result inspection, evidence disclosure, revision, regeneration, restart, exit, repository source, and local-run guidance. Returning to selections preserves the selected pair; removing either feature immediately invalidates generation until it is reselected. Variant tabs are explicitly inspection-only.
 
-The state boundary is intentionally ephemeral. Showcase state is not persisted or represented in browser history, cookies, query parameters, `localStorage`, or `sessionStorage`, so a default entry or refresh constructs the landing state. The production `mode` query continues only to select Showcase versus local engine surfaces; it does not restore a Showcase phase.
+Prompt 013 supersedes the earlier ephemeral state boundary. Current Lab state is represented in `history.state` at `?mode=showcase&view=lab`, survives valid back/forward and refresh transitions, and is cleared by Restart. Cookies, `localStorage`, `sessionStorage`, and servers remain unused.
 
 Visible actions were audited: landing anchors have valid destinations, result links point to repository/source guidance, selection controls are semantic toggle buttons, evidence is a real disclosure, and non-functional sample-app actions render as non-interactive illustration. Keyboard focus, pressed/expanded state, reduced motion, wrapping result actions, mobile stacking, and a non-covering mobile tray are included.
 
@@ -94,6 +106,6 @@ UI Merge Studio cannot begin the required causal chain against it. Preview launc
 
 The hosted flow now proves that the visitor's selections causally update a combined visual preview and that the repository contains a previously executed local run connecting the controlled feature boundaries to source, supporting files, exclusions, candidate identity, and five passing verification gates. The Showcase renders those claims from a typed validated manifest.
 
-It does not prove browser-side Git execution or fresh verification. Candidate report `.ums/generation/045c4d7fbcadd33b/candidate-report.json` is replayed, including base `dc2f93c7e6b9`, candidate `combined-result`, selected `AppSidebar` and `ActivityFilters` boundaries, recorded exclusions, and install/typecheck/tests/focused-tests/build passes.
+It does not prove browser-side Git execution or fresh verification. The committed sanitized report at `docs/evidence/showcase/latest/run-report.json` is replayed, including base `cccd7116646d`, candidate `combined-result` at `ede2b13e9b50`, selected `AppSidebar` and `ActivityFilters` boundaries, recorded exclusions, and install/typecheck/tests/focused-tests/build passes.
 
 The visual support-desk application remains fixture-specific presentation. The strongest anti-hardcoding evidence is outside that visual reconstruction: source identities from two schema-v2 analysis artifacts, deterministic plan operations, explicit dependency and exclusion reasons, verification records, automated manifest/UI tests, and the external Vite validation documented below.

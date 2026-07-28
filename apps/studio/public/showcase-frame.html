@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UI Merge Studio artifact replay</title>
+    <style>
+      html, body { min-height: 100%; margin: 0; background: #fff; }
+      body[data-error] { display: grid; place-items: center; padding: 2rem; box-sizing: border-box; color: #34323a; font: 600 14px/1.5 system-ui, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <script>
+      (async () => {
+        const artifact = new URLSearchParams(location.search).get('ums-artifact');
+        const allowed = /^\/showcase-runs\/[a-f0-9]+\/(?:baseline|branch-a|branch-b|combined-result)\/index\.html$/;
+        const routeRewrite = '<script>history.replaceState({}, "", "/tickets")<\/script>';
+
+        function fail(message) {
+          document.body.dataset.error = 'true';
+          document.body.textContent = message;
+        }
+
+        if (!artifact || !allowed.test(artifact)) {
+          fail('This recorded artifact path is not supported.');
+          return;
+        }
+
+        const preserveArtifactRoute = (nativeMethod, state, title, url) => {
+          if (url === undefined || url === null) return nativeMethod(state, title, url);
+          const requested = new URL(String(url), location.href);
+          if (!/^\/tickets(?:\/|$)/.test(requested.pathname)) return nativeMethod(state, title, url);
+          const contained = new URL('/tickets', location.origin);
+          contained.search = requested.search;
+          contained.searchParams.set('ums-artifact', artifact);
+          contained.hash = requested.hash;
+          return nativeMethod(state, title, `${contained.pathname}${contained.search}${contained.hash}`);
+        };
+
+        const nativePushState = history.pushState.bind(history);
+        const nativeReplaceState = history.replaceState.bind(history);
+        history.pushState = (state, title, url) => preserveArtifactRoute(nativePushState, state, title, url);
+        history.replaceState = (state, title, url) => preserveArtifactRoute(nativeReplaceState, state, title, url);
+
+        try {
+          const response = await fetch(artifact, { cache: 'force-cache' });
+          if (!response.ok) throw new Error(`Artifact request failed with ${response.status}.`);
+          const source = await response.text();
+          if (!source.includes('<base href="./">') || !source.includes(routeRewrite)) {
+            throw new Error('The recorded artifact shell did not match the verified replay contract.');
+          }
+          const base = new URL('.', new URL(artifact, location.origin)).href;
+          const containedSource = source
+            .replace('<base href="./">', `<base href="${base}">`)
+            .replace(routeRewrite, '');
+          document.open();
+          document.write(containedSource);
+          document.close();
+        } catch (error) {
+          fail(error instanceof Error ? error.message : 'The recorded artifact could not be loaded.');
+        }
+      })();
+    </script>
+  </body>
+</html>

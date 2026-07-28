@@ -1,5 +1,15 @@
 # Limitations
 
+## Prompt 013 public Showcase boundary
+
+- The hosted Showcase proves one exact controlled two-feature combination from run `3788f05dfefcd572`; it does not execute a visitor’s repository or support arbitrary feature combinations.
+- The baseline, branch, and combined iframes are actual prebuilt applications. The combined iframe is the compiled candidate artifact, not a visual reconstruction, but it is also not freshly generated in the hosted browser.
+- Generated manifest data supplies the successful path’s source boundaries, files, dependencies, exclusions, commits, and verification. Build-time schema and hash checks guard that relationship.
+- The public verification summary intentionally shows TypeScript, the full fixture tests, focused feature tests, and production build. The report’s install gate remains part of the five recorded gates but is not promoted as a product-quality claim.
+- Lab state uses browser history at `?mode=showcase&view=lab`. Valid state survives back/forward and refresh; Restart resets it. State is not stored in cookies, web storage, or a server.
+- The optional refusal is narrower than the successful candidate evidence. `branch-incompatible-route` proves that preview synchronization stops when route contracts differ; no candidate was attempted or created for that scenario.
+- Keyboard, focus, reduced-motion, and responsive behavior have focused automated and manual coverage, but this is not formal assistive-technology or device-lab certification.
+
 ## Hosted Showcase boundary
 
 - The Showcase proves one exact controlled two-feature combination; it does not support arbitrary repositories or unrecorded subsets.
@@ -7,11 +17,11 @@
 - Timestamps are volatile. The stable run ID and normalized manifest hash derive from exact commits and stable evidence.
 - Vercel performs no Git operation, candidate generation, verification, or repository mutation.
 
-## Prompt 010 completed-journey boundary
+## Prompt 010 completed-journey boundary (historical; state model superseded)
 
 Revision in Showcase Mode changes which committed controlled-sample features are represented in the replay; it does not mutate a hosted repository or generate a new Git candidate. The evidence panel reports the supported facts already documented for `combined-result` and links to repository evaluation evidence. It does not provide visitor-specific logs, timings, commit IDs, or newly executed results.
 
-Browser back and forward do not traverse internal Showcase phases because the app deliberately writes no history entries. Refresh and re-entry start at landing. The production-only `?mode=local` switch still requires the Node server and local APIs, as documented; arbitrary query parameters do not restore or advance Showcase state.
+Prompt 013 supersedes the former no-history state model. The current Lab uses validated `history.state` entries and `?mode=showcase&view=lab`; the production-only `?mode=local` switch still requires the Node server and local APIs.
 
 Responsive and keyboard behavior is covered by component structure, CSS breakpoints, focus styling, and focused tests. This remains a controlled UI audit rather than formal assistive-technology or device-lab certification.
 
@@ -86,11 +96,11 @@ Changed declaration mapping uses Git hunk/declaration overlap. Added single-decl
 Prompt 004B supports conventional direct `describe`, `test`, `it`, lifecycle hooks, `.skip`, `.only`, `.concurrent`, and `.each` forms with static callbacks. It retains required enclosing suites, lexically applicable hooks, local helper/fixture declarations, transitive static references, and individual import specifiers. It does not execute tests or use runtime coverage. Dynamic/custom test factories, computed registration, unsupported callbacks, inseparable mixed top-level setup, unresolved helper imports, or hunks spanning included and excluded units produce `partial` or `refused` results rather than a resolved guess.
 
 The fixture inspector test file now resolves below file level: the activity/clipboard test is included and the unrelated sorting test is excluded. Because both tests share `renderApp`, relevance for this controlled case also permits exact callback literals that are uniquely owned by reachable production declarations; titles are display-only and never dependency semantics. This bounded mechanism is not a general semantic understanding of assertions or UI behavior. A resolved analysis is still not a directly applicable patch and does not prove that reconstructing or copying its listed regions will compile, pass tests, or preserve behavior in another branch. No candidate branch, source mutation, rewritten test module, or combined result exists.
-# Prompt 011 Showcase limitations
+# Prompt 011 Showcase limitations (historical; corrected by generated artifacts)
 
-- The hosted result is an interactive visual reconstruction of the controlled support-dashboard fixture, not a live checkout or generated candidate runtime.
+- The hosted result is a prebuilt compiled artifact of the controlled support-dashboard candidate, not a live checkout or freshly generated browser result.
 - Verification statuses are replayed from one previously executed deterministic local report; no command runs for a hosted visitor.
-- The Result Preview is causally connected to feature selections at the presentation layer, but it does not execute transformed candidate source.
-- Manifest facts are manually curated from committed evidence rather than generated during the Vite build. Runtime validation catches missing required fields, but does not independently re-read JSON artifacts.
+- The Result Preview is causally connected to feature selections and executes the compiled transformed candidate source.
+- Manifest facts are generated from the sanitized committed run evidence; schema, byte-equality, artifact-presence, and SHA-256 checks run before the Studio build.
 - The controlled navigation and activity-filter graphs are small and conventional. They do not establish arbitrary React, monorepo, framework, or dependency-pattern support.
 - Public readiness still depends on final deployment/link checking and review of whether detailed development history belongs on `main`.

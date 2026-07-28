@@ -2,7 +2,9 @@
 
 ## Real-artifact Showcase
 
-The hosted Showcase is a static inspection of a genuine controlled local run. `npm run showcase:prepare` validates the fixture, analyzes both selected React boundaries, invokes the existing candidate generator, runs its verification gates, builds baseline/Branch A/Branch B/the generated candidate, exports those builds, sanitizes the evidence, and generates the frontend manifest. `npm run build` validates the report, manifest, artifact presence, and SHA-256 hashes before building Studio.
+The hosted Showcase is an interactive replay of verified controlled run `3788f05dfefcd572`. Its recruiter-facing landing page explains the product without mounting an application, then the Merge Lab lets a visitor switch among one large active baseline/branch preview, select **Focus Mode** and **Activity Lens** through authoritative parent controls, inspect generated source and dependency evidence, and reveal the actual prebuilt candidate at `ede2b13e9b5016b1abcabfd4996ece6d52ed138c`.
+
+`npm run showcase:prepare` validates the fixture, analyzes both selected React boundaries, invokes the existing candidate generator, runs its verification gates, builds baseline/Branch A/Branch B/the generated candidate, exports those builds, sanitizes the evidence, and generates the frontend manifest. `npm run build` validates the report, manifest, artifact presence, and SHA-256 hashes before building Studio.
 
 Vercel only deploys those static outputs. It does not run Git, create worktrees, generate a branch, or execute tests. Use local mode for live repository operations.
 
@@ -22,11 +24,11 @@ UI Merge Studio is an open-source local developer tool for comparing multiple Re
 
 ## Showcase Mode
 
-Showcase Mode is the static, Vercel-ready first-run experience for people who do not have a compatible repository locally. It presents the controlled sample's base branch, navigation experiment, activity-filter experiment, and combined result as interactive React UI.
+Showcase Mode is the static, Vercel-ready first-run experience for people who do not have a compatible repository locally. It presents the controlled sample's base branch, navigation experiment, activity-filter experiment, and combined result as actual compiled React applications.
 
-The one-click walkthrough teaches `Compare → Select → Combine → Verify` without setup. On the result screen, `Back to selections` preserves the current pair so either highlighted feature can be toggled off, reselected, and regenerated. `Restart demo`, `View evidence`, `View source on GitHub`, and `Run locally` provide explicit next steps.
+The two-layer experience teaches `Visible selection → Source evidence → Dependencies → Candidate result → Verification or safe refusal` without setup. The Lab mounts exactly one active artifact at a time. Parent-page controls select the two visible feature boundaries; the composition tray remains locked until both are selected. The final view exposes the compiled candidate, four developer-facing verification checks backed by the five-gate report, and developer handoff links.
 
-Showcase state exists only in React memory. A root load, normal refresh, or later return starts at the landing page; selections are never written to web storage, cookies, query parameters, or browser history.
+Lab state is stored in `history.state` at `?mode=showcase&view=lab`, so valid selections survive version switching, browser back/forward, and refresh. **Restart Lab** replaces that state with a clean Lab. No selection state is written to cookies, `localStorage`, `sessionStorage`, or a server.
 
 The walkthrough is deliberately an evidence replay, not cloud execution: its progress labels and verification summary present the committed controlled proof. The browser does not create Git worktrees, mutate a repository, or rerun tests. Use local mode to execute the real engine.
 
@@ -41,7 +43,7 @@ npm run build
 
 Add `?mode=local` to a production-served build only when it is paired with the Node server and local repository APIs.
 
-![UI Merge Studio external Vite mapping](docs/evidence/prompt-007b/external-vite-mapping.png)
+![UI Merge Studio recruiter-facing Showcase](docs/evidence/prompt-013/01-landing-hero.png)
 
 ## Why it exists
 
@@ -277,22 +279,13 @@ A public hosted version should therefore be presented as an interactive showcase
 | Controlled unsafe-combination refusal | Passed |
 | External Vite execution | Passed |
 | External Vite source mapping | Passed |
-| External Vite candidate generation | Pending |
+| External Vite candidate generation | Passed (bounded) |
 | Next.js support | Unsupported |
 | Cloud execution | Unsupported |
 
 ## Roadmap
 
-The next bounded milestone is external Vite candidate generation:
-
-- extract direct and transitive dependencies;
-- exclude unrelated changes;
-- reconcile imports;
-- create a candidate from the exact base;
-- run typecheck, tests, build, and runtime verification;
-- confirm both selected external features;
-- preserve source branches;
-- clean up all temporary resources.
+The next compatibility milestone should test a second unrelated Vite repository with an application-owned test suite and meaningfully different source structure. Next.js requires an explicit framework adapter and remains unsupported; the current evidence must not be generalized into universal React support.
 
 ## License
 

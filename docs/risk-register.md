@@ -2,6 +2,18 @@
 
 Build validation mitigates recorded Showcase drift: `npm run build` fails on a missing report, missing artifact, malformed schema, local absolute path, stale generated manifest, or mismatched artifact/manifest hash. The remaining risk is fixture specificity; controlled refs must be regenerated when they change.
 
+## Prompt 013 public Showcase risks
+
+| Risk | Impact | Mitigation |
+| --- | --- | --- |
+| Interactive replay is mistaken for live hosted Git execution | Visitor overestimates the deployed product | State the replay boundary on the landing page, Lab, verification, and docs; reserve real repository operations for local mode |
+| Authored UI drifts from generated run evidence | Source, dependency, exclusion, or verification claims become misleading | Derive successful-path facts from the generated manifest and retain schema, byte-equality, artifact-presence, and hash validation in the build |
+| A compiled artifact rewrites itself to `/tickets` and reloads the outer SPA recursively | Nested Showcase frames, repeated navigation, or a hung journey | Serve an allowlisted replay shell at exactly `/tickets`, preserve the artifact query, strip the known artifact history bootstrap at runtime, and assert one bounded child frame after reload |
+| Multiple or miniature iframes return | Preview becomes unreadable and resource-heavy | Mount no iframe on landing and exactly one active artifact in the Lab; test iframe count and 1280×720 readability |
+| Public verification grows beyond the report | Unsupported quality claims reduce trust | Whitelist the four developer-facing checks backed by the five-gate report and assert that accessibility, runtime, visual-diff, and PR claims are absent |
+| Route-synchronization refusal is described as a merge or generator failure | The safety proof exceeds its provenance | Label it as a separately tested fixture, call the real capability comparison, display the exact contracts, and state that no candidate was attempted or created |
+| History-backed state becomes internally inconsistent | Refresh/back can reveal a result without both selections | Keep downstream state deterministic, cover selection history/refresh/restart, and reset to the initial Lab state explicitly |
+
 | Risk | Consequence | Response |
 | --- | --- | --- |
 | External repository configuration becomes hidden component mapping | A demo passes without general source resolution | Configuration accepts only repository execution/ref/route/verification data; names and paths occur only in post-resolution test assertions |
@@ -56,7 +68,7 @@ Build validation mitigates recorded Showcase drift: `npm run build` fails on a m
 | Risk | Impact | Mitigation |
 | --- | --- | --- |
 | Evidence manifest drifts from committed artifacts | Hosted claims become stale | Typed schema, runtime validation, integrity tests, and candidate-report provenance |
-| Visual preview is mistaken for generated source | Visitor overestimates hosted behavior | Persistent “Visual preview — not a generated branch” and evidence-replay copy |
+| Prebuilt compiled artifact is mistaken for fresh browser generation | Visitor overestimates hosted behavior | Persistent evidence-replay copy and explicit local-engine boundary |
 | Recorded gates look like fake cloud execution | Credibility loss | Manual gate inspection, evidence source per gate, no timer, explicit local-run boundary |
 | Fixture presentation looks hardcoded | Engineer discounts real engine | Plan exposes exact source/dependency/exclusion evidence and links to code/evaluation |
 | Prompt archive becomes the first public proof | Product looks like a scripted AI artifact | Focused public links and explicit Development history label |
