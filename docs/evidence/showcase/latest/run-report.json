@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "runId": "352e72c5bd76b7ef",
-  "generatedAt": "2026-07-27T23:56:26.606Z",
+  "runId": "3788f05dfefcd572",
+  "generatedAt": "2026-07-28T15:57:56.282Z",
   "fixture": "fixtures/generated/support-dashboard",
   "engineVersion": 1,
   "repository": {
     "baseRef": "main",
-    "commonBaseCommit": "65450c9291d5058983f07991d48e326898e22a02",
+    "commonBaseCommit": "cccd7116646d0cc59d4795478e1783580c249966",
     "branchA": {
       "name": "branch-sidebar",
-      "commit": "42ed6234adc6f6deaa1c0a7744d91b532baf8b7d"
+      "commit": "2b5365a560eb0867f33ff73a29da579a7eca099b"
     },
     "branchB": {
       "name": "branch-inspector",
-      "commit": "e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9"
+      "commit": "3e7249400d6fa2e08336b7fff308c794af53aecd"
     },
     "candidateBranch": "combined-result",
-    "candidateCommit": "55cba9c628423492f9579212c86813a09e22811c",
+    "candidateCommit": "ede2b13e9b5016b1abcabfd4996ece6d52ed138c",
     "compatibility": "compatible"
   },
   "selectedFeatureIds": [
@@ -30,7 +30,7 @@
       "summary": "Adds persistent collapse behavior and compact navigation.",
       "branchLabel": "Branch A",
       "branch": "branch-sidebar",
-      "branchCommit": "42ed6234adc6f6deaa1c0a7744d91b532baf8b7d",
+      "branchCommit": "2b5365a560eb0867f33ff73a29da579a7eca099b",
       "selectedBoundary": "AppSidebar",
       "analyzedBoundary": "AppSidebar",
       "sourceFile": "src/features/navigation/AppSidebar.tsx",
@@ -75,7 +75,7 @@
       "summary": "Adds All, Notes, and Replies filtering to ticket activity.",
       "branchLabel": "Branch B",
       "branch": "branch-inspector",
-      "branchCommit": "e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9",
+      "branchCommit": "3e7249400d6fa2e08336b7fff308c794af53aecd",
       "selectedBoundary": "ActivityFilters",
       "analyzedBoundary": "TicketInspector",
       "sourceFile": "src/features/tickets/ActivityFilters.tsx",
@@ -187,33 +187,33 @@
       "id": "baseline",
       "label": "Baseline",
       "ref": "main",
-      "commit": "65450c9291d5058983f07991d48e326898e22a02",
-      "path": "/showcase-runs/352e72c5bd76b7ef/baseline/",
-      "sha256": "12da799d138b8501648bcd007a31c5a2540e48d720fb981761ffa4af64ddbe85"
+      "commit": "cccd7116646d0cc59d4795478e1783580c249966",
+      "path": "/showcase-runs/3788f05dfefcd572/baseline/",
+      "sha256": "c8bac48692176a896a9dc958623413998fb4fb05cbfade673cb27bceb6407c89"
     },
     {
       "id": "branch-a",
       "label": "Branch A",
       "ref": "branch-sidebar",
-      "commit": "42ed6234adc6f6deaa1c0a7744d91b532baf8b7d",
-      "path": "/showcase-runs/352e72c5bd76b7ef/branch-a/",
-      "sha256": "eaa0fa9262e59c2744788eeb686c98d7bc5aae13e23cedf48d1a474292cbe1bc"
+      "commit": "2b5365a560eb0867f33ff73a29da579a7eca099b",
+      "path": "/showcase-runs/3788f05dfefcd572/branch-a/",
+      "sha256": "b9582e43e91d98743ad52df15f433514138997b6de9dea67f72d751365518470"
     },
     {
       "id": "branch-b",
       "label": "Branch B",
       "ref": "branch-inspector",
-      "commit": "e566884d3ba2a3ae2b17f1d1a2e645a2c53ff5d9",
-      "path": "/showcase-runs/352e72c5bd76b7ef/branch-b/",
-      "sha256": "29c19f903ae847bdadfeb325572217dfab15fff584095e7e51f141b93c783678"
+      "commit": "3e7249400d6fa2e08336b7fff308c794af53aecd",
+      "path": "/showcase-runs/3788f05dfefcd572/branch-b/",
+      "sha256": "90c4b33d5f711062e07b55ca10e12c4afe81e958c993c9d294f1e9ec6e2a3aa6"
     },
     {
       "id": "combined-result",
       "label": "Combined result",
       "ref": "combined-result",
-      "commit": "55cba9c628423492f9579212c86813a09e22811c",
-      "path": "/showcase-runs/352e72c5bd76b7ef/combined-result/",
-      "sha256": "c07bd4d7fc37a45f8694b5c07bfa3a29f89c3eaaca963184ce811e6f9d436bc7"
+      "commit": "ede2b13e9b5016b1abcabfd4996ece6d52ed138c",
+      "path": "/showcase-runs/3788f05dfefcd572/combined-result/",
+      "sha256": "d919fcd974d95f2cf213fc8fe2f829fa18cbc50cdced645e2a161b72c30bdef0"
     }
   ],
   "links": {
@@ -225,5 +225,5 @@
     "source": "https://github.com/varun-raj-77/ui-merge-studio",
     "localSetup": "https://github.com/varun-raj-77/ui-merge-studio#run-the-controlled-demo"
   },
-  "manifestSha256": "018a559b42f8ba5e567a436b2285e253f6b268e8289eccbdd91d9245f8a47359"
+  "manifestSha256": "e3c57d4d2e48a668cb585dfdf5a0e62822f22c13f554f8f02fd4174d62bf9034"
 }
