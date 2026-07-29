@@ -1,75 +1,12 @@
 # Risk register
 
-Build validation mitigates recorded Showcase drift: `npm run build` fails on a missing report, missing artifact, malformed schema, local absolute path, stale generated manifest, or mismatched artifact/manifest hash. The remaining risk is fixture specificity; controlled refs must be regenerated when they change.
-
-## Prompt 013 public Showcase risks
-
-| Risk | Impact | Mitigation |
-| --- | --- | --- |
-| Interactive replay is mistaken for live hosted Git execution | Visitor overestimates the deployed product | State the replay boundary on the landing page, Lab, verification, and docs; reserve real repository operations for local mode |
-| Authored UI drifts from generated run evidence | Source, dependency, exclusion, or verification claims become misleading | Derive successful-path facts from the generated manifest and retain schema, byte-equality, artifact-presence, and hash validation in the build |
-| A compiled artifact rewrites itself to `/tickets` and reloads the outer SPA recursively | Nested Showcase frames, repeated navigation, or a hung journey | Serve an allowlisted replay shell at exactly `/tickets`, preserve the artifact query, strip the known artifact history bootstrap at runtime, and assert one bounded child frame after reload |
-| Multiple or miniature iframes return | Preview becomes unreadable and resource-heavy | Mount no iframe on landing and exactly one active artifact in the Lab; test iframe count and 1280×720 readability |
-| Public verification grows beyond the report | Unsupported quality claims reduce trust | Whitelist the four developer-facing checks backed by the five-gate report and assert that accessibility, runtime, visual-diff, and PR claims are absent |
-| Route-synchronization refusal is described as a merge or generator failure | The safety proof exceeds its provenance | Label it as a separately tested fixture, call the real capability comparison, display the exact contracts, and state that no candidate was attempted or created |
-| History-backed state becomes internally inconsistent | Refresh/back can reveal a result without both selections | Keep downstream state deterministic, cover selection history/refresh/restart, and reset to the initial Lab state explicitly |
-
-| Risk | Consequence | Response |
-| --- | --- | --- |
-| External repository configuration becomes hidden component mapping | A demo passes without general source resolution | Configuration accepts only repository execution/ref/route/verification data; names and paths occur only in post-resolution test assertions |
-| Source index and transformer use different AST boundaries | Valid declarations fail hash checks or transform the wrong text | Normalize reconstruction to the complete declaration-statement range and regression-test typed exported arrow components |
-| Purpose-built external branches overstate generality | One successful repository is presented as universal support | Preserve exact fixture provenance, list validation-specific traits, and require a second unrelated repository with its own tests as the next experiment |
-| External repository has no test suite | Verification misses regressions that browser checks do not cover | State the absence explicitly; require typecheck, lint, build, runtime assertions, and do not claim external tests passed |
-| Baseline framework warnings are mistaken for candidate regressions | Proof fails on pre-existing noise or suppresses real errors | Exclude only recognizable Ant Design warning-prefixed messages in the E2E assertion; continue failing on other console errors |
-| Rich external branch includes unrelated visible edits | Candidate leaks decorative branch changes | Require exact planned path equality, explicit exclusion evidence, candidate diff audit, and combined-runtime absence assertions |
-| Two external slices reconstruct one declaration differently | Last writer silently wins | Detect `overlapping-declaration` during read-only preflight and prove no branch/worktree mutation |
-| Async acknowledgement is mistaken for readiness | User acts on an unavailable runtime | Keep acknowledgement and terminal readiness distinct; poll the operation and wait for the validated bridge handshake |
-| Polling overlaps or survives a restart | Excess requests or stale UI mutation | Await every poll, bound backoff, cancel per-slot controllers, reject stale operation IDs, and stop on all terminal states |
-| Superseded launch races its replacement | Wrong worktree is removed or wrong session wins | Serialize work within each preview slot; abort and finish predecessor cleanup before replacement work |
-| Warm reuse shares writable dependencies across previews | Cross-runtime contamination | Reuse only the same slot’s exact-commit detached worktree; never share one `node_modules` directory between simultaneous slots |
-| Friendly fixture labels affect engine output | Hidden hard-coding invalidates the proof | Keep labels in `demoScenario.ts`; engine packages use only validated identities, Git/AST evidence, and immutable artifacts |
-| Automatic analysis chooses an overly narrow DOM owner | User thinks a leaf is the whole feature | Use the existing evidence-backed reverse integration expansion and show its real analyzed boundary in Technical details |
-| Sticky action tray obscures content | Important controls become unreachable at small heights | Keep the tray in document flow as a sticky dock and assert its top never overlaps the preview bottoms |
-| Preview/runtime integration is mistaken for framework-neutral | A real Next.js repository cannot launch or emit source identities | Treat runtime launch, transform injection, readiness route, and synchronization as explicit adapters; refuse unsupported frameworks before branch preparation |
-| Technical drawer loses keyboard context | Keyboard user becomes trapped or disoriented | Focus the close control on open, support Escape, label the modal, and retain visible focus styles |
-| Candidate branch receives partial output | Broken branch looks successful | Transform and verify in a detached worktree; register only the verified commit; always clean the worktree |
-| Two slices overwrite the same source | Silent last-write-wins behavior | Group operations by AST/import/export/region identity and refuse incompatible content with slice/evidence IDs |
-| Equivalent requirements duplicate code | Duplicate imports, tests, or JSX | Normalize semantic operations and retain combined provenance before applying in stable order |
-| Existing candidate contains unreviewed output | User work is overwritten | Compare generated and existing trees; accept only equality and otherwise refuse without moving the ref |
-| Controlled fixture success is generalized | Unsafe product claim | Document the bounded grammar and preserve conservative unsupported-operation refusal |
-| Rendered element cannot be mapped reliably | Wrong source identity | Falsify early with instrumentation experiments |
-| Static imports miss runtime dependencies | Broken candidate | Bound supported patterns and verify behavior |
-| Selected and unrelated edits share a hunk | Unsafe exclusion | Reconcile or refuse with evidence |
-| Tests become ownership metadata | Cheating fixture | Keep behavioral tests and isolated contract checks |
-| Commit/branch semantics leak into slicing | Invalid result | Audit production packages and mixed commits |
-| Route contracts conflict | Invalid combination | Represent incompatibility explicitly and test refusal later |
-| Vite/Babel module interop changes | Preview transform fails | Pin versions and exercise the real dev-server path in Playwright |
-| Wrapper component has no host root | Wrapper cannot be highlighted | Preserve meaningful descendants and document transparent wrappers |
-| Fragment spans disjoint host regions | Misleading single rectangle | Mark each direct host sibling with shared definition identity and `partial` confidence |
-| Runtime metadata is stale or malformed | Incorrect mapping | Validate version, branch, shape, origin, and refuse rather than guess |
-| Windows child process survives parent | Leaked worktree/server | Stop process trees and force-remove only positively identified controller temp worktrees |
-| Preview event impersonates another runtime | Cross-branch state corruption | Bind protocol v2 envelopes to registered origin, iframe window, preview ID, session UUID, generation, and branch |
-| Reflected navigation creates a ping-pong loop | Unbounded history/message churn | Emit local navigation separately from operation-ID acknowledgements and never propagate an acknowledgement |
-| Fixture route contracts diverge | Incorrect guessed navigation | Negotiate adapter-declared contracts and retain interactivity while explicitly refusing synchronization |
-| Restart preserves a dead runtime selection | Misleading source evidence | Clear the restarted slot before launch and reject every envelope from the prior session/generation |
-| Dynamic localhost origin weakens browser trust boundary | Malicious same-machine page attempts messages | Use exact per-session origins plus iframe-window and identity validation; do not use wildcard targets |
-| Static source graph misses runtime dependency | Slice is incomplete | Bound supported edges; record unresolved imports; return partial/refused rather than infer |
-| Unchanged selected source is mistaken for the branch feature | Unrelated delta is attributed to the selection | Require a reachable changed declaration or changed reverse integration chain; otherwise refuse |
-| Symbol and unrelated edits share an inseparable region | Unsafe symbol-level extraction | Fall back conservatively to a whole file when justified, or mark ambiguity partial/refused |
-| Style ownership is guessed from class names | Incorrect CSS inclusion | Require a supported static stylesheet import; use whole-file CSS fallback and document it |
-| Broad test association turns tests into ownership metadata | Unrelated test changes enter the slice | Require static symbol/helper evidence or an exact uniquely-owned production UI-contract literal; never use titles, paths, or fixture expectations |
-| Shared test setup serves included and excluded tests inseparably | A reconstructed test module is incomplete or over-broad | Detect mixed setup/hunk ownership and return partial/refused with a manual next step |
-| Mixed import declaration is classified as one ownership unit | Excluded-test dependencies leak into the slice | Track required and excluded imports by local specifier, including aliases |
-| Dynamic/custom test factories evade the AST unit model | Tests are silently omitted or misclassified | Record unsupported registration and refuse that test-file slice |
-| Branch moves after visual selection | Artifact describes a different source state | Bind preview session to a resolved commit and reject commit/session/location mismatch |
-| Deterministic artifact leaks runtime noise | Equivalent analysis hashes differ | Omit timestamps, sort every collection, and derive IDs from normalized slice JSON |
-# Prompt 011 public Showcase risks
-
-| Risk | Impact | Mitigation |
-| --- | --- | --- |
-| Evidence manifest drifts from committed artifacts | Hosted claims become stale | Typed schema, runtime validation, integrity tests, and candidate-report provenance |
-| Prebuilt compiled artifact is mistaken for fresh browser generation | Visitor overestimates hosted behavior | Persistent evidence-replay copy and explicit local-engine boundary |
-| Recorded gates look like fake cloud execution | Credibility loss | Manual gate inspection, evidence source per gate, no timer, explicit local-run boundary |
-| Fixture presentation looks hardcoded | Engineer discounts real engine | Plan exposes exact source/dependency/exclusion evidence and links to code/evaluation |
-| Prompt archive becomes the first public proof | Product looks like a scripted AI artifact | Focused public links and explicit Development history label |
-| Prompt history on `main` distracts launch audience | Weak first impression | Decide before launch whether to move full history to a development-history branch |
+| Risk | Mitigation |
+|---|---|
+| Hosted replay appears to perform Git operations | Persistent sample label, explicit local-engine explanation, and replay wording near evaluation. |
+| Visual highlight misses the real control | Linked feature regions and browser assertions that required control centres fall inside their regions. |
+| Evidence drifts from selections | One typed feature-evidence model drives tray, source, dependencies, exclusions, and compatibility. |
+| Unrecorded combinations look successful | Only the committed safe pair replays success; every other unproven pair is labelled unrecorded. |
+| Incompatible selection mutates source | Contract compatibility is evaluated before candidate work and produces a plain-language refusal. |
+| Fixture-specific semantics leak into the engine | Product names remain in Showcase metadata and controlled fixture source, never generic analyzers. |
+| External proof is overgeneralized | README and limitations explicitly bound it to one conventional Vite repository. |
+| Temporary processes or worktrees leak | Controllers use explicit lifecycle cleanup and verification tests audit cleanup. |

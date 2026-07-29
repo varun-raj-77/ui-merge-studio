@@ -42,7 +42,7 @@ test('creates, verifies, repeats idempotently, and opens the real two-feature ca
   await candidate.getByRole('button', { name: 'status' }).click();
   await expect(candidate.getByText('No status activity found.')).toBeVisible();
   await page.evaluate(() => scrollTo(0, 0));
-  await page.screenshot({ path: 'docs/evidence/prompt-006d/combined-result-1440x900.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/local-engine/combined-result-1440x900.png', fullPage: false });
   await page.getByRole('button', { name: 'Navigation experiment' }).click();
   await expect(card(page, 'left')).toBeVisible();
   await page.getByRole('button', { name: 'Activity-filter experiment' }).click();

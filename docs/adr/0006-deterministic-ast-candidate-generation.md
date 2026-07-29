@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted for the controlled Prompt 005 experiment.
+Accepted for the controlled deterministic-candidate experiment.
 
 ## Context
 

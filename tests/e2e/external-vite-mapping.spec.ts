@@ -46,7 +46,7 @@ test('launches and maps two unrelated Vite branches without repository-specific 
   await expect(field(right, 'Component')).toHaveText('RevenueTrendChart');
   await expect(field(right, 'Source')).toHaveText(/src\/views\/dashboard\/index\.tsx:\d+:\d+/);
   await expect(field(right, 'Branch')).toHaveText(rightBranch);
-  await page.screenshot({ path: 'docs/evidence/prompt-007b/external-vite-mapping.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/external-vite/source-mapping.png', fullPage: false });
 
   await request.delete('/api/preview');
   await expect.poll(async () => {

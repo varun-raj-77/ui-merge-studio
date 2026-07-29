@@ -2,13 +2,13 @@
 
 ## Status
 
-Accepted — Prompt 007 concludes **ABANDON**.
+Accepted — the first real-repository target concludes **ABANDON**.
 
 ## Context
 
 FlowCraft is a real Next.js 14 application. UI Merge Studio currently creates detached worktrees but always launches Vite, injects selection metadata with a Vite serve transform, probes `/tickets`, and detects a support-ticket route contract from one fixture file.
 
-Prompt 007 explicitly prohibits implementing Next.js support. Substituting Vite, bypassing Next compilation, selecting files manually, or broadly merging branches would break the rule that visual selection causally constrains source integration.
+The validation scope explicitly excludes implementing Next.js support. Substituting Vite, bypassing Next compilation, selecting files manually, or broadly merging branches would break the rule that visual selection causally constrains source integration.
 
 ## Decision
 

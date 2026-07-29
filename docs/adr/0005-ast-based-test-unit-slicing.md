@@ -4,7 +4,7 @@ Status: Accepted
 
 ## Context
 
-Prompt 004 conservatively associated an entire changed test file when its static module graph reached an analyzed feature. The inspector fixture deliberately puts relevant activity/filter behavior and unrelated sorting behavior in that same file, so whole-file inclusion could not prove a safe feature slice. Test titles, fixture paths, branch names, and expected-output tables are forbidden ownership semantics.
+The first dependency-slicing experiment conservatively associated an entire changed test file when its static module graph reached an analyzed feature. The inspector fixture deliberately puts relevant activity/filter behavior and unrelated sorting behavior in that same file, so whole-file inclusion could not prove a safe feature slice. Test titles, fixture paths, branch names, and expected-output tables are forbidden ownership semantics.
 
 ## Decision
 
@@ -23,4 +23,4 @@ Return `test-units` only when the separation is structurally complete. Inseparab
 - Nested suites, scoped hooks, helpers, fixture constants, aliases, and mixed imports have deterministic structural representations.
 - The artifact contains enough region and import evidence for a later reconstruction experiment, but no reconstruction or candidate branch is performed here.
 - Dynamic/custom DSLs and semantically inseparable setup remain outside the resolved contract.
-- Prompt 004 is PASS only for the supported controlled-fixture syntax; arbitrary test-file slicing remains unproven.
+- The experiment passes only for the supported controlled-fixture syntax; arbitrary test-file slicing remains unproven.

@@ -20,7 +20,7 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   ]) {
     await page.setViewportSize({ width, height });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
-    await page.screenshot({ path: `docs/evidence/prompt-007/homepage-${width}x${height}.png`, fullPage: false });
+    await page.screenshot({ path: `docs/evidence/local-engine/homepage-${width}x${height}.png`, fullPage: false });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: /Try sample demo/ }).click();
@@ -50,12 +50,12 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
     const frameBoxes = await page.locator('.frame-shell').evaluateAll(elements => elements.map(element => { const box = element.getBoundingClientRect(); return { bottom: box.bottom }; }));
     expect(trayBox).not.toBeNull();
     expect(trayBox!.y).toBeGreaterThanOrEqual(Math.max(...frameBoxes.map(box => box.bottom)) - 1);
-    await page.screenshot({ path: `docs/evidence/prompt-007/comparison-${width}x${height}.png`, fullPage: false });
+    await page.screenshot({ path: `docs/evidence/local-engine/comparison-${width}x${height}.png`, fullPage: false });
   }
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole('button', { name: 'Focus navigation' }).click();
   await expect(page.locator('[data-preview-id="right"]')).toBeHidden();
-  await page.screenshot({ path: 'docs/evidence/prompt-007/focused-navigation-1440x900.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/local-engine/focused-navigation-1440x900.png', fullPage: false });
   await page.getByRole('button', { name: 'Side by side' }).click();
   const leftSource = await page.locator('iframe').nth(0).getAttribute('src');
   await page.getByRole('button', { name: '← Back to overview' }).click();
@@ -73,7 +73,7 @@ test('keeps Guided Mode plain-language, responsive, and keyboard operable', asyn
   await frame.getByRole('button', { name: 'Collapse sidebar' }).press('Enter');
   await expect(page.locator('[data-preview-id="left"]')).toContainText('Collapsible navigation', { timeout: 60_000 });
   await expect(page.locator('.selection-summary')).toContainText('Selected');
-  await page.screenshot({ path: 'docs/evidence/prompt-007/selected-features-1440x900.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/local-engine/selected-features-1440x900.png', fullPage: false });
   await page.getByRole('button', { name: 'View source evidence' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: 'Close technical details' })).toBeFocused();

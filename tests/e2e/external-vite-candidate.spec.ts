@@ -33,7 +33,7 @@ test('creates, verifies, relaunches, and deterministically recognizes the extern
   await expect(leftFrame.getByText('Validation workspace')).toBeVisible();
   await expect(rightFrame.getByText('Validated revenue outlook')).toBeVisible();
   await expect(rightFrame.getByText(/Right preview note/)).toBeAttached();
-  await page.screenshot({ path: 'docs/evidence/prompt-008/01-external-branches.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/external-vite/01-external-branches.png', fullPage: false });
 
   await card(page, 'left').getByRole('button', { name: 'Choose feature' }).click();
   await leftFrame.getByText('Validation workspace').click();
@@ -56,7 +56,7 @@ test('creates, verifies, relaunches, and deterministically recognizes the extern
   await expect(versions.nth(1)).toContainText('revenueOutlook');
   await expect(versions.nth(1)).toContainText('revenueOutlookConfig');
   await expect(versions.nth(1)).toContainText('src/components/layout/index.tsx');
-  await page.screenshot({ path: 'docs/evidence/prompt-008/02-selected-source-evidence.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/external-vite/02-selected-source-evidence.png', fullPage: false });
   await page.getByRole('button', { name: 'Close technical details' }).click();
 
   await card(page, 'left').getByRole('button', { name: 'Confirm selection' }).click();
@@ -76,7 +76,7 @@ test('creates, verifies, relaunches, and deterministically recognizes the extern
   expect(plannedPaths.has('src/components/layout/headerbar.tsx')).toBe(false);
   expect(plannedPaths.has('src/components/layout/index.tsx')).toBe(false);
   await expect(page.getByRole('button', { name: 'Create verified branch' })).toBeEnabled();
-  await page.screenshot({ path: 'docs/evidence/prompt-008/03-candidate-plan.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/external-vite/03-candidate-plan.png', fullPage: false });
 
   const generationResponse = page.waitForResponse(response => response.url().endsWith('/api/candidate/generate') && response.request().method() === 'POST', { timeout: 240_000 });
   await page.getByRole('button', { name: 'Create verified branch' }).click();
@@ -87,7 +87,7 @@ test('creates, verifies, relaunches, and deterministically recognizes the extern
   expect(firstReport.verification.every((item: { status: string }) => item.status === 'passed')).toBe(true);
   await expect(page.getByRole('button', { name: 'View combined app' })).toBeVisible();
   await page.locator('.generation-summary').evaluate((element: HTMLDetailsElement) => { element.open = true; });
-  await page.screenshot({ path: 'docs/evidence/prompt-008/04-verification-summary.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/external-vite/04-verification-summary.png', fullPage: false });
 
   const secondResponse = await request.post('/api/candidate/generate', { data: preflight.request });
   const secondReport = await secondResponse.json();
@@ -106,7 +106,7 @@ test('creates, verifies, relaunches, and deterministically recognizes the extern
   await expect(rightFrame.getByText(/Right preview note/)).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Both selected changes, together' })).toBeVisible();
   await expect(page.locator('.result-workspace')).toContainText(candidateBranch);
-  await page.screenshot({ path: 'docs/evidence/prompt-008/05-combined-result.png', fullPage: false });
+  await page.screenshot({ path: 'docs/evidence/external-vite/05-combined-result.png', fullPage: false });
   expect(consoleErrors).toEqual([]);
 
   await request.delete('/api/preview');

@@ -36,7 +36,7 @@ UI Merge Studio:
 3. waits for `/tickets`;
 4. reads `src/state/ticketSelection.ts` for a support-ticket contract.
 
-FlowCraft has no Vite configuration and uses Next.js. Prompt 007 forbids implementing Next.js support. As a result, neither FlowCraft branch can produce a valid instrumented visual selection. Source mapping, dependency tracing, unrelated-change exclusion, planning, generation, visual result, and causal-plan variation are therefore unproven.
+FlowCraft has no Vite configuration and uses Next.js. The current product scope does not include a Next.js adapter. As a result, neither FlowCraft branch can produce a valid instrumented visual selection. Source mapping, dependency tracing, unrelated-change exclusion, planning, generation, visual result, and causal-plan variation are therefore unproven.
 
 ## Outcome
 

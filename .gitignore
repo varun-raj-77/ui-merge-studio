@@ -18,6 +18,7 @@ fixtures/generated/
 .ums/
 
 apps/studio/dist/
+docs/codex-prompts/
 
 .env
 .env.*
