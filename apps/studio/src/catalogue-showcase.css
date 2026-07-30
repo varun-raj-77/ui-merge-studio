@@ -447,7 +447,7 @@ button:focus-visible, a:focus-visible {
   left: 18px;
   min-height: 76px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 10px;
   padding: 10px;
@@ -495,6 +495,79 @@ button:focus-visible, a:focus-visible {
   padding: 3px;
   scrollbar-width: thin;
 }
+
+.history-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.history-actions button,
+.history-feedback button {
+  min-height: 34px;
+  padding: 0 9px;
+  border: 1px solid #ffffff24;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font: 800 10px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.history-actions button:disabled {
+  color: #ffffff55;
+  cursor: default;
+}
+
+.history-feedback {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 12px;
+  border-radius: 11px;
+  background: #20211dee;
+  color: #fff;
+  box-shadow: 0 10px 30px #1c1d1926;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.history-feedback button {
+  min-height: 30px;
+  background: #715ee8;
+}
+
+.history-panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: min(320px, calc(100vw - 36px));
+  max-height: 230px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--cat-line);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--cat-ink);
+  box-shadow: 0 16px 42px #1c1d192b;
+}
+
+.history-panel strong { font-size: 12px; }
+.history-panel ol {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding-left: 20px;
+}
+.history-panel li,
+.history-panel p {
+  color: var(--cat-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.history-panel p { margin: 10px 0 0; }
 
 .selection-chip {
   flex: 0 0 auto;
@@ -867,6 +940,13 @@ button:focus-visible, a:focus-visible {
     align-items: stretch;
     flex-direction: column;
     overflow-y: auto;
+  }
+  .history-actions { grid-column: 1 / -1; }
+  .history-actions button { flex: 1; }
+  .history-feedback,
+  .history-panel {
+    right: 0;
+    width: min(360px, calc(100vw - 16px));
   }
   .selection-chip { width: 100%; }
   .selection-chip > span:first-child { flex: 1; }

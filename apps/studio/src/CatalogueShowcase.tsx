@@ -12,6 +12,11 @@ import {
   type ShowcaseScope
 } from './showcaseSelection';
 import {
+  initialSelectionHistory,
+  selectionHistoryReducer,
+  selectionHistoryShortcut
+} from './selectionHistory';
+import {
   acceptIntentionalContext,
   createApplyPreviewContextCommand,
   defaultPreviewContext,
@@ -70,6 +75,7 @@ interface ArtifactFrameProps {
   selectionEnabled?: boolean;
   visibilitySignal?: boolean;
   onToggle?: (scope: string) => void;
+  onHistoryShortcut?: (action: 'undo' | 'redo') => void;
   onContextMessage: (message: PreviewContextMessage) => void;
 }
 
@@ -212,16 +218,20 @@ function ArtifactFrame({
   selectionEnabled = false,
   visibilitySignal,
   onToggle,
+  onHistoryShortcut,
   onContextMessage
 }: ArtifactFrameProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const scopeObserver = useRef<MutationObserver | null>(null);
+  const shortcutCleanup = useRef<(() => void) | null>(null);
   const toggleRef = useRef(onToggle);
+  const historyShortcutRef = useRef(onHistoryShortcut);
   const contextMessageRef = useRef(onContextMessage);
   const contextRef = useRef(context);
   const selectedScopesRef = useRef(selectedScopes);
   const applySequence = useRef(0);
   toggleRef.current = onToggle;
+  historyShortcutRef.current = onHistoryShortcut;
   contextMessageRef.current = onContextMessage;
   contextRef.current = context;
   selectedScopesRef.current = selectedScopes;
@@ -243,13 +253,26 @@ function ArtifactFrame({
   };
   const observeScopes = () => {
     scopeObserver.current?.disconnect();
+    shortcutCleanup.current?.();
     postState();
     const body = frame.current?.contentDocument?.body;
-    if (!selectionEnabled || !body) return;
-    scopeObserver.current = new MutationObserver(() => {
-      installContextualControls(frame.current, true, selectedScopesRef.current, scope => toggleRef.current?.(scope));
-    });
-    scopeObserver.current.observe(body, { childList: true, subtree: true });
+    const contentWindow = frame.current?.contentWindow;
+    if (contentWindow) {
+      const listener = (event: KeyboardEvent) => {
+        const action = selectionHistoryShortcut(event);
+        if (!action || !historyShortcutRef.current) return;
+        event.preventDefault();
+        historyShortcutRef.current(action);
+      };
+      contentWindow.addEventListener('keydown', listener);
+      shortcutCleanup.current = () => contentWindow.removeEventListener('keydown', listener);
+    }
+    if (selectionEnabled && body) {
+      scopeObserver.current = new MutationObserver(() => {
+        installContextualControls(frame.current, true, selectedScopesRef.current, scope => toggleRef.current?.(scope));
+      });
+      scopeObserver.current.observe(body, { childList: true, subtree: true });
+    }
   };
 
   useEffect(() => {
@@ -273,7 +296,10 @@ function ArtifactFrame({
     context.catalogue.selectedProductId,
     context.catalogue.quickViewOpen
   ]);
-  useEffect(() => () => scopeObserver.current?.disconnect(), []);
+  useEffect(() => () => {
+    scopeObserver.current?.disconnect();
+    shortcutCleanup.current?.();
+  }, []);
   useEffect(() => {
     const listener = (event: MessageEvent) => {
       if (event.origin !== location.origin || event.source !== frame.current?.contentWindow) return;
@@ -430,7 +456,7 @@ function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }:
   </div>;
 }
 
-function PreviewPanel({ preview, title, subtitle, artifact, active, context, selectedScopes, onToggle, onContextMessage }: {
+function PreviewPanel({ preview, title, subtitle, artifact, active, context, selectedScopes, onToggle, onHistoryShortcut, onContextMessage }: {
   preview: ComparisonPreview;
   title: string;
   subtitle: string;
@@ -439,6 +465,7 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, sel
   context: PreviewContext;
   selectedScopes: string[];
   onToggle: (scope: string) => void;
+  onHistoryShortcut: (action: 'undo' | 'redo') => void;
   onContextMessage: (message: PreviewContextMessage) => void;
 }) {
   return <article className={`workspace-preview ${active ? 'mobile-active' : ''}`} data-view={preview}>
@@ -453,6 +480,7 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, sel
         selectionEnabled
         visibilitySignal={active}
         onToggle={onToggle}
+        onHistoryShortcut={onHistoryShortcut}
         onContextMessage={onContextMessage}
       />
     </div>
@@ -472,7 +500,11 @@ function SelectionChip({ scope, openEvidence, remove }: {
 }
 
 function Comparison({ exit }: { exit: () => void }) {
-  const [selection, dispatch] = useReducer(showcaseSelectionReducer, emptyShowcaseSelection);
+  const [selectionHistory, dispatchHistory] = useReducer(
+    selectionHistoryReducer,
+    initialSelectionHistory
+  );
+  const selection = selectionHistory.present;
   const [previewContext, setPreviewContext] = useState(defaultPreviewContext);
   const [previewCapabilities, setPreviewCapabilities] = useState<Record<string, PreviewCapabilities>>({});
   const [contextNotices, setContextNotices] = useState<Record<string, PreviewContextNotice[]>>({});
@@ -485,6 +517,7 @@ function Comparison({ exit }: { exit: () => void }) {
   const [evidenceScope, setEvidenceScope] = useState<ShowcaseScope | null>(null);
   const [showConflict, setShowConflict] = useState(false);
   const [showConflictEvidence, setShowConflictEvidence] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const evidenceOpener = useRef<HTMLElement | null>(null);
   const lastContextRevision = useRef<Record<string, number>>({});
   const desiredKey = candidateKey(selection);
@@ -494,6 +527,16 @@ function Comparison({ exit }: { exit: () => void }) {
   const branchBArtifact = catalogueManifest.artifacts.find(item => item.kind === 'branch-b')!;
   const quickCount = selection.scopes.filter(scope => scope.featureId === 'product-quick-view').length;
   const selectionCount = selection.scopes.length + (selection.incompatibleProductId ? 1 : 0);
+
+  function performHistoryAction(action: 'undo' | 'redo') {
+    const available = action === 'undo'
+      ? selectionHistory.past.length > 0
+      : selectionHistory.future.length > 0;
+    if (!available) return;
+    dispatchHistory({ type: action });
+    setShowConflict(false);
+    setShowConflictEvidence(false);
+  }
 
   useEffect(() => {
     let resizeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -519,6 +562,21 @@ function Comparison({ exit }: { exit: () => void }) {
   }, []);
 
   useEffect(() => {
+    const listener = (event: KeyboardEvent) => {
+      const action = selectionHistoryShortcut(event);
+      if (!action) return;
+      const available = action === 'undo'
+        ? selectionHistory.past.length > 0
+        : selectionHistory.future.length > 0;
+      if (!available) return;
+      event.preventDefault();
+      performHistoryAction(action);
+    };
+    addEventListener('keydown', listener);
+    return () => removeEventListener('keydown', listener);
+  }, [selectionHistory.past.length, selectionHistory.future.length]);
+
+  useEffect(() => {
     if (refused || candidate.key === desiredKey) return;
     setCandidateStatus('resolving');
     const timer = setTimeout(() => {
@@ -528,12 +586,25 @@ function Comparison({ exit }: { exit: () => void }) {
     return () => clearTimeout(timer);
   }, [candidate.key, desiredKey, refused]);
 
+  const commitSelection = (
+    next: typeof selection,
+    label: string,
+    offerImmediateUndo = false
+  ) => {
+    dispatchHistory({
+      type: 'commit',
+      selection: next,
+      label,
+      offerImmediateUndo
+    });
+  };
   const removeScope = (scope: ShowcaseScope) => {
-    dispatch({ type: 'remove-scope', scope });
+    let next = showcaseSelectionReducer(selection, { type: 'remove-scope', scope });
     if (scope.featureId === 'product-quick-view' && quickCount === 1 && selection.incompatibleProductId) {
-      dispatch({ type: 'toggle-incompatible' });
+      next = showcaseSelectionReducer(next, { type: 'toggle-incompatible' });
       setShowConflict(false);
     }
+    commitSelection(next, `Removed ${scopeLabel(scope)}`, true);
   };
   const toggleRuntimeScope = (branch: ComparisonPreview, raw: string) => {
     const scope = scopeFromRuntime(raw, catalogueManifest.productIds);
@@ -542,25 +613,39 @@ function Comparison({ exit }: { exit: () => void }) {
     const removingLastQuickView = scope.featureId === 'product-quick-view'
       && alreadySelected
       && quickCount === 1;
-    dispatch({ type: 'toggle-scope', scope });
+    let next = showcaseSelectionReducer(selection, { type: 'toggle-scope', scope });
     if (!alreadySelected && window.innerWidth <= 700) {
       setDockExpanded(false);
     }
     if (removingLastQuickView && selection.incompatibleProductId) {
-      dispatch({ type: 'toggle-incompatible' });
+      next = showcaseSelectionReducer(next, { type: 'toggle-incompatible' });
       setShowConflict(false);
     }
+    commitSelection(
+      next,
+      `${alreadySelected ? 'Removed' : 'Added'} ${scopeLabel(scope)}`,
+      alreadySelected
+    );
   };
   const openEvidence = (scope: ShowcaseScope, opener: HTMLElement) => {
     evidenceOpener.current = opener;
     setEvidenceScope(scope);
   };
   const clearSelections = () => {
-    dispatch({ type: 'clear' });
+    const count = selectionCount;
+    commitSelection(
+      showcaseSelectionReducer(selection, { type: 'clear' }),
+      `Cleared ${count} selection${count === 1 ? '' : 's'}`,
+      true
+    );
     setShowConflict(false);
   };
   const removeIncompatible = () => {
-    dispatch({ type: 'toggle-incompatible' });
+    commitSelection(
+      showcaseSelectionReducer(selection, { type: 'toggle-incompatible' }),
+      'Removed Product-ID change',
+      true
+    );
     setShowConflict(false);
     setShowConflictEvidence(false);
   };
@@ -599,6 +684,7 @@ function Comparison({ exit }: { exit: () => void }) {
     }));
   };
   const scopeSummary = useMemo(() => selection.scopes.map(scopeLabel), [selection.scopes]);
+  const historyLabels = selectionHistory.past.slice(-6).reverse();
   const activeContextNotices = workspaceState === 'combined'
     ? contextNotices.combined ?? []
     : (contextNotices[mobilePreview] ?? []).filter(notice => notice.code !== 'unsupported-quick-view');
@@ -609,6 +695,8 @@ function Comparison({ exit }: { exit: () => void }) {
     data-context-category={previewContext.catalogue.categoryId}
     data-context-product={previewContext.catalogue.selectedProductId ?? ''}
     data-context-quick-view={previewContext.catalogue.quickViewOpen}
+    data-history-past={selectionHistory.past.length}
+    data-history-future={selectionHistory.future.length}
   >
     <header className="workspace-commandbar">
       <button onClick={exit} className="catalogue-wordmark"><span>UM</span><i>UI Merge Studio</i></button>
@@ -617,7 +705,11 @@ function Comparison({ exit }: { exit: () => void }) {
         className={selection.incompatibleProductId ? 'experimental active' : 'experimental'}
         disabled={!hasQuickViewSelection(selection)}
         aria-pressed={selection.incompatibleProductId}
-        onClick={() => dispatch({ type: 'toggle-incompatible' })}
+        onClick={() => commitSelection(
+          showcaseSelectionReducer(selection, { type: 'toggle-incompatible' }),
+          selection.incompatibleProductId ? 'Removed Product-ID change' : 'Added Product-ID change',
+          selection.incompatibleProductId
+        )}
       >{selection.incompatibleProductId ? '✓ Product-ID change added' : '+ Experimental Product-ID change'}</button>}
     </header>
 
@@ -631,8 +723,8 @@ function Comparison({ exit }: { exit: () => void }) {
         <button aria-pressed={mobilePreview === 'branch-b'} onClick={() => setMobilePreview('branch-b')}>Version B</button>
       </nav>
       <section className="preview-workspace">
-        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={scope => toggleRuntimeScope('branch-a', scope)} onContextMessage={handleContextMessage} />
-        <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={scope => toggleRuntimeScope('branch-b', scope)} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={scope => toggleRuntimeScope('branch-a', scope)} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={scope => toggleRuntimeScope('branch-b', scope)} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
       </section>
     </section>
     <section className="result-workspace" hidden={workspaceState !== 'combined'}>
@@ -642,7 +734,7 @@ function Comparison({ exit }: { exit: () => void }) {
         <div className="result-chips" aria-label="Selections used">{scopeSummary.map(label => <span key={label}>✓ {label}</span>)}</div>
       </header>
       <div className="combined-stage">
-        <ArtifactFrame artifact={candidate.artifact} title="Combined result application" previewId="combined" context={previewContext} selectedScopes={[]} onContextMessage={handleContextMessage} />
+        <ArtifactFrame artifact={candidate.artifact} title="Combined result application" previewId="combined" context={previewContext} selectedScopes={[]} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
         {candidateStatus === 'resolving' && <div className="candidate-loading" role="status">Updating result…</div>}
       </div>
     </section>
@@ -651,7 +743,7 @@ function Comparison({ exit }: { exit: () => void }) {
       {activeContextNotices.map(notice => <p key={`${notice.code}:${notice.message}`}>{notice.message}</p>)}
     </aside>}
 
-    {selectionCount > 0 && <aside className={`selection-dock ${dockExpanded ? 'expanded' : 'collapsed'} ${refused ? 'has-conflict' : ''}`} aria-label="Current selections">
+    {(selectionCount > 0 || selectionHistory.past.length > 0 || selectionHistory.future.length > 0) && <aside className={`selection-dock ${dockExpanded ? 'expanded' : 'collapsed'} ${refused ? 'has-conflict' : ''}`} aria-label="Current selections">
       <button className="dock-toggle" onClick={() => setDockExpanded(value => !value)} aria-expanded={dockExpanded}>
         <strong>{selectionCount} selection{selectionCount === 1 ? '' : 's'}</strong><span>{dockExpanded ? 'Minimize' : 'Review'}</span>
       </button>
@@ -663,14 +755,44 @@ function Comparison({ exit }: { exit: () => void }) {
           <button onClick={removeIncompatible} aria-label="Remove incompatible Product-ID change">×</button>
         </span>}
       </div>
-      <button className="clear-selections" onClick={clearSelections}>Clear</button>
+      <div className="history-actions" aria-label="Selection history controls">
+        <button
+          onClick={() => performHistoryAction('undo')}
+          disabled={selectionHistory.past.length === 0}
+          aria-keyshortcuts="Control+Z Meta+Z"
+        >Undo</button>
+        <button
+          onClick={() => performHistoryAction('redo')}
+          disabled={selectionHistory.future.length === 0}
+          aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
+        >Redo</button>
+        <button
+          onClick={() => setHistoryOpen(value => !value)}
+          aria-expanded={historyOpen}
+          aria-controls="selection-history-list"
+        >History</button>
+      </div>
+      <button className="clear-selections" onClick={clearSelections} disabled={selectionCount === 0}>Clear</button>
       {workspaceState === 'combined'
         ? <button className="view-combined" onClick={() => setWorkspaceState('comparison')}>Back to comparison</button>
         : <button className={refused ? 'review-conflict' : 'view-combined'} onClick={viewCombined}>{refused ? 'Review conflict' : 'View combined'}</button>}
+      {selectionHistory.undoPrompt && !historyOpen && <div className="history-feedback">
+        <span>{selectionHistory.undoPrompt}</span>
+        <button onClick={() => performHistoryAction('undo')}>Undo</button>
+      </div>}
+      {historyOpen && <section className="history-panel" aria-label="Selection history">
+        <strong>History</strong>
+        <ol id="selection-history-list">
+          {historyLabels.length === 0
+            ? <li>No selection actions yet.</li>
+            : historyLabels.map((entry, index) => <li key={`${selectionHistory.past.length - index}:${entry.label}`}>{entry.label}</li>)}
+        </ol>
+        {selectionHistory.future.length > 0 && <p>{selectionHistory.future.length} action{selectionHistory.future.length === 1 ? '' : 's'} available to redo.</p>}
+      </section>}
     </aside>}
 
     <p className="selection-live" role="status" aria-live="polite">
-      {refused ? 'Cannot combine the selected Product-ID change with Quick View. Safe selections are preserved.' : `${selectionCount} selections. ${candidateStatus === 'resolving' ? 'Updating combined result.' : 'Result ready.'}`}
+      {selectionHistory.announcement || (refused ? 'Cannot combine the selected Product-ID change with Quick View. Safe selections are preserved.' : `${selectionCount} selections. ${candidateStatus === 'resolving' ? 'Updating combined result.' : 'Result ready.'}`)}
     </p>
     {evidenceScope && <EvidenceDialog scope={evidenceScope} candidate={candidate} opener={evidenceOpener} close={() => setEvidenceScope(null)} />}
     {showConflict && <ConflictDialog quickCount={quickCount} close={() => setShowConflict(false)} remove={removeIncompatible} inspect={() => setShowConflictEvidence(value => !value)} showingEvidence={showConflictEvidence} />}
