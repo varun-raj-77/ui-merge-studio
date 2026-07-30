@@ -18,9 +18,9 @@ Normalize and stably sort the slice without timestamps. Derive a content-address
 
 ## Consequences
 
-- The controlled sidebar and inspector selections produce separate deterministic slices without manual filenames or fixture lookup tables.
-- Reverse integration evidence makes `ActivityFilters` expand explicitly to `TicketInspector`.
-- The unrelated sidebar heading and inspector sorting implementations are excluded affirmatively.
+- The controlled category-sidebar and quick-view selections produce separate deterministic slices without manual filenames or fixture lookup tables.
+- Reverse integration evidence connects added Product Catalogue components to their existing composition boundaries.
+- The unrelated promotional banner and inventory summary implementations are excluded affirmatively.
 - Whole-file stylesheet inclusion is deliberately conservative; supported tests are represented by structural units and per-specifier imports under ADR 0005.
 - The analyzer remains incomplete for dynamic/runtime module semantics, aliases, arbitrary re-exports, CSS-in-JS, and inseparable shared edits.
 - A resolved slice is evidence for a later integration experiment, not permission or proof that applying it is safe.

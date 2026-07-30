@@ -8,30 +8,28 @@ import type { PreviewCapabilities } from '../../shared/src/bridge';
 const babelTraverse = ((traverse as unknown as { default?: typeof traverse }).default ?? traverse);
 
 export async function detectFixtureCapabilities(repositoryRoot: string): Promise<PreviewCapabilities> {
-  const source = await readFile(resolve(repositoryRoot, 'src/state/ticketSelection.ts'), 'utf8').catch(error => {
+  const source = await readFile(resolve(repositoryRoot, 'src/state/catalogueContext.ts'), 'utf8').catch(error => {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   });
   if (source === null) return { routeSync: null, fixtureContext: null, sourceSelection: { version: 1 } };
+
   const ast = parse(source, { sourceType: 'module', plugins: ['typescript'] });
-  let queryContract = false;
-  let pathContract = false;
+  let route: string | null = null;
+  let queryKey: string | null = null;
+  let fixtureContract: string | null = null;
   babelTraverse(ast, {
     VariableDeclarator(path) {
-      if (t.isIdentifier(path.node.id, { name: 'ticketQueryKey' }) && t.isStringLiteral(path.node.init)) queryContract = true;
-    },
-    FunctionDeclaration(path) {
-      if (path.node.id?.name === 'ticketPath') pathContract = true;
+      if (!t.isIdentifier(path.node.id) || !t.isStringLiteral(path.node.init)) return;
+      if (path.node.id.name === 'catalogueRoute') route = path.node.init.value;
+      if (path.node.id.name === 'productQueryKey') queryKey = path.node.init.value;
+      if (path.node.id.name === 'catalogueFixtureContract') fixtureContract = path.node.init.value;
     }
   });
-  const routeSync = queryContract && !pathContract
-    ? { version: 1, contract: 'ticket-query-v1' }
-    : pathContract && !queryContract
-      ? { version: 1, contract: 'ticket-path-v1' }
-      : null;
+  const compatible = route === '/catalogue' && queryKey === 'product' && fixtureContract === 'product-catalogue-v1';
   return {
-    routeSync,
-    fixtureContext: routeSync ? { version: 1, contract: `support-ticket-${routeSync.contract}`, entityType: 'ticket' } : null,
+    routeSync: compatible ? { version: 1, contract: 'catalogue-query-v1' } : null,
+    fixtureContext: compatible ? { version: 1, contract: fixtureContract!, entityType: 'product' } : null,
     sourceSelection: { version: 1 }
   };
 }

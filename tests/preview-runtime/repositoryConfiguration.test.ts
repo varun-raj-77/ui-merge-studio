@@ -6,9 +6,9 @@ describe('bounded local repository configuration', () => {
   test('preserves the controlled defaults', () => {
     const configuration = loadRepositoryConfiguration('C:/studio', {});
     expect(configuration).toMatchObject({
-      repositoryPath: resolve('C:/studio', 'fixtures/generated/support-dashboard'),
+      repositoryPath: resolve('C:/studio', 'fixtures/generated/product-catalogue'),
       baseRef: 'main',
-      previewPath: '/tickets',
+      previewPath: '/catalogue',
       preferredBranches: [],
       candidateBranch: 'combined-result',
       verificationCommands: undefined

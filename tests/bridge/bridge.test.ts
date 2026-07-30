@@ -11,7 +11,7 @@ describe('versioned preview bridge', () => {
     expect(acceptsPreviewEvent({ origin: 'http://preview', data: message }, registration)?.type).toBe('boundary-selected');
   });
   test('rejects invalid origins, preview IDs, session IDs, and stale generations', () => {
-    const ready = (override: Partial<PreviewIdentity>) => ({ version: bridgeVersion, preview: { ...preview, ...override }, type: 'preview-ready', payload: { capabilities: { routeSync: null, fixtureContext: null, sourceSelection: { version: 1 } }, context: { route: '/tickets', entity: null } } });
+    const ready = (override: Partial<PreviewIdentity>) => ({ version: bridgeVersion, preview: { ...preview, ...override }, type: 'preview-ready', payload: { capabilities: { routeSync: null, fixtureContext: null, sourceSelection: { version: 1 } }, context: { route: '/catalogue', entity: null } } });
     expect(validatePreviewEvent({ origin: 'http://hostile', data: ready({}) }, registration).error).toContain('Origin mismatch');
     expect(validatePreviewEvent({ origin: 'http://preview', data: ready({ previewId: 'right' }) }, registration).error).toContain('mismatched');
     expect(validatePreviewEvent({ origin: 'http://preview', data: ready({ sessionId: 'session-old' }) }, registration).error).toContain('mismatched');
@@ -29,6 +29,6 @@ describe('versioned preview bridge', () => {
     expect(createStudioCommand(preview, 'enable-selection').type).toBe('enable-selection');
     expect(parseStudioCommand({ version: bridgeVersion, preview, type: 'select-ancestor', payload: { index: 1 } }, preview)).not.toBeNull();
     expect(parseStudioCommand({ version: bridgeVersion, preview, type: 'select-ancestor', payload: { index: 'one' } }, preview)).toBeNull();
-    expect(parseStudioCommand({ version: bridgeVersion, preview, type: 'sync-context', payload: { operationId: 'op-1', sourcePreviewId: 'right', context: { route: '/tickets', entity: { type: 'ticket', id: 'TCK-102' } } } }, preview)).not.toBeNull();
+    expect(parseStudioCommand({ version: bridgeVersion, preview, type: 'sync-context', payload: { operationId: 'op-1', sourcePreviewId: 'right', context: { route: '/catalogue', entity: { type: 'product', id: 'p-102' } } } }, preview)).not.toBeNull();
   });
 });

@@ -1,0 +1,2 @@
+export function PromotionalBanner() { return <aside className="promotional-banner"><small>Seasonal edit</small><strong>Workspace essentials, 20% off</strong></aside>; }
+export function CatalogueHeader() { return <><header className="catalogue-header"><div><p className="eyebrow">Product Catalogue</p><h1>Objects for focused work.</h1></div><span>Controlled sample data</span></header><PromotionalBanner /></>; }

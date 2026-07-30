@@ -30,9 +30,9 @@ function validViewport(value){return value&&(value.preset==='desktop'||value.pre
 function context(){
   const contract=capabilities.routeSync?.contract;
   let id=null;
-  if(contract==='ticket-query-v1')id=new URLSearchParams(location.search).get('ticket');
-  else if(contract==='ticket-path-v1'){const match=location.pathname.match(/^\\/tickets\\/([^/]+)$/);id=match?decodeURIComponent(match[1]):null}
-  return {route:location.pathname,entity:id?{type:'ticket',id}:null};
+  if(contract==='catalogue-query-v1')id=new URLSearchParams(location.search).get('product');
+  const entityType=capabilities.fixtureContext?.entityType||'entity';
+  return {route:location.pathname,entity:id?{type:entityType,id}:null};
 }
 function emitNavigation(){
   const current=context();const fingerprint=JSON.stringify(current);if(fingerprint===lastContextFingerprint)return;
@@ -53,11 +53,11 @@ function boundariesFrom(target){const result=[];let node=target instanceof Eleme
 function paint(entry){if(!entry){overlay.style.display='none';return}const r=entry.element.getBoundingClientRect();Object.assign(overlay.style,{display:'block',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'})}
 function applyContext(payload){
   const requested=payload.context;const entity=requested.entity;
-  if(entity&&entity.type!=='ticket'){send('sync-refused',{dimension:'fixture-context',reason:'This adapter can only represent ticket entities.'});return}
+  const entityType=capabilities.fixtureContext?.entityType;
+  if(entity&&entity.type!==entityType){send('sync-refused',{dimension:'fixture-context',reason:'The requested entity does not match this preview fixture contract.'});return}
   const contract=capabilities.routeSync?.contract;if(!contract){send('sync-refused',{dimension:'route',reason:'This preview did not declare a supported route contract.'});return}
   const url=new URL(location.href);
-  if(contract==='ticket-query-v1'){url.pathname='/tickets';url.search='';if(entity)url.searchParams.set('ticket',entity.id)}
-  else if(contract==='ticket-path-v1'){url.pathname=entity?'/tickets/'+encodeURIComponent(entity.id):'/tickets';url.search=''}
+  if(contract==='catalogue-query-v1'){url.pathname='/catalogue';url.search='';if(entity)url.searchParams.set('product',entity.id)}
   else {send('sync-refused',{dimension:'route',reason:'The declared route contract is not implemented by this fixture adapter.'});return}
   nativeReplace({},'',url);lastContextFingerprint=JSON.stringify(context());dispatchEvent(new PopStateEvent('popstate'));
   send('preview-state',{operationId:payload.operationId,context:context()});

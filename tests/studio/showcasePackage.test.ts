@@ -7,7 +7,8 @@ import { canonicalArtifactBytes, generatedManifestPath, hashArtifactBytes, hashD
 describe('prepared Showcase package', () => {
   it('validates the sanitized report, generated manifest, commits, and four artifact hashes', () => {
     const report = readAndValidateReport();
-    expect(report.selectedFeatureIds).toEqual(['navigation', 'activity']);
+    expect(report.selectedFeatureIds).toEqual(['category-sidebar', 'quick-view']);
+    expect(report.refusal).toMatchObject({ status: 'refused', conflictKind: 'changed-dependency-contract', contractPath: 'src/types/product.ts' });
     expect(report.repository.candidateCommit).toMatch(/^[a-f0-9]{40}$/);
     expect(report.verification.every(item => item.result === 'passed' && item.exitCode === 0)).toBe(true);
     for (const artifact of report.artifacts) {

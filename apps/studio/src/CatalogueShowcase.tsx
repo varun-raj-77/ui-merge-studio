@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { catalogueEvidence, combinationOutcome, type CatalogueFeatureId } from './catalogueEvidence';
+import { catalogueEvidence, combinationOutcome, recordedRefusal, type CatalogueFeatureId } from './catalogueEvidence';
 
 type View = 'landing' | 'compare';
 type BranchView = 'branch-a' | 'branch-b';
@@ -21,7 +21,7 @@ function CataloguePreview({ mode, selected, onToggle }: { mode: 'baseline' | Bra
   const hasSidebar = mode === 'branch-a' || mode === 'combined';
   const hasInspector = mode === 'branch-b' || mode === 'combined';
   const hasPromotion = mode === 'branch-a';
-  const newestFirst = mode === 'branch-b';
+  const hasInventorySummary = mode === 'branch-b';
   const [collapsed, setCollapsed] = useState(false);
   const [category, setCategory] = useState<Category>('All');
   const [activeProduct, setActiveProduct] = useState<typeof products[number] | null>(null);
@@ -30,9 +30,7 @@ function CataloguePreview({ mode, selected, onToggle }: { mode: 'baseline' | Bra
   useEffect(() => { if (activeProduct) closeButton.current?.focus(); }, [activeProduct]);
   const closeInspector = () => { setActiveProduct(null); requestAnimationFrame(() => lastTrigger.current?.focus()); };
   const onInspectorKey = (event: KeyboardEvent) => { if (event.key === 'Escape') closeInspector(); };
-  const visible = products
-    .filter(product => category === 'All' || product.category === category)
-    .sort((a, b) => newestFirst ? b.added - a.added : a.id.localeCompare(b.id));
+  const visible = products.filter(product => category === 'All' || product.category === category);
   const selectable = mode === 'branch-a' || mode === 'branch-b';
   return <section className={`catalogue-preview ${mode}`} aria-label={`${mode === 'baseline' ? 'Baseline' : mode === 'branch-a' ? 'Branch A' : mode === 'branch-b' ? 'Branch B' : 'Combined result'} product catalogue`}>
     <header><div><span className="catalogue-mark">PC</span><div><b>Product Catalogue</b><small>Controlled sample data</small></div></div><span>{visible.length} products</span></header>
@@ -42,7 +40,7 @@ function CataloguePreview({ mode, selected, onToggle }: { mode: 'baseline' | Bra
         <button className="collapse-control" onClick={() => setCollapsed(value => !value)} aria-label={collapsed ? 'Expand category sidebar' : 'Collapse category sidebar'}>{collapsed ? '›' : '‹'}</button>
         {!collapsed && <><strong>Categories</strong><div role="group" aria-label="Product categories">{(['All','Audio','Desk','Travel'] as Category[]).map(item => <button key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}</div>{selectable && <button className="region-select" aria-pressed={selected.has('category-sidebar')} onClick={() => onToggle?.('category-sidebar')}>{selected.has('category-sidebar') ? 'Selected' : 'Select category sidebar'}</button>}</>}
       </aside>}
-      <main><div className="catalogue-heading"><div><small>{newestFirst ? 'Newest arrivals first' : 'Spring collection'}</small><h3>Objects for focused work.</h3></div>{newestFirst && selectable && <button className={`sort-select ${selected.has('newest-first') ? 'selected' : ''}`} data-highlight="newest-first" aria-pressed={selected.has('newest-first')} onClick={() => onToggle?.('newest-first')}>{selected.has('newest-first') ? 'Newest-first selected' : 'Select newest-first sorting'}</button>}</div>
+      <main><div className="catalogue-heading"><div><small>{hasInventorySummary ? '5 products ready' : 'Spring collection'}</small><h3>Objects for focused work.</h3></div>{hasInventorySummary && selectable && <button className={`sort-select ${selected.has('inventory-summary') ? 'selected' : ''}`} data-highlight="inventory-summary" aria-pressed={selected.has('inventory-summary')} onClick={() => onToggle?.('inventory-summary')}>{selected.has('inventory-summary') ? 'Inventory summary selected' : 'Select inventory summary'}</button>}</div>
         <div className="product-grid">{visible.map(product => <ProductCard key={product.id} product={product} quickView={hasInspector} onOpen={(event?: unknown) => { lastTrigger.current = (event as { currentTarget?: HTMLButtonElement })?.currentTarget ?? document.activeElement as HTMLButtonElement; setActiveProduct(product); }} />)}</div>
       </main>
     </div>
@@ -68,13 +66,13 @@ function Comparison({ exit }: { exit: () => void }) {
   const toggle = (id: CatalogueFeatureId) => { setResult('idle'); setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]); };
   const evaluate = () => {
     const outcome = combinationOutcome(selected);
-    setResult(outcome === 'recorded-safe' ? 'combined' : outcome === 'incompatible' ? 'refused' : 'unrecorded');
+    setResult(outcome === 'recorded-safe' ? 'combined' : 'unrecorded');
   };
   return <main className={`comparison-shell ${showChanges ? 'show-changes' : ''}`}><header className="comparison-header"><button onClick={exit} className="catalogue-wordmark"><span>UM</span>UI Merge Studio</button><span>Interactive sample — no Git operations run in your browser.</span><a href="#local" onClick={exit}>Run locally</a></header><section className="comparison-intro"><div><p className="eyebrow">Product Catalogue comparison</p><h1>Choose the interface you want.</h1><p>Hover over highlighted changes and select the parts you want.</p></div><div className="comparison-controls"><button aria-pressed={showChanges} onClick={() => setShowChanges(value => !value)}>Show changed regions</button><div role="tablist" aria-label="Focused branch"><button role="tab" aria-selected={branch === 'branch-a'} onClick={() => setBranch('branch-a')}>Branch A</button><button role="tab" aria-selected={branch === 'branch-b'} onClick={() => setBranch('branch-b')}>Branch B</button></div></div></section>
     <section className="comparison-grid"><div><header><b>Baseline</b><small>Always visible</small></header><CataloguePreview mode="baseline" selected={new Set()} /></div><div><header><b>{branch === 'branch-a' ? 'Branch A' : 'Branch B'}</b><small>Independent preview</small></header><CataloguePreview mode={branch} selected={new Set(selected)} onToggle={toggle} /></div></section>
-    <section className="selection-workbench"><div className="selection-tray"><header><div><strong>Your selection</strong><small>{selected.length ? `${selected.length} changed region${selected.length === 1 ? '' : 's'}` : 'Nothing selected yet'}</small></div><button disabled={!selected.length} onClick={() => { setSelected([]); setResult('idle'); }}>Clear</button></header>{!selected.length ? <p>Selection tray is empty. Choose any highlighted change from either branch.</p> : <ul>{selected.map(id => <li key={id}><span>{catalogueEvidence[id].name}<small>{catalogueEvidence[id].branch}</small></span><button onClick={() => toggle(id)} aria-label={`Remove ${catalogueEvidence[id].name}`}>×</button></li>)}</ul>}<button className="evaluate-button" disabled={!selected.length} onClick={evaluate}>Evaluate selected combination</button><small>This sample replays committed results from controlled local engine runs. Run UI Merge Studio locally to evaluate your own repository.</small></div><EvidenceDrawer selected={selected} /></section>
-    {result === 'combined' && <section className="outcome-panel success-outcome"><header><p className="eyebrow">Committed engine result</p><h2>Combined result</h2><p>Included: Collapsible category sidebar from Branch A and Product quick-view inspector from Branch B. Excluded: Promotional banner and Newest-first sorting.</p></header><CataloguePreview mode="combined" selected={new Set(selected)} /></section>}
-    {result === 'refused' && <section className="outcome-panel refusal-outcome" role="alert"><p className="eyebrow">Stopped before mutation</p><h2>Cannot combine these selections.</h2><p>One branch changes product IDs to numbers while the inspector still expects string IDs. Applying both would break product selection.</p><strong>No candidate was attempted or created.</strong><details><summary>Technical details</summary><p><code>src/types/catalogue.ts#Product.id: number</code> conflicts with <code>src/hooks/useSelectedProduct.ts#selectedId: string</code>.</p></details></section>}
+    <section className="selection-workbench"><div className="selection-tray"><header><div><strong>Your selection</strong><small>{selected.length ? `${selected.length} changed region${selected.length === 1 ? '' : 's'}` : 'Nothing selected yet'}</small></div><button disabled={!selected.length} onClick={() => { setSelected([]); setResult('idle'); }}>Clear</button></header>{!selected.length ? <p>Selection tray is empty. Choose any highlighted change from either branch.</p> : <ul>{selected.map(id => <li key={id}><span>{catalogueEvidence[id].name}<small>{catalogueEvidence[id].branch}</small></span><button onClick={() => toggle(id)} aria-label={`Remove ${catalogueEvidence[id].name}`}>×</button></li>)}</ul>}<button className="evaluate-button" disabled={!selected.length} onClick={evaluate}>Evaluate selected combination</button><button onClick={() => setResult('refused')}>Replay Product-ID refusal proof</button><small>This sample replays committed results from controlled local engine runs. Run UI Merge Studio locally to evaluate your own repository.</small></div><EvidenceDrawer selected={selected} /></section>
+    {result === 'combined' && <section className="outcome-panel success-outcome"><header><p className="eyebrow">Committed engine result</p><h2>Combined result</h2><p>Included: Collapsible category sidebar from Branch A and Product quick-view inspector from Branch B. Excluded: Promotional banner and inventory summary.</p></header><CataloguePreview mode="combined" selected={new Set(selected)} /></section>}
+    {result === 'refused' && <section className="outcome-panel refusal-outcome" role="alert"><p className="eyebrow">Stopped before mutation</p><h2>Cannot combine these selections.</h2><p>{recordedRefusal.reason}</p><strong>No candidate was attempted or created.</strong><details><summary>Technical details</summary><p><code>{recordedRefusal.contractPath}#{recordedRefusal.contractSymbol}</code></p><p>{recordedRefusal.manualResolution}</p></details></section>}
     {result === 'unrecorded' && <section className="outcome-panel unrecorded-outcome" role="status"><h2>No recorded result for this combination.</h2><p>This hosted sample has no recorded engine result for this combination. Run locally to evaluate it.</p></section>}
   </main>;
 }

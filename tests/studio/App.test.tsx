@@ -9,8 +9,8 @@ import type { SourceIdentity } from '../../packages/shared/src/sourceIdentity';
 import type { FeatureSliceArtifact, SliceStatus } from '../../packages/source-analysis/src/types';
 import type { PreviewOperation } from '../../packages/preview-runtime/src/previewOperations';
 
-const capabilities: PreviewCapabilities = { routeSync: { version: 1, contract: 'ticket-query-v1' }, fixtureContext: { version: 1, contract: 'support-ticket-ticket-query-v1', entityType: 'ticket' }, sourceSelection: { version: 1 } };
-const session = (previewId: 'left' | 'right', branch: string, generation = 1) => ({ previewId, branch, generation, sessionId: `${previewId}-session-${generation}`, protocolVersion: bridgeVersion, branchCommit: `${branch}-commit`, url: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}/tickets`, origin: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}`, port: previewId === 'left' ? 5001 : 5002, worktreePath: `C:/temp/${previewId}`, status: 'running' as const, failure: null });
+const capabilities: PreviewCapabilities = { routeSync: { version: 1, contract: 'catalogue-query-v1' }, fixtureContext: { version: 1, contract: 'product-catalogue-v1', entityType: 'product' }, sourceSelection: { version: 1 } };
+const session = (previewId: 'left' | 'right', branch: string, generation = 1) => ({ previewId, branch, generation, sessionId: `${previewId}-session-${generation}`, protocolVersion: bridgeVersion, branchCommit: `${branch}-commit`, url: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}/catalogue`, origin: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}`, port: previewId === 'left' ? 5001 : 5002, worktreePath: `C:/temp/${previewId}`, status: 'running' as const, failure: null });
 function response(value: unknown, status = 200) { return Promise.resolve(new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })); }
 function emit(frame: HTMLIFrameElement, preview: PreviewIdentity & { origin: string }, type: string, payload?: unknown) { window.dispatchEvent(new MessageEvent('message', { origin: preview.origin, source: frame.contentWindow, data: { version: bridgeVersion, preview, type, payload } })); }
 function sourceIdentity(preview: ReturnType<typeof session>, componentName: string): SourceIdentity { return { boundaryId: `${componentName}-definition`, instanceId: `${componentName}-instance`, repositoryRelativePath: `src/${componentName}.tsx`, line: 4, column: 8, componentName, exportName: componentName, branch: preview.branch, previewId: preview.previewId, sessionId: preview.sessionId, generation: preview.generation, confidence: 'exact' }; }
@@ -21,16 +21,16 @@ function readyOperation(previewId: 'left' | 'right', branch: string): PreviewOpe
   const value = session(previewId, branch);
   return { operationId: `${previewId}-operation`, previewId, branch, state: 'ready', requestedAt: '2026-01-01T00:00:00.000Z', startedAt: '2026-01-01T00:00:00.001Z', completedAt: '2026-01-01T00:00:00.002Z', updatedAt: '2026-01-01T00:00:00.002Z', phases: [], result: value, error: null, supersededBy: null };
 }
-function appFetch(rightComponent = 'ActivityFilters') {
+function appFetch(rightComponent = 'ProductQuickView') {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
     const url = String(input);
-    if (url === '/api/repository') return response({ branches: ['branch-sidebar', 'branch-inspector', 'main'], clean: true, sessions: [] });
-    if (url === '/api/previews/left' && init?.method === 'POST') return response({ operationId: 'left-operation', previewId: 'left', branch: 'branch-sidebar', state: 'pending', requestedAt: '', coalesced: false }, 202);
-    if (url === '/api/previews/right' && init?.method === 'POST') return response({ operationId: 'right-operation', previewId: 'right', branch: 'branch-inspector', state: 'pending', requestedAt: '', coalesced: false }, 202);
-    if (url.endsWith('/left-operation')) return response(readyOperation('left', 'branch-sidebar'));
-    if (url.endsWith('/right-operation')) return response(readyOperation('right', 'branch-inspector'));
-    if (url === '/api/previews/left/analysis') return response(artifact(sourceIdentity(session('left', 'branch-sidebar'), 'AppSidebar')));
-    if (url === '/api/previews/right/analysis') return response(artifact(sourceIdentity(session('right', 'branch-inspector'), rightComponent)));
+    if (url === '/api/repository') return response({ branches: ['branch-a', 'branch-b', 'main'], clean: true, sessions: [] });
+    if (url === '/api/previews/left' && init?.method === 'POST') return response({ operationId: 'left-operation', previewId: 'left', branch: 'branch-a', state: 'pending', requestedAt: '', coalesced: false }, 202);
+    if (url === '/api/previews/right' && init?.method === 'POST') return response({ operationId: 'right-operation', previewId: 'right', branch: 'branch-b', state: 'pending', requestedAt: '', coalesced: false }, 202);
+    if (url.endsWith('/left-operation')) return response(readyOperation('left', 'branch-a'));
+    if (url.endsWith('/right-operation')) return response(readyOperation('right', 'branch-b'));
+    if (url === '/api/previews/left/analysis') return response(artifact(sourceIdentity(session('left', 'branch-a'), 'CategorySidebar')));
+    if (url === '/api/previews/right/analysis') return response(artifact(sourceIdentity(session('right', 'branch-b'), rightComponent)));
     if (url === '/api/candidate/preflight') return response({ generationId: 'f'.repeat(16), plan: { version: 1, repository: { baseCommit: '1'.repeat(40), candidateBranch: 'combined-result' }, sliceIds: ['a'.repeat(16), 'b'.repeat(16)], operations: [], conflicts: [], unresolved: [], status: 'ready' } });
     return response({ error: `Unexpected request: ${url}` }, 500);
   });
@@ -40,8 +40,8 @@ async function launch() {
   await waitFor(() => expect(launchButton).toBeEnabled(), { timeout: 10_000 });
   fireEvent.click(launchButton);
   return {
-    left: await screen.findByTitle('Navigation experiment live application', {}, { timeout: 5_000 }) as HTMLIFrameElement,
-    right: await screen.findByTitle('Activity-filter experiment live application', {}, { timeout: 5_000 }) as HTMLIFrameElement
+    left: await screen.findByTitle('Category sidebar branch live application', {}, { timeout: 5_000 }) as HTMLIFrameElement,
+    right: await screen.findByTitle('Quick-view branch live application', {}, { timeout: 5_000 }) as HTMLIFrameElement
   };
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -67,8 +67,8 @@ test('explains the task and defaults to the intended named versions without tech
   expect(await screen.findByRole('heading', { name: 'UI Merge Studio' })).toBeVisible();
   expect(screen.getByText(/Combine the best UI changes from different React branches/)).toBeVisible();
   expect(screen.getByRole('button', { name: /Try sample demo/ })).toBeVisible();
-  expect(screen.getByText(/arbitrary local repositories is the next validation milestone/)).toBeVisible();
-  expect(screen.getByText(/Demo application · Fake ticket data/)).toBeVisible();
+  expect(screen.getByText(/controlled local React \+ TypeScript \+ Vite Product Catalogue/)).toBeVisible();
+  expect(screen.getByText(/stable product data/)).toBeVisible();
   expect(screen.getByText(/These are examples—not limits/)).toBeVisible();
   expect(screen.queryByTitle(/Variant preview/)).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'How it works' })).toBeVisible();
@@ -80,19 +80,19 @@ test('launches through acknowledged operations and keeps both runtime identities
   appFetch();
   render(<App />);
   const frames = await launch();
-  emit(frames.left, session('left', 'branch-sidebar'), 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
-  emit(frames.right, session('right', 'branch-inspector'), 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
+  emit(frames.left, session('left', 'branch-a'), 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.right, session('right', 'branch-b'), 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
   expect(await screen.findByText('Both live apps are ready to compare')).toBeVisible();
   expect(screen.getByText(/two live Git branches of the same React application/)).toBeVisible();
-  expect(screen.getByText('Navigation experiment')).toBeVisible();
-  expect(screen.getByText('Activity-filter experiment')).toBeVisible();
-  expect(screen.getByText('branch-sidebar')).toBeVisible();
-  expect(screen.getByText('branch-inspector')).toBeVisible();
+  expect(screen.getAllByText('Category sidebar branch').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Quick-view branch').length).toBeGreaterThan(0);
+  expect(screen.getByText('branch-a')).toBeVisible();
+  expect(screen.getByText('branch-b')).toBeVisible();
   expect(screen.queryByRole('combobox', { name: /source/i })).not.toBeInTheDocument();
   expect(document.querySelector('.studio')).not.toHaveTextContent('Version A');
   expect(document.querySelector('.studio')).not.toHaveTextContent('Version B');
-  expect(frames.left).toHaveAttribute('src', session('left', 'branch-sidebar').url);
-  expect(frames.right).toHaveAttribute('src', session('right', 'branch-inspector').url);
+  expect(frames.left).toHaveAttribute('src', session('left', 'branch-a').url);
+  expect(frames.right).toHaveAttribute('src', session('right', 'branch-b').url);
   fireEvent.change(screen.getByLabelText('Preview size'), { target: { value: 'mobile' } });
   expect(frames.left.parentElement).toHaveStyle({ maxWidth: '390px' });
   expect(frames.right.parentElement).toHaveStyle({ maxWidth: '390px' });
@@ -104,14 +104,14 @@ test('automatically understands two visual selections and prepares the single co
   const fetchMock = appFetch();
   render(<App />);
   const frames = await launch();
-  const left = session('left', 'branch-sidebar');
-  const right = session('right', 'branch-inspector');
-  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
-  emit(frames.right, right, 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
-  emit(frames.left, left, 'boundary-selected', { identity: sourceIdentity(left, 'AppSidebar'), ancestors: [] });
-  emit(frames.right, right, 'boundary-selected', { identity: sourceIdentity(right, 'ActivityFilters'), ancestors: [] });
-  expect((await screen.findAllByText('Collapsible navigation')).length).toBeGreaterThanOrEqual(2);
-  expect((await screen.findAllByText('Activity filters')).length).toBeGreaterThanOrEqual(2);
+  const left = session('left', 'branch-a');
+  const right = session('right', 'branch-b');
+  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.right, right, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.left, left, 'boundary-selected', { identity: sourceIdentity(left, 'CategorySidebar'), ancestors: [] });
+  emit(frames.right, right, 'boundary-selected', { identity: sourceIdentity(right, 'ProductQuickView'), ancestors: [] });
+  expect((await screen.findAllByText('Category Sidebar')).length).toBeGreaterThanOrEqual(2);
+  expect((await screen.findAllByText('Product Quick View')).length).toBeGreaterThanOrEqual(2);
   for (const button of await screen.findAllByRole('button', { name: 'Confirm selection' })) fireEvent.click(button);
   await waitFor(() => expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeEnabled());
   expect(screen.getByText('Both selections passed the compatibility check.')).toBeVisible();
@@ -144,18 +144,19 @@ test('returns to the overview without duplicating active previews and resumes pr
   expect(screen.getByRole('button', { name: /Resume sample demo/ })).toBeVisible();
 });
 
-test('blocks a broad sample selection before it can appear safe to combine', async () => {
-  const fetchMock = appFetch('TicketActivityList');
+test('does not use a fixture-specific component allowlist before engine preflight', async () => {
+  const fetchMock = appFetch('InventorySummary');
   render(<App />);
   const frames = await launch();
-  const left = session('left', 'branch-sidebar');
-  const right = session('right', 'branch-inspector');
-  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
-  emit(frames.right, right, 'preview-ready', { capabilities, context: { route: '/tickets', entity: null } });
-  emit(frames.left, left, 'boundary-selected', { identity: sourceIdentity(left, 'AppSidebar'), ancestors: [] });
-  emit(frames.right, right, 'boundary-selected', { identity: sourceIdentity(right, 'TicketActivityList'), ancestors: [] });
-  expect(await screen.findByText('This selection was stopped before branch creation.')).toBeVisible();
-  expect(screen.getByText(/broader than this guided demo can verify safely/)).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
-  await waitFor(() => expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/candidate/preflight')).toHaveLength(0));
+  const left = session('left', 'branch-a');
+  const right = session('right', 'branch-b');
+  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.right, right, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.left, left, 'boundary-selected', { identity: sourceIdentity(left, 'CategorySidebar'), ancestors: [] });
+  emit(frames.right, right, 'boundary-selected', { identity: sourceIdentity(right, 'InventorySummary'), ancestors: [] });
+  expect((await screen.findAllByText('Inventory Summary')).length).toBeGreaterThan(0);
+  for (const button of screen.getAllByRole('button', { name: 'Confirm selection' })) {
+    fireEvent.click(button);
+  }
+  await waitFor(() => expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/candidate/preflight')).toHaveLength(1));
 });

@@ -126,7 +126,7 @@ export class PreviewController {
   private prepared = new Map<string, PreparedPreview>();
   private generations = new Map<string, number>();
 
-  constructor(private repository: RepositoryController, private previewViteConfig: string, private previewRoute = '/tickets') {}
+  constructor(private repository: RepositoryController, private previewViteConfig: string, private previewRoute = '/catalogue') {}
 
   async branches() { return (await this.repository.inspect()).branches; }
 

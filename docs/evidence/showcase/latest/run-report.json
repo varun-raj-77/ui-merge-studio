@@ -1,141 +1,147 @@
 {
-  "schemaVersion": 1,
-  "runId": "3788f05dfefcd572",
-  "generatedAt": "2026-07-28T15:57:56.282Z",
-  "fixture": "fixtures/generated/support-dashboard",
+  "schemaVersion": 2,
+  "runId": "a4aabbad57eb7fd7",
+  "generatedAt": "2026-07-29T20:11:26.972Z",
+  "fixture": "fixtures/generated/product-catalogue",
   "engineVersion": 1,
   "repository": {
     "baseRef": "main",
-    "commonBaseCommit": "cccd7116646d0cc59d4795478e1783580c249966",
+    "commonBaseCommit": "2335d8b9f09d989c93eedc36f8c82ea4ec8c29c4",
     "branchA": {
-      "name": "branch-sidebar",
-      "commit": "2b5365a560eb0867f33ff73a29da579a7eca099b"
+      "name": "branch-a",
+      "commit": "e58f084a208ebc2fd35a688119149dc0e1e5d3e7"
     },
     "branchB": {
-      "name": "branch-inspector",
-      "commit": "3e7249400d6fa2e08336b7fff308c794af53aecd"
+      "name": "branch-b",
+      "commit": "4e9e19f3f4dd13c463df34cf51a3aac26643ff2f"
     },
     "candidateBranch": "combined-result",
-    "candidateCommit": "ede2b13e9b5016b1abcabfd4996ece6d52ed138c",
+    "candidateCommit": "c56f50151d3d57b27941682e5e3d0b54f115725c",
     "compatibility": "compatible"
   },
   "selectedFeatureIds": [
-    "navigation",
-    "activity"
+    "category-sidebar",
+    "quick-view"
   ],
   "features": [
     {
-      "id": "navigation",
-      "name": "Collapsible navigation",
-      "summary": "Adds persistent collapse behavior and compact navigation.",
+      "id": "category-sidebar",
+      "name": "Collapsible category sidebar",
+      "summary": "Filters the product grid and preserves accessible collapse state.",
       "branchLabel": "Branch A",
-      "branch": "branch-sidebar",
-      "branchCommit": "2b5365a560eb0867f33ff73a29da579a7eca099b",
-      "selectedBoundary": "AppSidebar",
-      "analyzedBoundary": "AppSidebar",
-      "sourceFile": "src/features/navigation/AppSidebar.tsx",
+      "branch": "branch-a",
+      "branchCommit": "e58f084a208ebc2fd35a688119149dc0e1e5d3e7",
+      "selectedBoundary": "CategorySidebar",
+      "analyzedBoundary": "CatalogueWorkspace",
+      "sourceFile": "src/features/catalogue/CategorySidebar.tsx",
+      "sourceLine": 5,
       "supportingFiles": [
         {
-          "path": "src/features/navigation/SidebarNavItem.tsx",
-          "reason": "SidebarNavItem is a changed static dependency of the analyzed boundary."
+          "path": "src/features/catalogue/CatalogueWorkspace.tsx",
+          "reason": "CatalogueWorkspace is a changed integration step required to connect the selection to CatalogueWorkspace."
         },
         {
-          "path": "src/hooks/useSidebarState.ts",
-          "reason": "useSidebarState is a changed static dependency of the analyzed boundary."
-        },
-        {
-          "path": "src/styles/app.css",
+          "path": "src/features/catalogue/category-sidebar.css",
           "reason": "The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported."
         },
         {
-          "path": "src/test/sidebar.test.tsx",
+          "path": "src/hooks/useCategoryFilter.ts",
+          "reason": "useCategoryFilter is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/test/category-sidebar.test.tsx",
           "reason": "Only evidence-connected test units, support declarations, and import specifiers are required."
         },
         {
-          "path": "src/types/navigation.ts",
-          "reason": "sidebarStorageKey is a changed static dependency of the analyzed boundary."
+          "path": "src/types/category.ts",
+          "reason": "CategoryChoice is a changed static dependency of the analyzed boundary."
         }
       ],
       "excludedFiles": [
         {
-          "path": "src/features/tickets/TicketPage.tsx",
-          "symbol": "TicketPage",
-          "reason": "The component’s connection to the analyzed feature already exists unchanged in the merge base; this branch delta does not create that integration edge."
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "CatalogueHeader",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/types/navigation.ts",
-          "symbol": "SidebarState",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ]
     },
     {
-      "id": "activity",
-      "name": "Activity filters",
-      "summary": "Adds All, Notes, and Replies filtering to ticket activity.",
+      "id": "quick-view",
+      "name": "Product quick-view inspector",
+      "summary": "Opens a focused, keyboard-dismissible product detail panel.",
       "branchLabel": "Branch B",
-      "branch": "branch-inspector",
-      "branchCommit": "3e7249400d6fa2e08336b7fff308c794af53aecd",
-      "selectedBoundary": "ActivityFilters",
-      "analyzedBoundary": "TicketInspector",
-      "sourceFile": "src/features/tickets/ActivityFilters.tsx",
+      "branch": "branch-b",
+      "branchCommit": "4e9e19f3f4dd13c463df34cf51a3aac26643ff2f",
+      "selectedBoundary": "ProductQuickView",
+      "analyzedBoundary": "ProductGrid",
+      "sourceFile": "src/features/catalogue/ProductQuickView.tsx",
+      "sourceLine": 5,
       "supportingFiles": [
         {
-          "path": "src/features/tickets/TicketActivityList.tsx",
-          "reason": "TicketActivityList is a changed static dependency of the analyzed boundary."
+          "path": "src/features/catalogue/ProductCardWithQuickView.tsx",
+          "reason": "ProductCardWithQuickView is a changed static dependency of the analyzed boundary."
         },
         {
-          "path": "src/features/tickets/TicketHeader.tsx",
-          "reason": "TicketHeader is a changed static dependency of the analyzed boundary."
+          "path": "src/features/catalogue/ProductGrid.tsx",
+          "reason": "ProductGrid is a changed integration step required to connect the selection to ProductGrid."
         },
         {
-          "path": "src/hooks/useActivityFilter.ts",
-          "reason": "useActivityFilter is a changed static dependency of the analyzed boundary."
-        },
-        {
-          "path": "src/hooks/useCopyReference.ts",
-          "reason": "useCopyReference is a changed static dependency of the analyzed boundary."
-        },
-        {
-          "path": "src/main.tsx",
-          "reason": "This changed module-level import registers the feature stylesheet on the application integration chain."
-        },
-        {
-          "path": "src/styles/inspector.css",
+          "path": "src/features/catalogue/quick-view.css",
           "reason": "The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported."
         },
         {
-          "path": "src/test/inspector.test.tsx",
+          "path": "src/hooks/useSelectedProduct.ts",
+          "reason": "useSelectedProduct is a changed static dependency of the analyzed boundary."
+        },
+        {
+          "path": "src/test/quick-view.test.tsx",
           "reason": "Only evidence-connected test units, support declarations, and import specifiers are required."
-        },
-        {
-          "path": "src/types/inspector.ts",
-          "reason": "CopyState is a changed static dependency of the analyzed boundary."
-        },
-        {
-          "path": "src/utils/severitySummary.ts",
-          "reason": "severitySummary is a changed static dependency of the analyzed boundary."
         }
       ],
       "excludedFiles": [
         {
-          "path": "src/features/tickets/TicketList.tsx",
-          "symbol": "TicketList",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "CatalogueHeader",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/sortTickets.ts",
-          "symbol": "sortTicketsNewestFirst",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ]
     }
   ],
+  "refusal": {
+    "status": "refused",
+    "branch": "branch-incompatible",
+    "branchCommit": "1874acd521e82dd9a1deca9910857251e94bde9c",
+    "selectedBoundary": "ProductIdentityBadge",
+    "sourceFile": "src/features/catalogue/ProductIdentityBadge.tsx",
+    "sourceLine": 2,
+    "pairedWith": "quick-view",
+    "conflictKind": "changed-dependency-contract",
+    "contractPath": "src/types/product.ts",
+    "contractSymbol": "Product",
+    "reason": "One selected slice replaces the existing Product contract while another selected slice was analyzed against that existing contract.",
+    "manualResolution": "Reconcile the shared type contract and update its dependent feature manually, then capture fresh rendered selections and source analysis.",
+    "evidenceReference": "run-report.json#/refusal"
+  },
   "verification": [
     {
       "id": "install",
       "command": "npm ci --no-audit --no-fund",
-      "purpose": "Install exactly the dependencies recorded by the fixture lockfile.",
+      "purpose": "Install exactly the locked fixture dependencies.",
       "exitCode": 0,
       "result": "passed",
       "evidenceReference": "run-report.json#/verification/install"
@@ -151,15 +157,15 @@
     {
       "id": "tests",
       "command": "npm test",
-      "purpose": "Run the complete controlled-fixture test suite.",
+      "purpose": "Run the complete Product Catalogue fixture suite.",
       "exitCode": 0,
       "result": "passed",
       "evidenceReference": "run-report.json#/verification/tests"
     },
     {
       "id": "focused-feature-tests",
-      "command": "npm test -- src/test/sidebar.test.tsx src/test/inspector.test.tsx",
-      "purpose": "Run the selected navigation and activity-filter tests.",
+      "command": "npm test -- src/test/category-sidebar.test.tsx src/test/quick-view.test.tsx",
+      "purpose": "Run the two AST-selected feature test modules.",
       "exitCode": 0,
       "result": "passed",
       "evidenceReference": "run-report.json#/verification/focused-feature-tests"
@@ -167,7 +173,7 @@
     {
       "id": "production-build",
       "command": "npm run build",
-      "purpose": "Compile the generated candidate as a production Vite application.",
+      "purpose": "Compile the candidate as a production Vite application.",
       "exitCode": 0,
       "result": "passed",
       "evidenceReference": "run-report.json#/verification/production-build"
@@ -178,7 +184,7 @@
     "npm ci --no-audit --no-fund",
     "npm run typecheck",
     "npm test",
-    "npm test -- src/test/sidebar.test.tsx src/test/inspector.test.tsx",
+    "npm test -- src/test/category-sidebar.test.tsx src/test/quick-view.test.tsx",
     "npm run build"
   ],
   "result": "succeeded",
@@ -187,43 +193,43 @@
       "id": "baseline",
       "label": "Baseline",
       "ref": "main",
-      "commit": "cccd7116646d0cc59d4795478e1783580c249966",
-      "path": "/showcase-runs/3788f05dfefcd572/baseline/",
-      "sha256": "c8bac48692176a896a9dc958623413998fb4fb05cbfade673cb27bceb6407c89"
+      "commit": "2335d8b9f09d989c93eedc36f8c82ea4ec8c29c4",
+      "path": "/showcase-runs/a4aabbad57eb7fd7/baseline/",
+      "sha256": "b942d5d5212212bb7728a8a772d5c2aa41b8b29d1e90057f1c8f911260a9229f"
     },
     {
       "id": "branch-a",
       "label": "Branch A",
-      "ref": "branch-sidebar",
-      "commit": "2b5365a560eb0867f33ff73a29da579a7eca099b",
-      "path": "/showcase-runs/3788f05dfefcd572/branch-a/",
-      "sha256": "b9582e43e91d98743ad52df15f433514138997b6de9dea67f72d751365518470"
+      "ref": "branch-a",
+      "commit": "e58f084a208ebc2fd35a688119149dc0e1e5d3e7",
+      "path": "/showcase-runs/a4aabbad57eb7fd7/branch-a/",
+      "sha256": "7e1246025b78770b4f178b6753cc595b2e03003c34137906828fcffa70ba4ca5"
     },
     {
       "id": "branch-b",
       "label": "Branch B",
-      "ref": "branch-inspector",
-      "commit": "3e7249400d6fa2e08336b7fff308c794af53aecd",
-      "path": "/showcase-runs/3788f05dfefcd572/branch-b/",
-      "sha256": "90c4b33d5f711062e07b55ca10e12c4afe81e958c993c9d294f1e9ec6e2a3aa6"
+      "ref": "branch-b",
+      "commit": "4e9e19f3f4dd13c463df34cf51a3aac26643ff2f",
+      "path": "/showcase-runs/a4aabbad57eb7fd7/branch-b/",
+      "sha256": "812f5739c9b23ab138e9edd276c5228a59bb02cf975f539588dfb1915a3efc7e"
     },
     {
       "id": "combined-result",
       "label": "Combined result",
       "ref": "combined-result",
-      "commit": "ede2b13e9b5016b1abcabfd4996ece6d52ed138c",
-      "path": "/showcase-runs/3788f05dfefcd572/combined-result/",
-      "sha256": "d919fcd974d95f2cf213fc8fe2f829fa18cbc50cdced645e2a161b72c30bdef0"
+      "commit": "c56f50151d3d57b27941682e5e3d0b54f115725c",
+      "path": "/showcase-runs/a4aabbad57eb7fd7/combined-result/",
+      "sha256": "b8c2da268ae87b3f07591f7de11f006a5204a15653e707934c53d4cdde979a30"
     }
   ],
   "links": {
     "report": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/evidence/showcase/latest/run-report.json",
-    "completion": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/completion-report-012.md",
+    "completion": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/evaluation.md",
     "evaluation": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/evaluation.md",
     "architecture": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/adr/0010-recorded-real-artifact-showcase.md",
     "limitations": "https://github.com/varun-raj-77/ui-merge-studio/blob/main/docs/limitations.md",
     "source": "https://github.com/varun-raj-77/ui-merge-studio",
     "localSetup": "https://github.com/varun-raj-77/ui-merge-studio#run-the-controlled-demo"
   },
-  "manifestSha256": "e3c57d4d2e48a668cb585dfdf5a0e62822f22c13f554f8f02fd4174d62bf9034"
+  "manifestSha256": "9a30ab4cb8a69e4367ffb7536778c8ec1f972e35563c15c63b6e1d248a476aa7"
 }

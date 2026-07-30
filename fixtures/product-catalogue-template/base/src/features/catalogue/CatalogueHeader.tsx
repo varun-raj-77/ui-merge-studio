@@ -1,0 +1,1 @@
+export function CatalogueHeader() { return <header className="catalogue-header"><div><p className="eyebrow">Product Catalogue</p><h1>Objects for focused work.</h1></div><span>Controlled sample data</span></header>; }

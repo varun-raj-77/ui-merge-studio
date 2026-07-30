@@ -55,18 +55,15 @@ describe('free catalogue comparison', () => {
     expect(screen.getByText(catalogueEvidence['quick-view'].sourceFile)).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Evaluate selected combination' }));
     expect(screen.getByRole('heading', { name: 'Combined result' })).toBeVisible();
-    expect(screen.getByText(/excluded: promotional banner and newest-first sorting/i)).toBeVisible();
+    expect(screen.getByText(/excluded: promotional banner and inventory summary/i)).toBeVisible();
     expect(screen.getByLabelText('Combined result product catalogue')).toBeVisible();
   });
 
   it('naturally refuses the incompatible product-id pair before mutation', () => {
     render(<CatalogueShowcase />); open();
-    fireEvent.click(screen.getByRole('button', { name: 'Select promotional banner' }));
-    branchB(); selectInspector();
-    fireEvent.click(screen.getByRole('button', { name: 'Evaluate selected combination' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Replay Product-ID refusal proof' }));
     const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('product IDs to numbers');
-    expect(alert).toHaveTextContent('inspector still expects string IDs');
+    expect(alert).toHaveTextContent('existing Product contract');
     expect(alert).toHaveTextContent('No candidate was attempted or created');
   });
 

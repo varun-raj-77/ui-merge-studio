@@ -18,7 +18,7 @@ git(target, ['init', '-b', 'main']);
 git(target, ['config', 'user.name', 'Phase 0 Fixture']);
 git(target, ['config', 'user.email', 'phase0-fixture@example.invalid']);
 git(target, ['add', '.']);
-git(target, ['commit', '-m', 'Establish dashboard baseline']);
+git(target, ['commit', '-m', 'Establish product catalogue baseline']);
 const base = git(target, ['rev-parse', 'HEAD']);
 
 function variation(branch: string, overlayName: string, message: string) {
@@ -27,11 +27,10 @@ function variation(branch: string, overlayName: string, message: string) {
   git(target, ['add', '.']);
   git(target, ['commit', '-m', message]);
 }
-variation('branch-sidebar', 'sidebar', 'Implement sidebar branch variation');
-variation('branch-inspector', 'inspector', 'Implement inspector branch variation');
-variation('branch-incompatible-route', 'incompatible', 'Implement path-route branch variation');
+variation('branch-a', 'branch-a', 'Add category filter sidebar');
+variation('branch-b', 'branch-b', 'Add product quick view');
+variation('branch-incompatible', 'branch-incompatible', 'Change product identity contract');
 git(target, ['checkout', 'main']);
 console.log(`Fixture: ${target}`);
-for (const branch of ['main', 'branch-sidebar', 'branch-inspector', 'branch-incompatible-route']) console.log(`${branch}: ${git(target, ['rev-parse', branch])}`);
+for (const branch of ['main', 'branch-a', 'branch-b', 'branch-incompatible']) console.log(`${branch}: ${git(target, ['rev-parse', branch])}`);
 console.log('Verify with: npm run fixture:verify');
-

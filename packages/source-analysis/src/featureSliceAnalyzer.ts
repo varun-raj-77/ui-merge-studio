@@ -54,7 +54,7 @@ export class FeatureSliceAnalyzer {
         const candidates = branchEdges.filter(edge => edge.to.key === current.key && edge.type === 'renders-component' && !visited.has(edge.from.key));
         if (!candidates.length) { boundaryReason = 'No safe existing application integration boundary was found for the selected added definition.'; break; }
         const edge = candidates[0]; integrationPath.push(edge); visited.add(edge.from.key);
-        if (baseEdgeKeys.has(edgeKey(edge)) && baseIndex.declarationByKey.has(edge.from.key)) { boundary = edge.from; boundaryResolved = true; boundaryReason = `Expanded from ${seed.name} to ${boundary.name} because the selected definition requires a changed integration chain before reaching an existing base composition boundary.`; break; }
+        if (baseIndex.declarationByKey.has(edge.from.key)) { boundary = edge.from; boundaryResolved = true; boundaryReason = `Expanded from ${seed.name} to ${boundary.name} because the selected definition requires a changed integration chain before reaching an existing base declaration boundary.`; break; }
         current = edge.from;
       }
     }
@@ -96,7 +96,13 @@ export class FeatureSliceAnalyzer {
     for (const edge of integrationPath) { const id = addEvidence('integrated-by', edge.to.key, edge.from.key, `${edge.from.name} provides the supported reverse component-integration edge for ${edge.to.name}.`, baseEdgeKeys.has(edgeKey(edge)) ? 'existing' : 'added'); includeDeclaration(edge.from, `${edge.from.name} is a changed integration step required to connect the selection to ${boundary.name}.`, [id]); }
     walk(boundary);
     const integrationModules = this.reverseModuleClosure(branchIndex, boundary.path);
-    for (const module of integrationModules) for (const styleImport of module.imports.filter(item => item.kind === 'style' && item.resolvedPath)) {
+    const styleModules = new Map(integrationModules.map(module => [module.path, module]));
+    for (const key of visited) {
+      const declaration = branchIndex.declarationByKey.get(key);
+      const module = declaration ? branchIndex.moduleByPath.get(declaration.path) : null;
+      if (module) styleModules.set(module.path, module);
+    }
+    for (const module of [...styleModules.values()].sort((a, b) => a.path.localeCompare(b.path))) for (const styleImport of module.imports.filter(item => item.kind === 'style' && item.resolvedPath)) {
       const stylePath = styleImport.resolvedPath!; const file = changedByPath.get(stylePath); if (!file) continue; const id = addEvidence('imports-style', module.path, stylePath, `${module.path} statically imports the changed stylesheet.`, baseIndex.moduleByPath.get(module.path)?.imports.some(item => item.kind === 'style' && item.resolvedPath === stylePath) ? 'existing' : 'added');
       included.set(`${stylePath}#<file>`, { path: stylePath, category: 'style', symbol: null, branchChangeId: `${branchCommit}:${stylePath}:file`, wholeFile: true, reason: 'The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported.', evidenceEdgeIds: [id], confidence: 'conservative' });
       if (!baseIndex.moduleByPath.get(module.path)?.imports.some(item => item.kind === 'style' && item.resolvedPath === stylePath) && changedByPath.has(module.path)) included.set(`${module.path}#<module>`, { path: module.path, category: 'integration', symbol: null, branchChangeId: `${branchCommit}:${module.path}:module`, wholeFile: true, reason: 'This changed module-level import registers the feature stylesheet on the application integration chain.', evidenceEdgeIds: [id], confidence: 'conservative' });

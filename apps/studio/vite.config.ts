@@ -6,7 +6,7 @@ function artifactReplayRoute() {
   const rewrite = (request: { url?: string }, _response: unknown, next: () => void) => {
     if (request.url) {
       const url = new URL(request.url, 'http://localhost');
-      if (url.pathname === '/tickets') request.url = `/showcase-frame.html${url.search}`;
+      if (url.pathname === '/catalogue') request.url = `/showcase-frame.html${url.search}`;
     }
     next();
   };

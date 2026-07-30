@@ -14,7 +14,7 @@
       (async () => {
         const artifact = new URLSearchParams(location.search).get('ums-artifact');
         const allowed = /^\/showcase-runs\/[a-f0-9]+\/(?:baseline|branch-a|branch-b|combined-result)\/index\.html$/;
-        const routeRewrite = '<script>history.replaceState({}, "", "/tickets")<\/script>';
+        const routeRewrite = '<script>history.replaceState({}, "", "/catalogue")<\/script>';
 
         function fail(message) {
           document.body.dataset.error = 'true';
@@ -29,8 +29,8 @@
         const preserveArtifactRoute = (nativeMethod, state, title, url) => {
           if (url === undefined || url === null) return nativeMethod(state, title, url);
           const requested = new URL(String(url), location.href);
-          if (!/^\/tickets(?:\/|$)/.test(requested.pathname)) return nativeMethod(state, title, url);
-          const contained = new URL('/tickets', location.origin);
+          if (!/^\/catalogue(?:\/|$)/.test(requested.pathname)) return nativeMethod(state, title, url);
+          const contained = new URL('/catalogue', location.origin);
           contained.search = requested.search;
           contained.searchParams.set('ums-artifact', artifact);
           contained.hash = requested.hash;

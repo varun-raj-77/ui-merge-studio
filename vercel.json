@@ -4,7 +4,7 @@
   "outputDirectory": "apps/studio/dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/tickets", "destination": "/showcase-frame.html" },
+    { "source": "/catalogue", "destination": "/showcase-frame.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

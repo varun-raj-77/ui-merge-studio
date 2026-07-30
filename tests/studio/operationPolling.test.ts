@@ -6,7 +6,7 @@ function operation(state: PreviewOperation['state']): PreviewOperation {
   return {
     operationId: 'operation-1',
     previewId: 'left',
-    branch: 'branch-sidebar',
+    branch: 'branch-a',
     state,
     requestedAt: new Date().toISOString(),
     startedAt: null,

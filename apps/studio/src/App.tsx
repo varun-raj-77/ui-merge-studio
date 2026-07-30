@@ -131,7 +131,7 @@ export function CandidatePanel({ inputs, candidateBranch = 'combined-result', on
   const safetyState = failed ? 'Review failure' : report?.status === 'succeeded' ? 'Verified branch created' : busy ? 'Creating and testing' : preflight?.plan.status === 'ready' ? 'Ready to combine' : 'Waiting for selections';
   return <section className="combine-tray" aria-label="Selected features and combine action">
     <div className="tray-features">
-      {slots.map((slot, index) => <div key={slot}><span>{index === 0 ? 'Navigation branch' : 'Activity-filter branch'}</span><strong>{featureLabel(inputs[index]?.artifact)}</strong></div>)}
+      {slots.map((slot, index) => <div key={slot}><span>{index === 0 ? 'Category sidebar branch' : 'Quick-view branch'}</span><strong>{featureLabel(inputs[index]?.artifact)}</strong></div>)}
       <div className={`tray-safety ${failed ? 'is-failed' : preflight?.plan.status === 'ready' ? 'is-ready' : ''}`}><span>Safety check</span><strong><i className="status-dot" aria-hidden="true" />{safetyState}</strong></div>
     </div>
     <div className={`tray-status ${failed ? 'is-failed' : ''}`} role="status" aria-live="polite"><span>{error ?? progress}</span></div>
@@ -172,16 +172,16 @@ function IntroScreen({ ready, status, expanded, active, onToggleDetails, onStart
           <button className="secondary-action" onClick={onToggleDetails} aria-expanded={expanded}>How it works</button>
           {active && <button className="text-action stop-action" onClick={onStop}>Stop demo</button>}
         </div>
-        <p className="repository-readiness" role="status">{ready ? 'This guided demo uses a small local React project. Support for selecting arbitrary local repositories is the next validation milestone.' : status}</p>
+        <p className="repository-readiness" role="status">{ready ? 'This guided demo uses a controlled local React + TypeScript + Vite Product Catalogue repository.' : status}</p>
       </div>
       <aside className="demo-brief">
         <p className="eyebrow">This guided demo</p>
         <h2>{demoScenario.sampleAppName}</h2>
         <p>{demoScenario.sampleAppDescription}</p>
         <div className="demo-pair">
-          <div><span>Navigation branch</span><strong>Collapsible navigation</strong></div>
+          <div><span>Branch A</span><strong>Category sidebar</strong></div>
           <span aria-hidden="true">+</span>
-          <div><span>Activity branch</span><strong>Activity filters</strong></div>
+          <div><span>Branch B</span><strong>Product quick view</strong></div>
         </div>
         <p className="demo-note">These are examples—not limits. The same workflow can evaluate many safely isolatable visible React features.</p>
       </aside>
@@ -319,7 +319,7 @@ export function App() {
       dispatch({ type: 'sync-status', status: plan.reason, error: plan.target ? null : plan.reason });
       if (plan.target) send(plan.target, 'sync-context', { operationId: plan.operationId, sourcePreviewId: previewId, context: plan.context });
     }
-    if (message.type === 'preview-state') dispatch({ type: 'sync-status', status: 'The ticket and route match in both versions.', error: null });
+    if (message.type === 'preview-state') dispatch({ type: 'sync-status', status: 'The product context and route match in both versions.', error: null });
     if (message.type === 'boundary-selected') {
       const identity = (message.payload as { identity: SourceIdentity }).identity;
       send(previewId, 'disable-selection');
@@ -435,8 +435,8 @@ export function App() {
         <div className="header-control-group" aria-label="Preview controls">
           <div className="segmented-control header-layout" aria-label="Preview layout">
             <button className={comparisonLayout === 'both' ? 'active' : ''} onClick={() => setComparisonLayout('both')}>Side by side</button>
-            <button className={comparisonLayout === 'left' ? 'active' : ''} onClick={() => setComparisonLayout('left')}>Focus navigation</button>
-            <button className={comparisonLayout === 'right' ? 'active' : ''} onClick={() => setComparisonLayout('right')}>Focus {state.previews.right.branch === 'combined-result' ? 'result' : 'activity'}</button>
+            <button className={comparisonLayout === 'left' ? 'active' : ''} onClick={() => setComparisonLayout('left')}>Focus category sidebar</button>
+            <button className={comparisonLayout === 'right' ? 'active' : ''} onClick={() => setComparisonLayout('right')}>Focus {state.previews.right.branch === 'combined-result' ? 'result' : 'quick view'}</button>
           </div>
           <label>Fit<select aria-label="Preview size" value={state.viewport.preset} onChange={event => setViewport(event.target.value as keyof typeof viewportPresets)}><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="mobile">Mobile</option></select></label>
         </div>

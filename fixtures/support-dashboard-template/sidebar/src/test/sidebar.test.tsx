@@ -1,3 +1,0 @@
-import { fireEvent, screen } from '@testing-library/react';
-import { renderApp } from './renderApp';
-test('collapses accessibly, shows open count, and persists state', () => { localStorage.setItem('support-dashboard.sidebar-collapsed', 'not-json'); renderApp('/tickets'); expect(screen.getByLabelText('1 open tickets')).toBeInTheDocument(); fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' })); expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument(); expect(screen.getByRole('link', { name: 'Tickets' })).toBeInTheDocument(); expect(localStorage.getItem('support-dashboard.sidebar-collapsed')).toBe('true'); });

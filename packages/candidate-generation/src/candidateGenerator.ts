@@ -31,24 +31,17 @@ class VerificationFailure extends Error { constructor(message: string) { super(m
 export class CandidateGenerator {
   private repository: GitSourceRepository;
   private artifactRoot: string;
-  private verificationCommands: VerificationCommand[];
+  private verificationCommands: VerificationCommand[] | null;
   constructor(readonly repositoryRoot: string, private options: CandidateGeneratorOptions = {}) {
     this.repositoryRoot = resolve(repositoryRoot); this.repository = new GitSourceRepository(this.repositoryRoot); this.artifactRoot = resolve(options.artifactRoot ?? this.repositoryRoot);
-    const npm = process.platform === 'win32' ? (process.env.ComSpec ?? 'C:\\Windows\\System32\\cmd.exe') : 'npm'; const npmPrefix=process.platform==='win32'?['/d','/s','/c','npm']:[];
-    this.verificationCommands = options.verificationCommands ?? [
-      { name:'install', executable:npm, args:[...npmPrefix,'ci','--no-audit','--no-fund'] },
-      { name:'typecheck', executable:npm, args:[...npmPrefix,'run','typecheck'] },
-      { name:'tests', executable:npm, args:[...npmPrefix,'test'] },
-      { name:'focused-feature-tests', executable:npm, args:[...npmPrefix,'test','--','src/test/sidebar.test.tsx','src/test/inspector.test.tsx'] },
-      { name:'production-build', executable:npm, args:[...npmPrefix,'run','build'] }
-    ];
+    this.verificationCommands = options.verificationCommands ?? null;
   }
 
   async preflight(request: CandidateGenerationRequest): Promise<CandidatePreflight> {
     const immutable = JSON.parse(JSON.stringify(request)) as CandidateGenerationRequest;
     const generationId = this.generationId(immutable); const unresolved = await this.validate(immutable); const operations: CandidateOperation[] = [];
     if (!unresolved.length) await this.buildOperations(immutable, operations, unresolved);
-    const normalized = this.normalizeOperations(operations); const conflicts = this.detectConflicts(normalized);
+    const normalized = this.normalizeOperations(operations); const conflicts = this.detectConflicts(normalized, immutable.artifacts);
     const plan: CandidatePlan = { version:candidateGenerationVersion, repository:{baseCommit:immutable.expectedBaseCommit,candidateBranch:immutable.candidateBranch}, sliceIds:stable(immutable.artifacts.map(item=>item.analysisId), value=>value), operations:normalized, conflicts, unresolved:stable(unresolved,item=>`${item.path}:${item.reason}`), status: conflicts.length || unresolved.length ? 'refused' : 'ready' };
     return { generationId, plan };
   }
@@ -69,7 +62,7 @@ export class CandidateGenerator {
       const plannedPaths = new Set(preflight.plan.operations.map(item=>item.target.path)); const tracked=(await this.git(['diff','--name-only'],worktreePath)).split(/\r?\n/).filter(Boolean);const untracked=(await this.git(['ls-files','--others','--exclude-standard'],worktreePath)).split(/\r?\n/).filter(Boolean);const actualPaths = new Set([...tracked,...untracked]);
       if ([...actualPaths].some(path=>!plannedPaths.has(path)) || [...plannedPaths].some(path=>!actualPaths.has(path))) throw new CandidateRefusal(`Candidate changed-file set does not match the deterministic plan. Planned: ${[...plannedPaths].sort().join(', ')}; actual: ${[...actualPaths].sort().join(', ')}.`);
       await this.git(['add','-A'],worktreePath); try{await this.git(['diff','--cached','--check'],worktreePath);}catch(error){const value=error as Error&{stdout?:string;stderr?:string};throw new CandidateRefusal(`Candidate whitespace check failed: ${(value.stdout??value.stderr??value.message).trim()}`);}
-      report.stage='verify'; this.options.onStage?.('verify'); await this.verify(worktreePath, report.verification);
+      report.stage='verify'; this.options.onStage?.('verify'); await this.verify(worktreePath, report.verification, preflight.plan);
       this.options.onProgress?.({stage:'writing-tree',message:'Writing and comparing the verified candidate tree.'});
       const tree = await this.git(['write-tree'],worktreePath); report.repository.candidateTree=tree;
       const currentCandidate = await this.tryResolve(immutable.candidateBranch);
@@ -171,7 +164,7 @@ export class CandidateGenerator {
     }
     return stable([...map.values()],operationOrder);
   }
-  private detectConflicts(operations:CandidateOperation[]) {
+  private detectConflicts(operations:CandidateOperation[], artifacts:FeatureSliceArtifact[] = []) {
     const conflicts:CandidateConflict[]=[]; const add=(kind:string,path:string,symbol:string|null,items:CandidateOperation[],reason:string)=>conflicts.push({id:`conflict:${textHash(`${kind}:${path}:${symbol}:${items.map(item=>item.id).sort().join(':')}`).slice(0,16)}`,kind,path,symbol,sliceIds:stable([...new Set(items.flatMap(item=>item.sliceIds))],value=>value),operationIds:stable(items.map(item=>item.id),value=>value),evidenceEdgeIds:stable([...new Set(items.flatMap(item=>item.evidenceEdgeIds))],value=>value),reason,manualResolution:'Resolve the competing source ownership manually, then produce fresh resolved slices.'});
     const declarationKinds=new Set<CandidateOperation['kind']>(['replace-declaration','insert-declaration','replace-jsx-region']); const groups=new Map<string,CandidateOperation[]>();
     for(const item of operations.filter(op=>declarationKinds.has(op.kind))){const key=`${item.target.path}#${item.target.symbol}`;const list=groups.get(key)??[];list.push(item);groups.set(key,list);} for(const [key,items] of groups) if(new Set(items.map(item=>item.postcondition.expectedContentHash)).size>1)add('overlapping-declaration',items[0].target.path,items[0].target.symbol,items,`Slices reconstruct ${key} with different source declarations.`);
@@ -179,6 +172,27 @@ export class CandidateGenerator {
     const imports=new Map<string,CandidateOperation[]>(); for(const item of operations.filter(op=>op.kind==='insert-import-specifier'&&op.importRequirement?.local)){const key=`${item.target.path}#${item.importRequirement!.local}`;const list=imports.get(key)??[];list.push(item);imports.set(key,list);} for(const items of imports.values())if(new Set(items.map(item=>importKey(item.importRequirement!))).size>1)add('conflicting-import-alias',items[0].target.path,items[0].importRequirement!.local,items,`The same local import binding is assigned incompatible sources or imported names.`);
     const exports=new Map<string,CandidateOperation[]>();for(const item of operations.filter(op=>op.kind==='insert-export'&&op.exportRequirement)){const key=`${item.target.path}#${item.exportRequirement!.exported}`;const list=exports.get(key)??[];list.push(item);exports.set(key,list);}for(const items of exports.values())if(new Set(items.map(item=>`${item.exportRequirement!.source}:${item.exportRequirement!.imported}`)).size>1)add('conflicting-export',items[0].target.path,items[0].exportRequirement!.exported,items,'Slices export the same name from incompatible source bindings.');
     for(let left=0;left<operations.length;left++)for(let right=left+1;right<operations.length;right++){const a=operations[left],b=operations[right];if(a.target.path!==b.target.path||!a.target.region||!b.target.region||a.target.symbol===b.target.symbol)continue;if(a.target.region.startLine<=b.target.region.endLine&&b.target.region.startLine<=a.target.region.endLine)add('overlapping-source-region',a.target.path,null,[a,b],'Distinct operations overlap the same inseparable base source region.');}
+    for (const operation of operations.filter(item => declarationKinds.has(item.kind) && item.target.symbol)) {
+      const contractKey = `${operation.target.path}#${operation.target.symbol}`;
+      for (const artifact of artifacts.filter(item => !operation.sliceIds.includes(item.analysisId))) {
+        const dependencies = artifact.slice.evidence.filter(edge => edge.type === 'uses-type' && edge.baseState === 'existing' && edge.to === contractKey);
+        if (!dependencies.length) continue;
+        const sliceIds = stable([...new Set([...operation.sliceIds, artifact.analysisId])], value => value);
+        const evidenceEdgeIds = stable([...new Set([...operation.evidenceEdgeIds, ...dependencies.map(edge => edge.id)])], value => value);
+        const id = `conflict:${textHash(`changed-dependency-contract:${contractKey}:${sliceIds.join(':')}`).slice(0,16)}`;
+        if (!conflicts.some(item => item.id === id)) conflicts.push({
+          id,
+          kind:'changed-dependency-contract',
+          path:operation.target.path,
+          symbol:operation.target.symbol,
+          sliceIds,
+          operationIds:[operation.id],
+          evidenceEdgeIds,
+          reason:`One selected slice replaces the existing ${operation.target.symbol} contract while another selected slice was analyzed against that existing contract.`,
+          manualResolution:'Reconcile the shared type contract and update its dependent feature manually, then capture fresh rendered selections and source analysis.'
+        });
+      }
+    }
     return stable(conflicts,item=>item.id);
   }
 
@@ -201,7 +215,19 @@ export class CandidateGenerator {
       if(/\.[jt]sx?$/.test(operation.target.path))parseModule(await readFile(target,'utf8'),operation.target.path); applied.push({operationId:operation.id,path:operation.target.path,status,resultingContentHash:textHash(await readFile(target)),detail:operation.detail});
     }
   }
-  private async verify(worktree:string,results:VerificationResult[]) { for(const command of this.verificationCommands){this.options.onProgress?.({stage:'verification',message:`Running verification: ${command.name}.`,verification:command.name});let output='';let exitCode=0;try{const result=await execFileAsync(command.executable,command.args,{cwd:worktree,encoding:'utf8',maxBuffer:20*1024*1024,windowsHide:true});output=`${result.stdout}\n${result.stderr}`;}catch(error){const value=error as Error&{stdout?:string;stderr?:string;code?:number};output=`${value.stdout??''}\n${value.stderr??''}\n${value.message}`;exitCode=typeof value.code==='number'?value.code:1;}results.push({name:command.name,command:[command.executable,...command.args].join(' '),status:exitCode===0?'passed':'failed',exitCode,outputTail:output.trim().slice(-4000)});if(exitCode!==0)throw new VerificationFailure(`Verification command ${command.name} failed with exit code ${exitCode}.`);} }
+  private defaultVerificationCommands(plan: CandidatePlan): VerificationCommand[] {
+    const npm = process.platform === 'win32' ? (process.env.ComSpec ?? 'C:\\Windows\\System32\\cmd.exe') : 'npm';
+    const npmPrefix = process.platform === 'win32' ? ['/d','/s','/c','npm'] : [];
+    const focusedTests = [...new Set(plan.operations.filter(item => item.kind === 'reconstruct-test-file').map(item => item.target.path))].sort();
+    return [
+      { name:'install', executable:npm, args:[...npmPrefix,'ci','--no-audit','--no-fund'] },
+      { name:'typecheck', executable:npm, args:[...npmPrefix,'run','typecheck'] },
+      { name:'tests', executable:npm, args:[...npmPrefix,'test'] },
+      ...(focusedTests.length ? [{ name:'focused-feature-tests', executable:npm, args:[...npmPrefix,'test','--',...focusedTests] }] : []),
+      { name:'production-build', executable:npm, args:[...npmPrefix,'run','build'] }
+    ];
+  }
+  private async verify(worktree:string,results:VerificationResult[],plan:CandidatePlan) { for(const command of this.verificationCommands ?? this.defaultVerificationCommands(plan)){this.options.onProgress?.({stage:'verification',message:`Running verification: ${command.name}.`,verification:command.name});let output='';let exitCode=0;try{const result=await execFileAsync(command.executable,command.args,{cwd:worktree,encoding:'utf8',maxBuffer:20*1024*1024,windowsHide:true});output=`${result.stdout}\n${result.stderr}`;}catch(error){const value=error as Error&{stdout?:string;stderr?:string;code?:number};output=`${value.stdout??''}\n${value.stderr??''}\n${value.message}`;exitCode=typeof value.code==='number'?value.code:1;}results.push({name:command.name,command:[command.executable,...command.args].join(' '),status:exitCode===0?'passed':'failed',exitCode,outputTail:output.trim().slice(-4000)});if(exitCode!==0)throw new VerificationFailure(`Verification command ${command.name} failed with exit code ${exitCode}.`);} }
   private generationId(request:CandidateGenerationRequest){return createHash('sha256').update(JSON.stringify({version:candidateGenerationVersion,repositoryRoot:resolve(request.repositoryRoot),baseRef:request.baseRef,expectedBaseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch,analyzerSchemaVersion:request.analyzerSchemaVersion,sliceIds:stable(request.artifacts.map(item=>item.analysisId),value=>value)})).digest('hex').slice(0,16);}
   private emptyReport(preflight:CandidatePreflight,request:CandidateGenerationRequest):CandidateGenerationReport{const excluded:ExcludedSourceChange[]=request.artifacts.flatMap(artifact=>artifact.slice.excludedChanges.map(item=>({sliceId:artifact.analysisId,path:item.path,symbol:item.symbol?.name??null,reason:item.reason})));const relativePath=`.ums/generation/${preflight.generationId}/candidate-report.json`;return{version:candidateGenerationVersion,generationId:preflight.generationId,status:'failed',stage:'validate',message:'Candidate generation has not completed.',repository:{baseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch},sliceIds:preflight.plan.sliceIds,plan:preflight.plan,appliedOperations:[],excludedSourceChanges:stable(excluded,item=>`${item.sliceId}:${item.path}:${item.symbol??''}`),conflicts:preflight.plan.conflicts,verification:[],cleanup:{worktreeRemoved:true,processesStopped:true,detail:'No worktree created.'},relativePath};}
   private unresolved(target:CandidateUnresolved[],path:string,sliceId:string,reason:string){target.push({path,sliceId,reason,manualResolution:'Use a supported non-overlapping source structure or resolve the source integration manually, then re-analyze.'});}

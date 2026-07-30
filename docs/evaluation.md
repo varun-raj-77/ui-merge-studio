@@ -10,8 +10,8 @@ One unrelated Vite repository was validated from exact base `8223897`. Two indep
 
 ## Hosted Product Catalogue
 
-The public sample keeps the baseline visible beside the focused branch, starts with an empty selection tray, supports arbitrary select/deselect ordering, derives evidence from a typed selection model, and distinguishes interactive behavior from committed engine evidence.
+The public sample keeps the baseline visible beside the focused branch, starts with an empty selection tray, supports arbitrary select/deselect ordering, and distinguishes interactive behavior from committed engine evidence. The supported pair and Product-ID refusal are generated from actual instrumented selections, AST/Git analysis, preflight, candidate verification, and artifact builds.
 
-The recorded valid pair combines the category sidebar and quick-view inspector while excluding the promotion and sorting changes. The recorded incompatible pair detects the numeric-versus-string `Product.id` contract conflict before mutation. Unrecorded combinations are not presented as successes.
+The recorded valid pair combines the category sidebar and quick-view inspector while excluding the promotional banner and inventory summary changes. The recorded incompatible pair detects the numeric-versus-string `Product.id` contract conflict before mutation. Unrecorded combinations are not presented as successes.
 
 Current browser coverage includes compact landing viewports, desktop comparison, mobile comparison, sidebar collapse/expand, category filtering, inspector open/close and Escape behavior, exact highlight/control containment, safe combination, exclusion evidence, refusal, and unrecorded-result honesty.

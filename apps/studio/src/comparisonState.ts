@@ -44,9 +44,9 @@ export function compareCapabilities(left: PreviewCapabilities | null, right: Pre
   if (!left || !right) return { compatible: false, reason: 'Waiting for both previews to report capabilities.' };
   if (!left.routeSync || !right.routeSync) return { compatible: false, reason: 'Route synchronization unavailable because a preview did not declare a supported route contract.' };
   if (left.routeSync.version !== right.routeSync.version || left.routeSync.contract !== right.routeSync.contract) return { compatible: false, reason: `Route synchronization unavailable: contracts differ (${left.routeSync.contract} vs ${right.routeSync.contract}).` };
-  if (!left.fixtureContext || !right.fixtureContext) return { compatible: false, reason: 'Selected-ticket synchronization unavailable because a preview did not declare a fixture-context contract.' };
-  if (left.fixtureContext.version !== right.fixtureContext.version || left.fixtureContext.contract !== right.fixtureContext.contract || left.fixtureContext.entityType !== right.fixtureContext.entityType) return { compatible: false, reason: `Selected-ticket synchronization unavailable: contracts differ (${left.fixtureContext.contract} vs ${right.fixtureContext.contract}).` };
-  return { compatible: true, reason: `Route and selected ticket synchronized through ${left.routeSync.contract}.` };
+  if (!left.fixtureContext || !right.fixtureContext) return { compatible: false, reason: 'Selected-entity synchronization unavailable because a preview did not declare a fixture-context contract.' };
+  if (left.fixtureContext.version !== right.fixtureContext.version || left.fixtureContext.contract !== right.fixtureContext.contract || left.fixtureContext.entityType !== right.fixtureContext.entityType) return { compatible: false, reason: `Selected-entity synchronization unavailable: contracts differ (${left.fixtureContext.contract} vs ${right.fixtureContext.contract}).` };
+  return { compatible: true, reason: `Route and selected entity synchronized through ${left.routeSync.contract}.` };
 }
 
 export function planContextSynchronization(state: ComparisonState, source: PreviewSlotId, context: ComparisonContext, incomingOperationId: string | null, operationId: string) {
