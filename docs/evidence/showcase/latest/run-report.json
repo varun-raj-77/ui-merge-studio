@@ -1,23 +1,23 @@
 {
   "schemaVersion": 3,
-  "runId": "7719604e8efd06f3",
-  "generatedAt": "2026-07-30T02:09:12-04:00",
+  "runId": "9b78a0a80cdc2801",
+  "generatedAt": "2026-07-30T16:43:39-04:00",
   "fixture": "fixtures/generated/product-catalogue",
   "engineVersion": 1,
   "repository": {
     "baseRef": "main",
-    "commonBaseCommit": "e03da71dfee51026b78bc8ef7944e4e1bd87e359",
+    "commonBaseCommit": "180d1e3c67cac3d2d53891a0c56474ec930e3fab",
     "branchA": {
       "name": "branch-a",
-      "commit": "4a2c4b5cd8238bee4e579b36a3400693b54315ad"
+      "commit": "3019d1c8ec9e2c6098f7c6c3f56dcb6c1401b42b"
     },
     "branchB": {
       "name": "branch-b",
-      "commit": "a9bdcb409fa73efc36e19fe700dae7ea5be9e0d9"
+      "commit": "bcfa930820cc50384bd71745315f2a2403cf2ec8"
     },
     "incompatible": {
       "name": "branch-incompatible",
-      "commit": "2bc232f449f14e7fca675ab8b784bc9641d989ba"
+      "commit": "b05394d316581f91477ef6fec89fed170e0cf0c5"
     }
   },
   "productIds": [
@@ -34,7 +34,7 @@
       "summary": "Filters the product grid and preserves accessible collapse state.",
       "branchLabel": "Branch A",
       "branch": "branch-a",
-      "branchCommit": "4a2c4b5cd8238bee4e579b36a3400693b54315ad",
+      "branchCommit": "3019d1c8ec9e2c6098f7c6c3f56dcb6c1401b42b",
       "selectedBoundary": "CategorySidebar",
       "analyzedBoundary": "CatalogueWorkspace",
       "sourceFile": "src/features/catalogue/CategorySidebar.tsx",
@@ -85,7 +85,7 @@
       "summary": "Enables a focused, keyboard-dismissible product detail panel for configured stable IDs.",
       "branchLabel": "Branch B",
       "branch": "branch-b",
-      "branchCommit": "a9bdcb409fa73efc36e19fe700dae7ea5be9e0d9",
+      "branchCommit": "bcfa930820cc50384bd71745315f2a2403cf2ec8",
       "selectedBoundary": "ProductCardWithQuickView",
       "analyzedBoundary": "ProductGrid",
       "sourceFile": "src/features/catalogue/ProductCardWithQuickView.tsx",
@@ -133,7 +133,7 @@
   "refusal": {
     "status": "refused",
     "branch": "branch-incompatible",
-    "branchCommit": "2bc232f449f14e7fca675ab8b784bc9641d989ba",
+    "branchCommit": "b05394d316581f91477ef6fec89fed170e0cf0c5",
     "selectedBoundary": "ProductIdentityBadge",
     "sourceFile": "src/features/catalogue/ProductIdentityBadge.tsx",
     "sourceLine": 2,
@@ -151,27 +151,27 @@
       "kind": "baseline",
       "label": "Baseline",
       "ref": "main",
-      "commit": "e03da71dfee51026b78bc8ef7944e4e1bd87e359",
-      "path": "/showcase-runs/7719604e8efd06f3/static/baseline/",
-      "sha256": "87818c3f3502e92b65dc8cdf12455eddfbb907889821d6f3ab787b3cd35c41bc"
+      "commit": "180d1e3c67cac3d2d53891a0c56474ec930e3fab",
+      "path": "/showcase-runs/9b78a0a80cdc2801/static/baseline/",
+      "sha256": "5a970509e5fbbf4bb8065bca9b75d5fa6a6effde95d9a24e89dc74ed7fbf1f27"
     },
     {
       "id": "branch-a",
       "kind": "branch-a",
       "label": "Branch A · Category navigation",
       "ref": "branch-a",
-      "commit": "4a2c4b5cd8238bee4e579b36a3400693b54315ad",
-      "path": "/showcase-runs/7719604e8efd06f3/static/branch-a/",
-      "sha256": "bbad6f0e2524954109d294792980fd499ee667ce82393da45f3fadeb5e097945"
+      "commit": "3019d1c8ec9e2c6098f7c6c3f56dcb6c1401b42b",
+      "path": "/showcase-runs/9b78a0a80cdc2801/static/branch-a/",
+      "sha256": "47dea00ccbbdfe377ac5a9ba0cd9116c6f6fc908422446f507080d86b40249a2"
     },
     {
       "id": "branch-b",
       "kind": "branch-b",
       "label": "Branch B · Product Quick View",
       "ref": "branch-b",
-      "commit": "a9bdcb409fa73efc36e19fe700dae7ea5be9e0d9",
-      "path": "/showcase-runs/7719604e8efd06f3/static/branch-b/",
-      "sha256": "01adb67a655a5c848678c9f97f82036d1d81ac44a86156b5f893bbbbe3a4ee9d"
+      "commit": "bcfa930820cc50384bd71745315f2a2403cf2ec8",
+      "path": "/showcase-runs/9b78a0a80cdc2801/static/branch-b/",
+      "sha256": "1af354f7ddb3a170eddc8e24a2bb04bc06712f2493547d3a404c9f3a05062047"
     }
   ],
   "candidates": [
@@ -182,16 +182,16 @@
         "quickViewProductIds": []
       },
       "candidateBranch": "main",
-      "candidateCommit": "e03da71dfee51026b78bc8ef7944e4e1bd87e359",
-      "buildId": "2b4c398c0a4e665e",
+      "candidateCommit": "180d1e3c67cac3d2d53891a0c56474ec930e3fab",
+      "buildId": "ef2c9878c8aa79f0",
       "artifact": {
         "id": "candidate:sidebar-0--quick-none",
         "kind": "candidate",
         "label": "Combined · Baseline",
         "ref": "main",
-        "commit": "e03da71dfee51026b78bc8ef7944e4e1bd87e359",
-        "path": "/showcase-runs/7719604e8efd06f3/static/baseline/",
-        "sha256": "87818c3f3502e92b65dc8cdf12455eddfbb907889821d6f3ab787b3cd35c41bc"
+        "commit": "180d1e3c67cac3d2d53891a0c56474ec930e3fab",
+        "path": "/showcase-runs/9b78a0a80cdc2801/static/baseline/",
+        "sha256": "5a970509e5fbbf4bb8065bca9b75d5fa6a6effde95d9a24e89dc74ed7fbf1f27"
       },
       "sliceIds": [],
       "configuredSource": null,
@@ -240,19 +240,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101",
-      "candidateCommit": "0e3c0674ae03eba500c385be0fc2b330fd418faa",
-      "buildId": "b51c67be93ba7663",
+      "candidateCommit": "140cfce4d5ae625646dfdc2f9629eefedc546dcf",
+      "buildId": "5ffad9d799c0efe9",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101",
-        "commit": "0e3c0674ae03eba500c385be0fc2b330fd418faa",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101/",
-        "sha256": "61c3cfd5a0767a4fd7434bfb69653b779d4b91e937be3516c80842a3252ec95a"
+        "commit": "140cfce4d5ae625646dfdc2f9629eefedc546dcf",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101/",
+        "sha256": "89355585196b3d1a0357c73a42f2a2621c1fc6314239aa56072a7d6277e8f82f"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -318,19 +318,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-102",
-      "candidateCommit": "8e4e692111ea2a54f2b0b1bf20935c785bb296ab",
-      "buildId": "ef53c520749ec416",
+      "candidateCommit": "bacde16a110eca6532a7a2850977ec1a2d1ce56f",
+      "buildId": "b008d699b5655851",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-102",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102",
-        "commit": "8e4e692111ea2a54f2b0b1bf20935c785bb296ab",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-102/",
-        "sha256": "a98386d00f504d437b9262a32f02907daafab6074a18e6333163f434c92a546e"
+        "commit": "bacde16a110eca6532a7a2850977ec1a2d1ce56f",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-102/",
+        "sha256": "64e43548bc086374980e438b03289f6cb51df238f72a9143591695ddf469b946"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -398,19 +398,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-102-103",
-      "candidateCommit": "57e4c1995a9318f7d832fb72ed260e0928cc9d75",
-      "buildId": "46b44d5e9b92dc5d",
+      "candidateCommit": "66ce4bfeefbe79540be0a6a23d19348fa4649a01",
+      "buildId": "8792b7ce2daa36ef",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-102_p-103",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-103",
-        "commit": "57e4c1995a9318f7d832fb72ed260e0928cc9d75",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-102_p-103/",
-        "sha256": "6ac27d5e230d0dc1aa8bf3b461c22437d91a7a70e4734a30db1142da967bf88c"
+        "commit": "66ce4bfeefbe79540be0a6a23d19348fa4649a01",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-102_p-103/",
+        "sha256": "e58ca500ffa38e23787eb066cbe747ce770901001d4ce5157cc2e30e46e068bf"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -480,19 +480,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-102-103-104",
-      "candidateCommit": "b5d34ebd66ea317d8f9e734aff5a7d4867ccfc41",
-      "buildId": "d1d4bfaa36f69914",
+      "candidateCommit": "fe563fd4616a68447ec3844978a9586ea08c7ccd",
+      "buildId": "ca560c4012d4c58a",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-102_p-103_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-103-104",
-        "commit": "b5d34ebd66ea317d8f9e734aff5a7d4867ccfc41",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-102_p-103_p-104/",
-        "sha256": "8f111b6b8f190f2f05db9950c9f8984e00c36c54c4e5b0a3c0cdf74563ca62a4"
+        "commit": "fe563fd4616a68447ec3844978a9586ea08c7ccd",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-102_p-103_p-104/",
+        "sha256": "7ce855ad4e32e4a26ceb9dabaf3c3f09274aeaedd804f05660257a0b2611e9b9"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -564,19 +564,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-102-103-104-105",
-      "candidateCommit": "0c4ba0dc4202d720f6e195a3123cec53b8ac1e26",
-      "buildId": "e64d6c38cec91168",
+      "candidateCommit": "fc48dca9343bffe43ffec1105a31bda0f9569e19",
+      "buildId": "919f70a11cbe1de6",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-102_p-103_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-103-104-105",
-        "commit": "0c4ba0dc4202d720f6e195a3123cec53b8ac1e26",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-102_p-103_p-104_p-105/",
-        "sha256": "34b0f5df2543f7e22baebbdef80edb5def7347488eb900ea56fdcd29a1f4a374"
+        "commit": "fc48dca9343bffe43ffec1105a31bda0f9569e19",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-102_p-103_p-104_p-105/",
+        "sha256": "bdd9d3173bc1763c0cdac7dba7617fec58a57457c9e02dde225f9bf3f20c72db"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -648,19 +648,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-102-103-105",
-      "candidateCommit": "ec5bf00fdbb0d55f3da208f8d40674173879d887",
-      "buildId": "311369df752654e0",
+      "candidateCommit": "eea23ba8e5583a3036b08ee486a87ed9e3b67485",
+      "buildId": "bb036e24d98d3056",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-102_p-103_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-103-105",
-        "commit": "ec5bf00fdbb0d55f3da208f8d40674173879d887",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-102_p-103_p-105/",
-        "sha256": "0675d1e2073f9abd67c312f7466faa2613f555242c57e268aa2bd6cc6ebce0e4"
+        "commit": "eea23ba8e5583a3036b08ee486a87ed9e3b67485",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-102_p-103_p-105/",
+        "sha256": "6c6cafe081293360fcc9c13df97d361f32d125402eae8557b5c743514ef06f22"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -730,19 +730,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-102-104",
-      "candidateCommit": "afe5234e5f8cf1a85bb439dcd2156a0851a50d15",
-      "buildId": "2671e72535682bda",
+      "candidateCommit": "d584ea741b58a310e05e7477bdd006a8ca3cbbd6",
+      "buildId": "63abaaf6eac1afa5",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-102_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-104",
-        "commit": "afe5234e5f8cf1a85bb439dcd2156a0851a50d15",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-102_p-104/",
-        "sha256": "c9ed8c567605d4cbe86cbfaf9a98aaf7453450605d7d61b0c6746a1ff99b58e8"
+        "commit": "d584ea741b58a310e05e7477bdd006a8ca3cbbd6",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-102_p-104/",
+        "sha256": "065c32611afd55c82f24fe26fcf621b4cd5c706ddfc177f59502688b555f03d2"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -812,19 +812,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-102-104-105",
-      "candidateCommit": "c0c1cdeb555c3251e26638cc90bdb8d545094ba7",
-      "buildId": "150d1be3f52acfc5",
+      "candidateCommit": "b13c2b9611645fd02d50e05266f7d264a71bb5c4",
+      "buildId": "f75acaa5bbc69d91",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-102_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-104-105",
-        "commit": "c0c1cdeb555c3251e26638cc90bdb8d545094ba7",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-102_p-104_p-105/",
-        "sha256": "a000db0a192190d086d0aacaf72026b069530d0647f058de62d50e9906dba09f"
+        "commit": "b13c2b9611645fd02d50e05266f7d264a71bb5c4",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-102_p-104_p-105/",
+        "sha256": "fa9f315c13ac42e5aea43a30381fc832bb77fc4b733d6c52d65a523a93c52613"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -894,19 +894,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-102-105",
-      "candidateCommit": "a30462cca6821b6cc826c389ee7964f7e317e226",
-      "buildId": "5128265591a42b4e",
+      "candidateCommit": "709559ef35b6d14e73cf25333c143a9594e8b100",
+      "buildId": "e7d27e67c4009007",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-102_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-105",
-        "commit": "a30462cca6821b6cc826c389ee7964f7e317e226",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-102_p-105/",
-        "sha256": "3b34a868f811614d17dcf7f2a33d3eacdea14e6af7849037c9f0770f7e86860a"
+        "commit": "709559ef35b6d14e73cf25333c143a9594e8b100",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-102_p-105/",
+        "sha256": "de68c678828b4cbea48567ff1a1138059d9a08e20f12403893c7249e00611d65"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -974,19 +974,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-103",
-      "candidateCommit": "e9c1002b3f980a62f3c433a238fbe37000a643f0",
-      "buildId": "84d130f777e90f59",
+      "candidateCommit": "d2fe84630e6cf54d314eee23b0907f2d258405ff",
+      "buildId": "731435205ec583ea",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-103",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-103",
-        "commit": "e9c1002b3f980a62f3c433a238fbe37000a643f0",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-103/",
-        "sha256": "d0a604d01af5cb55414b5c2f4dd7bb1b83e09928b47a56f05405febfe1c28630"
+        "commit": "d2fe84630e6cf54d314eee23b0907f2d258405ff",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-103/",
+        "sha256": "12707f4452bc5985f35ec25f4337e9fde8716a0510e15c04a82cfa300be9c259"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1054,19 +1054,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-103-104",
-      "candidateCommit": "19584dc81b3c0e8125e210dd292aa4ff9727dbec",
-      "buildId": "4c6a428e6de5c82c",
+      "candidateCommit": "8bb6d920deaaac2f1097dafa1aacf8457556b4f1",
+      "buildId": "f764a938281f9c99",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-103_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-103-104",
-        "commit": "19584dc81b3c0e8125e210dd292aa4ff9727dbec",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-103_p-104/",
-        "sha256": "21f56b764b103f56c024b83f5b9f6978ce3ceee6ea233f3789ed64346bf5ce11"
+        "commit": "8bb6d920deaaac2f1097dafa1aacf8457556b4f1",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-103_p-104/",
+        "sha256": "3de8e0197478b097d072ebe5bb69a984483e8c51d5a2670a098fdc51370a3590"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1136,19 +1136,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-103-104-105",
-      "candidateCommit": "53fc2e5d2b53c7faa2ff17caa12b95b57dcebf91",
-      "buildId": "8b79e396d81f8ce0",
+      "candidateCommit": "88686c757d5b11c66f68bbdca1fe0fe827cfc3e3",
+      "buildId": "2524b9005f52fd7d",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-103_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-103-104-105",
-        "commit": "53fc2e5d2b53c7faa2ff17caa12b95b57dcebf91",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-103_p-104_p-105/",
-        "sha256": "33458c3d057dac9a3a55cbe7785e8e7c0c6ed3b25e8264d905bb557e6e64b2fd"
+        "commit": "88686c757d5b11c66f68bbdca1fe0fe827cfc3e3",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-103_p-104_p-105/",
+        "sha256": "daa3afcae92eb2891346c4ade53ca86807abf188625b4064f5a1fe7fa0aa4a4a"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1218,19 +1218,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-103-105",
-      "candidateCommit": "c248b57925ceb2c92cbd52b30e861b3765feb754",
-      "buildId": "d564e2755cb4796d",
+      "candidateCommit": "15ff9c221a4af279bedd41c102802ade805239bf",
+      "buildId": "61ea18752f28a219",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-103_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-103-105",
-        "commit": "c248b57925ceb2c92cbd52b30e861b3765feb754",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-103_p-105/",
-        "sha256": "c52d022f3051b4d42526aa9caac18d563e51f0d0d1c32c64eb69846104d404fb"
+        "commit": "15ff9c221a4af279bedd41c102802ade805239bf",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-103_p-105/",
+        "sha256": "ff297992f0dcd8855a9ff71ea5fd8d9ced89935f67de231e263797614dd1d59c"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1298,19 +1298,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-104",
-      "candidateCommit": "f687f08d4889a14ecdb7e1ac1751fbe78181aad4",
-      "buildId": "d91e9c203a9bfd54",
+      "candidateCommit": "5582e457636b8cd37a8a90f7ae33a0e34248b5a4",
+      "buildId": "bc324b944244d1c8",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-104",
-        "commit": "f687f08d4889a14ecdb7e1ac1751fbe78181aad4",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-104/",
-        "sha256": "c91edd433350996fcb8d5ea9f258db2f48de6e67b4dfe43f7c0acf4ba28a857f"
+        "commit": "5582e457636b8cd37a8a90f7ae33a0e34248b5a4",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-104/",
+        "sha256": "8d797d258b0adeda12219e91f1eec6a78013f7fc36cdf2f3193c15cf8079c483"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1378,19 +1378,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-104-105",
-      "candidateCommit": "78167f610bd212908d96e752975cf386eda7b968",
-      "buildId": "60a102605433c68f",
+      "candidateCommit": "3408824844edf85232daad18ab0f2b4f7fadb1a1",
+      "buildId": "d4599158d4fe4135",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-104-105",
-        "commit": "78167f610bd212908d96e752975cf386eda7b968",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-104_p-105/",
-        "sha256": "cb78a62be755875f367280aee0f279e481ec7a7dd71de4ce32c6a8135264cef8"
+        "commit": "3408824844edf85232daad18ab0f2b4f7fadb1a1",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-104_p-105/",
+        "sha256": "a399c0103f72f064a1135efa1f6e917a370e772de323fa21f665ebb949c2c0db"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1458,19 +1458,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-101-105",
-      "candidateCommit": "1f809d22f3fb86c25b1e3172a25d51d667a7a503",
-      "buildId": "6aa3150345c7cc03",
+      "candidateCommit": "175f9c5a296ad8977f54201d89c6899546e46463",
+      "buildId": "a08b9851608f5cf4",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-101_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-105",
-        "commit": "1f809d22f3fb86c25b1e3172a25d51d667a7a503",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-101_p-105/",
-        "sha256": "da7856222e15aec8c9c8d23180aaf812f75b260c97f6d29f1cb4dc9bba483eac"
+        "commit": "175f9c5a296ad8977f54201d89c6899546e46463",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-101_p-105/",
+        "sha256": "19cba6d7a255ec07523b836e2947ed22fcbbedcefd3731e346642c850a2b7af7"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1536,19 +1536,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-102",
-      "candidateCommit": "c6b44a279b97a3417855008981e003b341fcf711",
-      "buildId": "75fba6fcbfda95e0",
+      "candidateCommit": "b2956ab38f3539b68bf809da81cfb45a0132e0ea",
+      "buildId": "60f063005f8b37b6",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-102",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102",
-        "commit": "c6b44a279b97a3417855008981e003b341fcf711",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-102/",
-        "sha256": "dfc6054306c446e078f1590a553de7bf55a816055eb6712d79b3985226947e8a"
+        "commit": "b2956ab38f3539b68bf809da81cfb45a0132e0ea",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-102/",
+        "sha256": "24224f984a4241179601b6583d8d945ef9fb0aa0cff9c0b2b0786e7214a27ac8"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1614,19 +1614,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-102-103",
-      "candidateCommit": "a12f6839cbc662ab5b45b2c46a4373ec8d3afeaa",
-      "buildId": "28b5625d38c92f14",
+      "candidateCommit": "795624ffae38a17beee408ff9a1a353247d384ad",
+      "buildId": "25a9b229cd1f35ab",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-102_p-103",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-103",
-        "commit": "a12f6839cbc662ab5b45b2c46a4373ec8d3afeaa",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-102_p-103/",
-        "sha256": "ee3a49c14832759f39f4abe9ac6547c2840bc244a808d0ed1d181881f23ef98a"
+        "commit": "795624ffae38a17beee408ff9a1a353247d384ad",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-102_p-103/",
+        "sha256": "ae6a2101311c5bc766643c6d6a6f929251e77d27ecac6d37dcf9150ad8686964"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1694,19 +1694,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-102-103-104",
-      "candidateCommit": "b13a006d5f219d43e67dd28afe903918c8c6e1a1",
-      "buildId": "c3ceb0fa3d487853",
+      "candidateCommit": "25b5fe1be8f4edfb30eaadbbae349ea890e256dd",
+      "buildId": "f32d003602c1973d",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-102_p-103_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-103-104",
-        "commit": "b13a006d5f219d43e67dd28afe903918c8c6e1a1",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-102_p-103_p-104/",
-        "sha256": "5e3c35eb29ea73de18737db9264427b0274528c965808359449749a40ab67734"
+        "commit": "25b5fe1be8f4edfb30eaadbbae349ea890e256dd",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-102_p-103_p-104/",
+        "sha256": "5f6c27775178c2517d7fa0812c281fc49a2dd28f626738bf439fe2b474cd490b"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1776,19 +1776,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-102-103-104-105",
-      "candidateCommit": "ed3af01926d71eb19fd23cccae629479dbd5de3f",
-      "buildId": "ef808d818719a14c",
+      "candidateCommit": "734fac2e5a86eb3b2daa520752e97f10cdd5ce0c",
+      "buildId": "5ac995f5a739a6bd",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-102_p-103_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-103-104-105",
-        "commit": "ed3af01926d71eb19fd23cccae629479dbd5de3f",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-102_p-103_p-104_p-105/",
-        "sha256": "847208c172e3cb3f3d82a14e9ab809200c20bcecd4dfcf2361be2b04aeeb8e87"
+        "commit": "734fac2e5a86eb3b2daa520752e97f10cdd5ce0c",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-102_p-103_p-104_p-105/",
+        "sha256": "b44a32267fedf4709f2a152c08f350e3e176bc706775548e20f661e9ed07fc4c"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1858,19 +1858,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-102-103-105",
-      "candidateCommit": "3e722e27930ca2b9b86ca73c527cb66280e04621",
-      "buildId": "f96212fc4d2f177c",
+      "candidateCommit": "4d200bca4c7c458dcbd853f1c081726f1e883b00",
+      "buildId": "a2b9a115c9a05011",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-102_p-103_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-103-105",
-        "commit": "3e722e27930ca2b9b86ca73c527cb66280e04621",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-102_p-103_p-105/",
-        "sha256": "4d897d5d2424466170fe15ebed534f9f11ff6488072da19895dcf77aa06604aa"
+        "commit": "4d200bca4c7c458dcbd853f1c081726f1e883b00",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-102_p-103_p-105/",
+        "sha256": "932be769a06d58df45dd92d2f119c4ca0878009e727f0a27c37d30ba677e885b"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -1938,19 +1938,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-102-104",
-      "candidateCommit": "0d2841bd4e6257b95e96209cd46220dd2489c4fc",
-      "buildId": "cd684f3bc992b510",
+      "candidateCommit": "910590e6a4a5891ffc1e83fe404a326527b5bccb",
+      "buildId": "93a3d4b6447b0da7",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-102_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-104",
-        "commit": "0d2841bd4e6257b95e96209cd46220dd2489c4fc",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-102_p-104/",
-        "sha256": "6e5d2dff8047415ddbe97d6175fee82d2ee66882fc17438d173b47e1d3653ec7"
+        "commit": "910590e6a4a5891ffc1e83fe404a326527b5bccb",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-102_p-104/",
+        "sha256": "fbb0082016fb28f3d8bf91c9e320dbbc2de8c2b2c42685f4d44ad806e9740207"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2018,19 +2018,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-102-104-105",
-      "candidateCommit": "a0e903de3f9e17034dca5011ccf63184674f3a51",
-      "buildId": "71352c7a8aac91be",
+      "candidateCommit": "792caab22973b727109f10776dce39e4b2768777",
+      "buildId": "b1a20ae11659c9eb",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-102_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-104-105",
-        "commit": "a0e903de3f9e17034dca5011ccf63184674f3a51",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-102_p-104_p-105/",
-        "sha256": "92fe68345c66ed9da4ff79219ab50bd9631e81914841c9a1946d5208edac8c23"
+        "commit": "792caab22973b727109f10776dce39e4b2768777",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-102_p-104_p-105/",
+        "sha256": "b169ff766769cadf3546c0f02063488bc1ec650de0a4342e62d17aa112362d02"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2098,19 +2098,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-102-105",
-      "candidateCommit": "c9cd866d99fbcf1c5029748b07050cc2110d9e5e",
-      "buildId": "f29f0343289207c1",
+      "candidateCommit": "da465d6d28d402c1eb088823281b615030462a24",
+      "buildId": "30911f471f23e28a",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-102_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-105",
-        "commit": "c9cd866d99fbcf1c5029748b07050cc2110d9e5e",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-102_p-105/",
-        "sha256": "c811bef030f3483c7686866ddeeb8955e624535b228b4ea6c708e704a3bdf650"
+        "commit": "da465d6d28d402c1eb088823281b615030462a24",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-102_p-105/",
+        "sha256": "14d2ba874794408654fd6356df612e73275153ef2eea3a24ea2e77e26d172857"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2176,19 +2176,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-103",
-      "candidateCommit": "0e45ea75f93c06813fbe2eb8e7843ffa6765f0a8",
-      "buildId": "1921310be486171c",
+      "candidateCommit": "7aa7de3b7548172aa656dcab5adf9615c5b48ddf",
+      "buildId": "83a514c4df83f3a5",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-103",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-103",
-        "commit": "0e45ea75f93c06813fbe2eb8e7843ffa6765f0a8",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-103/",
-        "sha256": "72bbbde0679ef826a9e8ad1de86a6de4504fa5dbe6409689bf87dd7ee11511e4"
+        "commit": "7aa7de3b7548172aa656dcab5adf9615c5b48ddf",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-103/",
+        "sha256": "b4645093e1f3d20c76ab26cb73adf8fa95166eec3893be7fa10255944e5dc19c"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2254,19 +2254,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-103-104",
-      "candidateCommit": "126db5469b555ee25c37a5c5aa28b29422e61a98",
-      "buildId": "26d4c6b73760c6f6",
+      "candidateCommit": "e06d94aabc30ddfa7cca1a83bcdf71e6ce78a20f",
+      "buildId": "f341439fc3b6b4e0",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-103_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-103-104",
-        "commit": "126db5469b555ee25c37a5c5aa28b29422e61a98",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-103_p-104/",
-        "sha256": "6413b91b1e085281ad0bb03d4eefd6359dc9ea553f12f77eb92d4a1d0595cdcf"
+        "commit": "e06d94aabc30ddfa7cca1a83bcdf71e6ce78a20f",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-103_p-104/",
+        "sha256": "eebbb5ace677dd83c66a194293885817ac09e97366b0aa1f527b521c988f3d0d"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2334,19 +2334,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-103-104-105",
-      "candidateCommit": "5b9909ed05da401fe2e85efd7ea0c113dfc92ad7",
-      "buildId": "5e656bcea8a620ca",
+      "candidateCommit": "3e8a7dbe02df3ba81c57a5c0b419fa5be7610a15",
+      "buildId": "0e9acd93210f4dd4",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-103_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-103-104-105",
-        "commit": "5b9909ed05da401fe2e85efd7ea0c113dfc92ad7",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-103_p-104_p-105/",
-        "sha256": "9c6a5f87b61cee940b9ef97f344e43040f6a1f7759d0252bf00c8cea5d69bf9c"
+        "commit": "3e8a7dbe02df3ba81c57a5c0b419fa5be7610a15",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-103_p-104_p-105/",
+        "sha256": "d5df4a0907571227bfafb5aedeea5e505a806359c84afd0ffba6afe5dfec5897"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2414,19 +2414,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-103-105",
-      "candidateCommit": "b4a0a5562dca4aa0ca7f8b663ad08b22d54cb76a",
-      "buildId": "53257d1f9ea8aa5c",
+      "candidateCommit": "01036943fdeefe1f452d8fd380ce0ebea91820f2",
+      "buildId": "6d865e3f14f15f10",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-103_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-103-105",
-        "commit": "b4a0a5562dca4aa0ca7f8b663ad08b22d54cb76a",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-103_p-105/",
-        "sha256": "82ede442b4083f0d426e29c5a7bddc6808010415e43799cf8b36a79acb898c3c"
+        "commit": "01036943fdeefe1f452d8fd380ce0ebea91820f2",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-103_p-105/",
+        "sha256": "22f822fd5dc1765c792bd0229e4dd559595e44b0d23af56cdf6a7c8d82852c43"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2492,19 +2492,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-104",
-      "candidateCommit": "baa57e537ac8405cca89f288bf64e385aa77dc10",
-      "buildId": "fb5e91df6fd14941",
+      "candidateCommit": "386c9e31ce605bb941042bd22b233bc032383f3d",
+      "buildId": "70a737fe08dbc824",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-104",
-        "commit": "baa57e537ac8405cca89f288bf64e385aa77dc10",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-104/",
-        "sha256": "a059f3a07c4f113d8d2073868c85843a7d462cb31fb5610bbde5dc4988f8c095"
+        "commit": "386c9e31ce605bb941042bd22b233bc032383f3d",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-104/",
+        "sha256": "5911b55b53e8237ce1708a518fdb820b1067850a1268aebb2bcd6b21a5d611b6"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2570,19 +2570,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-104-105",
-      "candidateCommit": "ca381136a0358937e66d47a9373510b93161ccfd",
-      "buildId": "c55c600c7c0c0ae0",
+      "candidateCommit": "e1ac7ea1d2245b26780d8ad3a6be0e0738c864a4",
+      "buildId": "3a6bf8400c31d18d",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-104-105",
-        "commit": "ca381136a0358937e66d47a9373510b93161ccfd",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-104_p-105/",
-        "sha256": "543ed2a42768f564df0130e0e5653c0d90f7d3c63d142c46eae2f1108681465a"
+        "commit": "e1ac7ea1d2245b26780d8ad3a6be0e0738c864a4",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-104_p-105/",
+        "sha256": "95e50ca9aba67a7b8ad9e6673c0f177207414f7695057f63fdb67938f6d1ea32"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2648,19 +2648,19 @@
         ]
       },
       "candidateBranch": "showcase-s0-q-105",
-      "candidateCommit": "ab365135daacfd6c2e0750f9fa939041bdf76d58",
-      "buildId": "3b816c1c162c2032",
+      "candidateCommit": "3a0f9c64ab11272b868b2d93149a6326950bdf3f",
+      "buildId": "764e8a2b3f27ecfb",
       "artifact": {
         "id": "candidate:sidebar-0--quick-p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s0-q-105",
-        "commit": "ab365135daacfd6c2e0750f9fa939041bdf76d58",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-0--quick-p-105/",
-        "sha256": "936d54c5f908b58fee9542b57017f9ab7756d7da4aeefd733da0ed301a02270b"
+        "commit": "3a0f9c64ab11272b868b2d93149a6326950bdf3f",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-0--quick-p-105/",
+        "sha256": "020f80595dec85f7d688460cffed4a3c7c87e4f75996352459c1385b0edf697c"
       },
       "sliceIds": [
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2723,19 +2723,19 @@
         "quickViewProductIds": []
       },
       "candidateBranch": "showcase-s1-q-none",
-      "candidateCommit": "351d8334a26c44d01ea26b0deec845a399630bbb",
-      "buildId": "9ebd2b4acea2e06b",
+      "candidateCommit": "5a4219dbfe002672c5e5da42da6134478e52cf64",
+      "buildId": "891df1920a97f102",
       "artifact": {
         "id": "candidate:sidebar-1--quick-none",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-none",
-        "commit": "351d8334a26c44d01ea26b0deec845a399630bbb",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-none/",
-        "sha256": "4a321b764e464c14489e1ebb8c3b3d26ec1b5bf224d0c9d4115a30b49e2c5cfe"
+        "commit": "5a4219dbfe002672c5e5da42da6134478e52cf64",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-none/",
+        "sha256": "b81bfa735c19f4049bf90b86fa719c9c934ac5f92d64f2fa495eb40ce4434e7c"
       },
       "sliceIds": [
-        "58a60c22854e55a2"
+        "e60d176956db94e6"
       ],
       "configuredSource": null,
       "excludedChanges": [
@@ -2799,20 +2799,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101",
-      "candidateCommit": "0afd24db1249b7ba040fa4b5d34097b9c7607e76",
-      "buildId": "edd310f97c014e14",
+      "candidateCommit": "821a71b64ac0035c596a090a8f21be23c5bd00d0",
+      "buildId": "6b504e26fb621862",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101",
-        "commit": "0afd24db1249b7ba040fa4b5d34097b9c7607e76",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101/",
-        "sha256": "4294ca4478a5256efe3225bb33ef1be0eee2cecf2e7abd8e08d2ef6d7a3cee43"
+        "commit": "821a71b64ac0035c596a090a8f21be23c5bd00d0",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101/",
+        "sha256": "eead6b16fa7acb01120449852d5437735262e017ab52c9056be0ad42a7a3c398"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2828,13 +2828,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -2843,8 +2838,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -2893,20 +2893,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-102",
-      "candidateCommit": "d98bbcc2ca6606e8474b96481d585004dbed95e1",
-      "buildId": "1b60727d2d567db8",
+      "candidateCommit": "5780a6740f47caf105367d47723784e6628922b8",
+      "buildId": "b7f9ee3e4056c76f",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-102",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102",
-        "commit": "d98bbcc2ca6606e8474b96481d585004dbed95e1",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-102/",
-        "sha256": "b88faaa834e7a9f42220e26335db3c8e5846fbf9596385eba389b8c4f0b3ba14"
+        "commit": "5780a6740f47caf105367d47723784e6628922b8",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-102/",
+        "sha256": "07f4b5e09570d551bef44bcc968b01488fda1d0e31ff809f07ddb1e757ee2993"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -2923,13 +2923,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -2938,8 +2933,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -2989,20 +2989,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-102-103",
-      "candidateCommit": "b03ab87adccc3aa8546fd005d87d138c69559907",
-      "buildId": "ca8c1acc729dffb0",
+      "candidateCommit": "f1284aa304261d51729ac17c39fbad2e5ae07c19",
+      "buildId": "df9f054fdfc9d106",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-102_p-103",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-103",
-        "commit": "b03ab87adccc3aa8546fd005d87d138c69559907",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-102_p-103/",
-        "sha256": "f7a08ecbe408d8d3d3947174e068b1d50e2aaf8af3a9740087d66358518cb736"
+        "commit": "f1284aa304261d51729ac17c39fbad2e5ae07c19",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-102_p-103/",
+        "sha256": "3f11bee5f7ebbc4e2b46daabea0605170ab05b841223ea640c9bc28d3cc67517"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3020,13 +3020,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3035,8 +3030,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3087,20 +3087,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-102-103-104",
-      "candidateCommit": "f32aaaa53e88b3b7a553675d39d5282c759eba40",
-      "buildId": "daeb2d315fd98110",
+      "candidateCommit": "a559dde1aac67b760af6fa755732653f2c65bad5",
+      "buildId": "f41a5d1d2be6dc54",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-102_p-103_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-103-104",
-        "commit": "f32aaaa53e88b3b7a553675d39d5282c759eba40",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-102_p-103_p-104/",
-        "sha256": "0025d1f5b2200bc94a813133b4dbad7860cbf18d17ba8dd3aea8ff2fcccf48b3"
+        "commit": "a559dde1aac67b760af6fa755732653f2c65bad5",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-102_p-103_p-104/",
+        "sha256": "2a05671a6e151f76b2c458c154d3cf370d0200a9492483927b287ffe124eaac7"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3119,13 +3119,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3134,8 +3129,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3187,20 +3187,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-102-103-104-105",
-      "candidateCommit": "b4ea41618314ca3060d28f74735f84ddf743764f",
-      "buildId": "aaf8a9042474ed29",
+      "candidateCommit": "e2ad3aa90300f8f02ffd182b677c272506571e14",
+      "buildId": "a90fb686b6eff3de",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-102_p-103_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-103-104-105",
-        "commit": "b4ea41618314ca3060d28f74735f84ddf743764f",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-102_p-103_p-104_p-105/",
-        "sha256": "b20d327258b5b7125bf6a20744d27177443128d3c0d34890e071ad6439433de7"
+        "commit": "e2ad3aa90300f8f02ffd182b677c272506571e14",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-102_p-103_p-104_p-105/",
+        "sha256": "6d30a68da46e4712a3cc411bdf00c703d7d9485de2f9c8e54b3b07294e114abf"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3220,13 +3220,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3235,8 +3230,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3287,20 +3287,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-102-103-105",
-      "candidateCommit": "69116827382174042b79c8bb2495af34f199159d",
-      "buildId": "7dea0e6bcba5b352",
+      "candidateCommit": "228934846c7d21021c346e564d2cbfe0e23cd030",
+      "buildId": "52cfd2114e705c59",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-102_p-103_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-103-105",
-        "commit": "69116827382174042b79c8bb2495af34f199159d",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-102_p-103_p-105/",
-        "sha256": "4b9927997681cc70be8fc136814ba6d8d53638db84cd677ff73182f15eeb0255"
+        "commit": "228934846c7d21021c346e564d2cbfe0e23cd030",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-102_p-103_p-105/",
+        "sha256": "5592b173dbb5886ce8a154cffc5b1f9f5f3079b004dffdc3e79fdc39dc88b6e3"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3319,13 +3319,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3334,8 +3329,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3385,20 +3385,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-102-104",
-      "candidateCommit": "de4e34881288ae66160bf9cdda82868c776aae28",
-      "buildId": "3fdc0fe0c3dfacb7",
+      "candidateCommit": "b1348917889b08505d493dcc6faa9691de6dc04c",
+      "buildId": "7e69a21e336144ab",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-102_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-104",
-        "commit": "de4e34881288ae66160bf9cdda82868c776aae28",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-102_p-104/",
-        "sha256": "b928dffd381c4d8060607fb67dd45312053772fa7a2e5390154faf32c1b0965c"
+        "commit": "b1348917889b08505d493dcc6faa9691de6dc04c",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-102_p-104/",
+        "sha256": "d3e25e641ffaa683e2f8c11d3f17b3e3c536de8bb6fb4ec5da28e55c79072b72"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3416,13 +3416,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3431,8 +3426,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3483,20 +3483,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-102-104-105",
-      "candidateCommit": "580a9f02d96ae8a8c6756058114e6b862d1c4585",
-      "buildId": "669a63cd30865d50",
+      "candidateCommit": "a4c54cade89e7697b8d0f30e9fd83fe8b7ea9d79",
+      "buildId": "e7b625a707bb33af",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-102_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-104-105",
-        "commit": "580a9f02d96ae8a8c6756058114e6b862d1c4585",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-102_p-104_p-105/",
-        "sha256": "fcaca535c64a6b0d25a2ad70f2c9f232b16de0ea67e5764cb8dabb58583b0d12"
+        "commit": "a4c54cade89e7697b8d0f30e9fd83fe8b7ea9d79",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-102_p-104_p-105/",
+        "sha256": "9d8f1a5fdba200866e41da34bc3ca048ec34cc26408b2ff8fdca82809dc9aa33"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3515,13 +3515,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3530,8 +3525,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3581,20 +3581,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-102-105",
-      "candidateCommit": "3cf2cb39fd204766dc9702d38a7ead59fa092999",
-      "buildId": "6fa0a7fe30b58bcf",
+      "candidateCommit": "afa6b8ec83ad356b5689283bda3be95b773f9ea2",
+      "buildId": "c634dde58fed8881",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-102_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-105",
-        "commit": "3cf2cb39fd204766dc9702d38a7ead59fa092999",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-102_p-105/",
-        "sha256": "d78a63787f5f2e83ea7bfc9b1959f805828604dae4fa75ba10dc6c1835cf63b5"
+        "commit": "afa6b8ec83ad356b5689283bda3be95b773f9ea2",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-102_p-105/",
+        "sha256": "b7a76286c29f9561db0601eebeee6ce40b678ea94d4d6dd47c5dc43d1b669e5b"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3612,13 +3612,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3627,8 +3622,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3677,20 +3677,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-103",
-      "candidateCommit": "2ad056f2a9d558760e2bff5e6473bbef90bb0e82",
-      "buildId": "299f2e2e0b5fe82c",
+      "candidateCommit": "c3b190c1753583d42089b4de1a6591ba74978b53",
+      "buildId": "e056a902654de56d",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-103",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-103",
-        "commit": "2ad056f2a9d558760e2bff5e6473bbef90bb0e82",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-103/",
-        "sha256": "461f6ec0ddd357b1ce0eb4b9adfd21abeee55fb7248b34c767a1e18929e18713"
+        "commit": "c3b190c1753583d42089b4de1a6591ba74978b53",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-103/",
+        "sha256": "afe891ae1972b6cb5798e3401caa75aad849f8d79634c671cf1b6db0ed0027b9"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3707,13 +3707,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3722,8 +3717,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3773,20 +3773,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-103-104",
-      "candidateCommit": "0107789a048826e10825d03e6121a31850d44696",
-      "buildId": "16b27146cb4c2359",
+      "candidateCommit": "de74d6c63c292624b7d7ca6337f463177d762b3f",
+      "buildId": "c6b5cd019296263f",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-103_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-103-104",
-        "commit": "0107789a048826e10825d03e6121a31850d44696",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-103_p-104/",
-        "sha256": "676ad18b8b206f979d686619271da60f2e88c8ce01b433d40ad9ed9cf98922a4"
+        "commit": "de74d6c63c292624b7d7ca6337f463177d762b3f",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-103_p-104/",
+        "sha256": "0a6ef47d85ad9f2f6a77d517122bcb06231213cd262e524cecf032efdc0d8192"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3804,13 +3804,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3819,8 +3814,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3871,20 +3871,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-103-104-105",
-      "candidateCommit": "be06b65e212619cc220ee883e36c634f9895639c",
-      "buildId": "7c76c2dc47b997c7",
+      "candidateCommit": "19b4117f6295505e4d005a82b89e950e9e71dcc8",
+      "buildId": "70ef2507b7874f8e",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-103_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-103-104-105",
-        "commit": "be06b65e212619cc220ee883e36c634f9895639c",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-103_p-104_p-105/",
-        "sha256": "4c0b04c7c0602054358079f8915c6ddcb36c03f73044384426edb4a7cedabf3f"
+        "commit": "19b4117f6295505e4d005a82b89e950e9e71dcc8",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-103_p-104_p-105/",
+        "sha256": "ecc6a300111c894625ae86db0b87b067c2c2f846c94de5e60aac59a388f25a9e"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -3903,13 +3903,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -3918,8 +3913,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -3969,20 +3969,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-103-105",
-      "candidateCommit": "0dfa88dbb60d7222febc013afeac9ee4de74c95b",
-      "buildId": "77436acf94f04932",
+      "candidateCommit": "4c419dfa981c02d2f2ee670f99c7c0a5af32b313",
+      "buildId": "8a03f1039fe90574",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-103_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-103-105",
-        "commit": "0dfa88dbb60d7222febc013afeac9ee4de74c95b",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-103_p-105/",
-        "sha256": "28404b452bd28045bfcb79e6475c202905d580e22e18ccec41806e2c5b06019b"
+        "commit": "4c419dfa981c02d2f2ee670f99c7c0a5af32b313",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-103_p-105/",
+        "sha256": "1bd44c41445c9e08ed915d7d35c746f9388d8cbfbe5c209c9fa575f742015786"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4000,13 +4000,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4015,8 +4010,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4065,20 +4065,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-104",
-      "candidateCommit": "638eda987121acac8ac2973f0f6508f3dcd94584",
-      "buildId": "d2f9a0b7a3936e55",
+      "candidateCommit": "d56427cfa0a2f74523fc846c7a35375cab7e3df4",
+      "buildId": "32a71dea521eb2e2",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-104",
-        "commit": "638eda987121acac8ac2973f0f6508f3dcd94584",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-104/",
-        "sha256": "03f745704ef63d171f0a2a844235b4dabe96003f326f55128bf61db862e90abf"
+        "commit": "d56427cfa0a2f74523fc846c7a35375cab7e3df4",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-104/",
+        "sha256": "2e2f3f556b232188266139d465c4edd854481e996a703e91cf27d56ed82761b8"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4095,13 +4095,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4110,8 +4105,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4161,20 +4161,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-104-105",
-      "candidateCommit": "8af73486a3d5a4706bfdd0b0e241682ec4b53700",
-      "buildId": "8703725a355b5047",
+      "candidateCommit": "4fb442537b084e4d89ae765b84d750ea8282f11c",
+      "buildId": "301d66ed53eec656",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-104-105",
-        "commit": "8af73486a3d5a4706bfdd0b0e241682ec4b53700",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-104_p-105/",
-        "sha256": "4c983b2a97e3aff18a8afb60825c27850b43fb3e3eafde417882a697af246066"
+        "commit": "4fb442537b084e4d89ae765b84d750ea8282f11c",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-104_p-105/",
+        "sha256": "a6befa1e53a8e9dd1b3a79355717bed6ec554f49ea2104d90cab4e8c47ec01a3"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4192,13 +4192,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4207,8 +4202,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4257,20 +4257,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-101-105",
-      "candidateCommit": "d97d36bd12d9c7f381544a5c1622019c9ab60e16",
-      "buildId": "294d9ca627417061",
+      "candidateCommit": "8c33a34d59f2bd6680b822711705409de3a8ac5e",
+      "buildId": "d64c40229149ec3f",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-101_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-105",
-        "commit": "d97d36bd12d9c7f381544a5c1622019c9ab60e16",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-101_p-105/",
-        "sha256": "9fc6eed934007eaada3e947d05d8e1249ce53941758f0cfa7b2d8b20d95493ef"
+        "commit": "8c33a34d59f2bd6680b822711705409de3a8ac5e",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-101_p-105/",
+        "sha256": "2843837344aaa01d864d3249ef16f954cd25a460e4fce4a8436dd20ca4e27b96"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4287,13 +4287,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4302,8 +4297,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4351,20 +4351,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-102",
-      "candidateCommit": "47f29945b97ba83cdd7fe4240af7689c323e0e39",
-      "buildId": "f5be562f62228828",
+      "candidateCommit": "a151bd5d068fe7f132fa1b25ca82107eae981ad3",
+      "buildId": "378ac812e23ccc9f",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-102",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102",
-        "commit": "47f29945b97ba83cdd7fe4240af7689c323e0e39",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-102/",
-        "sha256": "0c631608e8096a9c641c8f0475756eddc0e0a5a7b67903fc47d5c78e20c01b9d"
+        "commit": "a151bd5d068fe7f132fa1b25ca82107eae981ad3",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-102/",
+        "sha256": "cc0d71f8a6291752ea6ccd0bae47b925e8c06abeba1cefe0d6bcab0910f13dbf"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4380,13 +4380,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4395,8 +4390,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4445,20 +4445,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-102-103",
-      "candidateCommit": "c0756d385b454a26ba8f42377c74386443776e73",
-      "buildId": "230165a7ff7540a0",
+      "candidateCommit": "09bfb6593078f91f257b47ae1f5b5ec1644e44c5",
+      "buildId": "7e61a13ff8378948",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-102_p-103",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-103",
-        "commit": "c0756d385b454a26ba8f42377c74386443776e73",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-102_p-103/",
-        "sha256": "4cccbb45ec7e7aee193dc13fe3709eddd663b603f7462f7c92d8bf53f29f7d66"
+        "commit": "09bfb6593078f91f257b47ae1f5b5ec1644e44c5",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-102_p-103/",
+        "sha256": "568898947c5dd7945826054973539d1dca8360b669dff7c3cf6c3a74e40c78e4"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4475,13 +4475,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4490,8 +4485,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4541,20 +4541,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-102-103-104",
-      "candidateCommit": "d75d4893d6a9c4fc0a9cc1822a4008015078d2e4",
-      "buildId": "2e83e65949a4847e",
+      "candidateCommit": "03cd18c4833bc8492a4e4a05627cb5c29e28290d",
+      "buildId": "5d2a3dea17b47bd5",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-102_p-103_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-103-104",
-        "commit": "d75d4893d6a9c4fc0a9cc1822a4008015078d2e4",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-102_p-103_p-104/",
-        "sha256": "cb0c6760e571fbc48076a153a785708d392f7c78e1f5d0baef6831f1495fb6b4"
+        "commit": "03cd18c4833bc8492a4e4a05627cb5c29e28290d",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-102_p-103_p-104/",
+        "sha256": "45d4d3f88ab2b978d228274be3564bcfe3a015ffa07c2b5f9b777797f37066b4"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4572,13 +4572,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4587,8 +4582,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4639,20 +4639,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-102-103-104-105",
-      "candidateCommit": "fe93e78ab1a2636b1fcd15db3b8a6852848141e2",
-      "buildId": "3b79027e3dcf35a3",
+      "candidateCommit": "5ef57ed68298ea62db0e92e5d8f77e6b6a92453d",
+      "buildId": "c615facb1ddaea3a",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-102_p-103_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-103-104-105",
-        "commit": "fe93e78ab1a2636b1fcd15db3b8a6852848141e2",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-102_p-103_p-104_p-105/",
-        "sha256": "14148055fa273bb59dc55dcb9b60df3eac1d540f7fa2841b2fcfb56fc2fc5a04"
+        "commit": "5ef57ed68298ea62db0e92e5d8f77e6b6a92453d",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-102_p-103_p-104_p-105/",
+        "sha256": "9ac298dfe5ed1f6e44bc2cc01993a7610f09dc8e2cb27f32202f0fe7988a4b7b"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4671,13 +4671,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4686,8 +4681,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4737,20 +4737,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-102-103-105",
-      "candidateCommit": "35781d1b70ff2dac99bc725db54ca4fd2825459d",
-      "buildId": "2f36c6238a67cd98",
+      "candidateCommit": "c2b39ec9ab67e3cb68da3eab3dd6f7b953608a79",
+      "buildId": "2cad69477d9b3577",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-102_p-103_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-103-105",
-        "commit": "35781d1b70ff2dac99bc725db54ca4fd2825459d",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-102_p-103_p-105/",
-        "sha256": "651f1980f5e52a518491edee3c9db8d399280cb6dd6361edb1b72c951c2e4816"
+        "commit": "c2b39ec9ab67e3cb68da3eab3dd6f7b953608a79",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-102_p-103_p-105/",
+        "sha256": "d9d5c0659f8889eb011527b500f6f2903d956fd6ff5870f12cb8caca939696c9"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4768,13 +4768,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4783,8 +4778,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4833,20 +4833,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-102-104",
-      "candidateCommit": "aefca581f23f983f80042ebc2972fd0898360f1a",
-      "buildId": "7ab76350fecd287d",
+      "candidateCommit": "bcf5ccc295fa2c05218c3fe2de038e3e79df701d",
+      "buildId": "7615624a1f183ebe",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-102_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-104",
-        "commit": "aefca581f23f983f80042ebc2972fd0898360f1a",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-102_p-104/",
-        "sha256": "4c4cbd6d34a51423e4e93c23f089c01d8c5eca456e5d05f9e2fd3a18d86dea34"
+        "commit": "bcf5ccc295fa2c05218c3fe2de038e3e79df701d",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-102_p-104/",
+        "sha256": "961b03861d96694e7e55718517978a84c4a4214bb6a6c058820fe1fbdecbe2c4"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4863,13 +4863,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4878,8 +4873,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -4929,20 +4929,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-102-104-105",
-      "candidateCommit": "22313c9a7f7888816ddfa5716bb51489703bb664",
-      "buildId": "1fef50b78f7e95eb",
+      "candidateCommit": "101afea40cbab18bd1efff84c5de8eedd64ff4f8",
+      "buildId": "13e7f851b0864711",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-102_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-104-105",
-        "commit": "22313c9a7f7888816ddfa5716bb51489703bb664",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-102_p-104_p-105/",
-        "sha256": "0978e3708c97ed057b54d44d24dbbfcc91c0fbad49944a0d1285365bd74a6564"
+        "commit": "101afea40cbab18bd1efff84c5de8eedd64ff4f8",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-102_p-104_p-105/",
+        "sha256": "af79a07970baef92b75fa1c773126d9612e288e1ae82a6b733e052c73e7c7a31"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -4960,13 +4960,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -4975,8 +4970,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5025,20 +5025,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-102-105",
-      "candidateCommit": "e2dad0500546e7e3e2d8e804bbd446a299d20d8f",
-      "buildId": "53a549329c96ff32",
+      "candidateCommit": "7c128a87f8892ddc004378560db07f8b3030637c",
+      "buildId": "866fba5cd5b3cc59",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-102_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-105",
-        "commit": "e2dad0500546e7e3e2d8e804bbd446a299d20d8f",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-102_p-105/",
-        "sha256": "4989b4d686dfe29afe62aa2720d53799fa049907b84cdce1b60129b41417d6bb"
+        "commit": "7c128a87f8892ddc004378560db07f8b3030637c",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-102_p-105/",
+        "sha256": "8b18bd463affb57585289cb8ff440721ea7c1fb41032879975212b8626517859"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -5055,13 +5055,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -5070,8 +5065,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5119,20 +5119,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-103",
-      "candidateCommit": "94fa541c13fd2a5510bb5f4d93723f21fcb10309",
-      "buildId": "dd6b03571bc42a5b",
+      "candidateCommit": "66c5c3771dd3689ffeb2d033eeb30128d219f9a8",
+      "buildId": "3e74453d210116d7",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-103",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-103",
-        "commit": "94fa541c13fd2a5510bb5f4d93723f21fcb10309",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-103/",
-        "sha256": "34b5ce8ee4f16b2708f8533088e14f710eb4f1c1f2d52c3e6f3a99a3b2760437"
+        "commit": "66c5c3771dd3689ffeb2d033eeb30128d219f9a8",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-103/",
+        "sha256": "731cdbb49cd1c017485b3f0fec3ed85d3486ecad365f7e7a2e420e6b33262bd1"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -5148,13 +5148,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -5163,8 +5158,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5213,20 +5213,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-103-104",
-      "candidateCommit": "31288af1660c7675c7cec5832a115376fe4a3394",
-      "buildId": "38dcc23237e5bf20",
+      "candidateCommit": "466d497e825238545d4b0e5722f640aa5bb54568",
+      "buildId": "438eeffd988b0ddd",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-103_p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-103-104",
-        "commit": "31288af1660c7675c7cec5832a115376fe4a3394",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-103_p-104/",
-        "sha256": "c29d0e400a8607c8c52e4d7546e59804a92ec18f5e4693a405bcd3b61d7e6455"
+        "commit": "466d497e825238545d4b0e5722f640aa5bb54568",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-103_p-104/",
+        "sha256": "7e91eedc5f48f232230e89a5d39d0405300ea60f5c269ad0f72cdcdc6cac9dd0"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -5243,13 +5243,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -5258,8 +5253,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5309,20 +5309,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-103-104-105",
-      "candidateCommit": "789c0cbaa5df03e2c87d6864c71dbe78758dfe5e",
-      "buildId": "e3ba50d594daf830",
+      "candidateCommit": "dbda1f70d280e8faad65963b3febf8e998113d13",
+      "buildId": "76334d58860a6b85",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-103_p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-103-104-105",
-        "commit": "789c0cbaa5df03e2c87d6864c71dbe78758dfe5e",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-103_p-104_p-105/",
-        "sha256": "23f3d1376a295eb749d71d37ee24360d99a81c89549f98d43322bb425235346f"
+        "commit": "dbda1f70d280e8faad65963b3febf8e998113d13",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-103_p-104_p-105/",
+        "sha256": "2b35f099a8a2f56abcf1e757d2bff2729015f946fe17b90d589afd71a81748c5"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -5340,13 +5340,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -5355,8 +5350,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5405,20 +5405,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-103-105",
-      "candidateCommit": "9ce7b981c24b22ff3a68dbef87d8d9d9020e210c",
-      "buildId": "729f5759ff5115cd",
+      "candidateCommit": "64093d050b70f3182613a6e967d6fdd66cc215f5",
+      "buildId": "ed83b7a7392e915d",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-103_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-103-105",
-        "commit": "9ce7b981c24b22ff3a68dbef87d8d9d9020e210c",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-103_p-105/",
-        "sha256": "7734feec38b8351db5d8660332d53e372c94e40acf550659321e12da4f83f39c"
+        "commit": "64093d050b70f3182613a6e967d6fdd66cc215f5",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-103_p-105/",
+        "sha256": "45e791529236166f18bfd54e4db210f63ea47dd6e604d3ee8138c47002e39f36"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -5435,13 +5435,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -5450,8 +5445,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5499,20 +5499,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-104",
-      "candidateCommit": "34a541d45045aa4419674f2c91b6864e1882ca04",
-      "buildId": "9887fabfa1000d5c",
+      "candidateCommit": "592b7376dca03ff6b608f7bae7932f189305df60",
+      "buildId": "761f68fcf9e5a31b",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-104",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-104",
-        "commit": "34a541d45045aa4419674f2c91b6864e1882ca04",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-104/",
-        "sha256": "e11104884260fc72fdf54806dd400225f35b0e2fa423591b66c0ddb96bbe8950"
+        "commit": "592b7376dca03ff6b608f7bae7932f189305df60",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-104/",
+        "sha256": "f57a7f9d7a5a17dafa9f3d2e7305cead5e37fb8410d38323eb227237d036518a"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -5528,13 +5528,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -5543,8 +5538,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5593,20 +5593,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-104-105",
-      "candidateCommit": "6cf90c3833243b6472487771d4e8bf051acb6a9f",
-      "buildId": "785f98e18fd699d3",
+      "candidateCommit": "81e98ecacb8419c1f4e0a77f4a98d7b3d4f09e65",
+      "buildId": "0f8f5ee15124600e",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-104_p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-104-105",
-        "commit": "6cf90c3833243b6472487771d4e8bf051acb6a9f",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-104_p-105/",
-        "sha256": "5d2ee0c5fef7d77202a13e2500e0f8eeeedf04a71c59ca9ba2b75c39f5f4cdf0"
+        "commit": "81e98ecacb8419c1f4e0a77f4a98d7b3d4f09e65",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-104_p-105/",
+        "sha256": "956b76d9c545c0eb57e946462a480da6eb0d37dc1d447d4701ffcb9b98420a8c"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -5623,13 +5623,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -5638,8 +5633,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5687,20 +5687,20 @@
         ]
       },
       "candidateBranch": "showcase-s1-q-105",
-      "candidateCommit": "47cbf5057d1c52812ab3725f4353e11be2e2446a",
-      "buildId": "3e455477331d0891",
+      "candidateCommit": "305cdb4c75e784a721769b7d41825dcef3fa65eb",
+      "buildId": "a76bac2cc455734f",
       "artifact": {
         "id": "candidate:sidebar-1--quick-p-105",
         "kind": "candidate",
         "label": "Combined candidate",
         "ref": "showcase-s1-q-105",
-        "commit": "47cbf5057d1c52812ab3725f4353e11be2e2446a",
-        "path": "/showcase-runs/7719604e8efd06f3/candidates/sidebar-1--quick-p-105/",
-        "sha256": "e3e0284d4ae0ae6f9e435694a9a23395be1a3ea9ac44f60db8b7684fc7cfacc8"
+        "commit": "305cdb4c75e784a721769b7d41825dcef3fa65eb",
+        "path": "/showcase-runs/9b78a0a80cdc2801/candidates/sidebar-1--quick-p-105/",
+        "sha256": "7bb910f9f4eca296479e37c130ff91e1f2d882ffa548c4a4a9c963e7550074f9"
       },
       "sliceIds": [
-        "58a60c22854e55a2",
-        "a079817f134a2cb7"
+        "b2aedf0b0ba0cde0",
+        "e60d176956db94e6"
       ],
       "configuredSource": {
         "path": "src/config/quickViewTargets.ts",
@@ -5716,13 +5716,8 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/features/catalogue/CatalogueHeader.tsx",
-          "symbol": "PromotionalBanner",
-          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
-        },
-        {
-          "path": "src/types/category.ts",
-          "symbol": "CategorySidebarState",
+          "path": "src/utils/inventorySummary.ts",
+          "symbol": "inventorySummary",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
@@ -5731,8 +5726,13 @@
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         },
         {
-          "path": "src/utils/inventorySummary.ts",
-          "symbol": "inventorySummary",
+          "path": "src/features/catalogue/CatalogueHeader.tsx",
+          "symbol": "PromotionalBanner",
+          "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
+        },
+        {
+          "path": "src/types/category.ts",
+          "symbol": "CategorySidebarState",
           "reason": "The changed symbol is outside the analyzed boundary’s supported forward graph and no added reverse integration edge connects it."
         }
       ],
@@ -5789,5 +5789,5 @@
     "source": "https://github.com/varun-raj-77/ui-merge-studio",
     "localSetup": "https://github.com/varun-raj-77/ui-merge-studio#run-the-controlled-demo"
   },
-  "manifestSha256": "7053762ef2eca29f17166a867f5cc1a993743b10e0d99d7a83884a1caeebb527"
+  "manifestSha256": "cac4974b6a81ac51637a401c750de9b4a7fedae76515b1ff006fa66f3635ef8a"
 }

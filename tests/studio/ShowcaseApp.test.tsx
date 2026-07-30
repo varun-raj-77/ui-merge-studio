@@ -1,63 +1,126 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CatalogueShowcase } from '../../apps/studio/src/CatalogueShowcase';
 
 beforeEach(() => history.replaceState({}, '', '?mode=showcase'));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  document.querySelectorAll('[data-test-frame]').forEach(element => element.remove());
+  vi.restoreAllMocks();
+});
 
 function open() {
-  fireEvent.click(screen.getByRole('button', { name: 'Open comparison workspace' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Try the interactive example' }));
+}
+
+function attachDocument(frame: HTMLIFrameElement) {
+  const host = document.createElement('div');
+  host.dataset.testFrame = '';
+  document.body.append(host);
+  Object.defineProperty(frame, 'contentDocument', { configurable: true, value: document });
+  return host;
+}
+
+function installScope(frameTitle: string, scope: string, label: string, content = '<button>Quick view</button>') {
+  const frame = screen.getByTitle(frameTitle) as HTMLIFrameElement;
+  const host = attachDocument(frame);
+  host.innerHTML = `<div data-ums-scope="${scope}" data-ums-label="${label}">${content}</div>`;
+  fireEvent.load(frame);
+  return host;
 }
 
 describe('Product Catalogue landing', () => {
-  it('states the product promise and honest hosted/local boundary', () => {
+  it('explains the outcome in five seconds without implementation terminology', () => {
     render(<CatalogueShowcase />);
-    expect(screen.getByRole('heading', { name: 'Compare React branches. Keep the best parts.' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Open comparison workspace' })).toBeVisible();
-    expect(screen.getByText(/Hosted candidates are pre-generated/)).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Combine the best parts of parallel React implementations.' })).toBeVisible();
+    expect(screen.getByText('Compare working versions, pick visible features, and generate one verified branch.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Try the interactive example' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'How it works' })).toBeVisible();
+    expect(screen.queryByText(/Branch A|Branch B|candidate ID|AST|Product Catalogue/i)).not.toBeInTheDocument();
   });
 });
 
-describe('free-selection workspace', () => {
-  it('opens with live play mode, three previews, and no prescribed selection', () => {
+describe('quiet comparison workspace', () => {
+  it('opens two interactive versions with no mode toggle, combined panel, or empty review UI', () => {
     render(<CatalogueShowcase />); open();
-    expect(screen.getByRole('button', { name: 'Play' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTitle('Branch A live application')).toBeVisible();
-    expect(screen.getByTitle('Branch B live application')).toBeVisible();
-    expect(screen.getByTitle('Combined live application')).toBeVisible();
-    expect(screen.getByText('Baseline · no feature scopes selected')).toBeVisible();
-    expect(screen.queryByText(/Step|Next, select|of 2 required/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Compare versions' })).toBeVisible();
+    expect(screen.getByTitle('Version A live application')).toBeVisible();
+    expect(screen.getByTitle('Version B live application')).toBeVisible();
+    expect(screen.getByTitle('Combined result application')).not.toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Play' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Select' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
   });
 
-  it('switches explicitly between play and select without prescribing a feature pair', () => {
+  it('keeps normal app clicks independent from the nearby source-backed Add control', () => {
     render(<CatalogueShowcase />); open();
-    const play = screen.getByRole('button', { name: 'Play' });
-    const select = screen.getByRole('button', { name: 'Select' });
-    fireEvent.click(select);
-    expect(select).toHaveAttribute('aria-pressed', 'true');
-    expect(play).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByText('Select mode exposes only engine-supported source scopes.')).toBeVisible();
-    expect(screen.queryByText(/Next, select|of 2 required/i)).not.toBeInTheDocument();
+    const appClick = vi.fn();
+    const frame = screen.getByTitle('Version B live application') as HTMLIFrameElement;
+    const host = attachDocument(frame);
+    host.innerHTML = '<div data-ums-scope="product-quick-view:p-102" data-ums-label="Quick View on Studio Speaker"><button id="quick">Quick view</button></div>';
+    host.querySelector('#quick')!.addEventListener('click', appClick);
+    fireEvent.load(frame);
+
+    fireEvent.click(host.querySelector('#quick')!);
+    expect(appClick).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Studio Speaker' }));
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick View · Studio Speaker');
   });
 
-  it('explains the local/hosted execution boundary in a keyboard-closeable dialog', () => {
+  it('transitions to a distinct combined result and returns to comparison', async () => {
     render(<CatalogueShowcase />); open();
-    fireEvent.click(screen.getByRole('button', { name: 'About local and hosted execution' }));
-    expect(screen.getByRole('dialog', { name: 'Local engine, hosted replay' })).toHaveTextContent('64 artifacts pre-generated');
+    const app = installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
+    fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View combined' }));
+
+    expect(screen.getByText('Combined result')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Built from 1 selection' })).toBeVisible();
+    expect(screen.getByTitle('Combined result application')).toBeVisible();
+    expect(screen.getByTitle('Version A live application')).not.toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: '← Back to comparison' }));
+    expect(screen.getByTitle('Version A live application')).toBeVisible();
+    await waitFor(() => expect(screen.getByTitle('Combined result application')).not.toBeVisible());
+  });
+
+  it('opens optional evidence from a selected chip and returns focus on Escape', () => {
+    render(<CatalogueShowcase />); open();
+    const app = installScope('Version B live application', 'product-quick-view:p-103', 'Quick View on Task Lamp');
+    fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Task Lamp' }));
+    const evidenceButton = screen.getByRole('button', { name: 'Evidence for Quick View · Task Lamp' });
+    fireEvent.click(evidenceButton);
+
+    const dialog = screen.getByRole('dialog', { name: 'Quick View · Task Lamp' });
+    expect(dialog).toHaveTextContent('ProductCardWithQuickView');
+    expect(within(dialog).getByRole('tab', { name: 'source' })).toHaveAttribute('aria-selected', 'true');
+    const closeButton = within(dialog).getByRole('button', { name: 'Close technical evidence' });
+    const verificationTab = within(dialog).getByRole('tab', { name: 'verification' });
+    expect(closeButton).toHaveFocus();
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+    expect(verificationTab).toHaveFocus();
+    fireEvent.keyDown(window, { key: 'Tab' });
+    expect(closeButton).toHaveFocus();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(evidenceButton).toHaveFocus();
   });
 
-  it('keeps the incompatible source unavailable until a conflicting Quick View scope exists', () => {
+  it('reviews and recovers from the Product-ID conflict without clearing safe selections', () => {
     render(<CatalogueShowcase />); open();
-    const incompatible = screen.getByRole('button', { name: 'Try incompatible Product ID' });
-    expect(incompatible).toBeDisabled();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
+    const app = installScope('Version B live application', 'product-quick-view:p-101', 'Quick View on Arc Headphones');
+    fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Arc Headphones' }));
+    fireEvent.click(screen.getByRole('button', { name: '+ Experimental Product-ID change' }));
 
-  it('clear all restores the canonical baseline state', () => {
-    render(<CatalogueShowcase />); open();
-    expect(screen.getByRole('button', { name: 'Clear all' })).toBeDisabled();
-    expect(screen.getByText('Baseline · no feature scopes selected')).toBeVisible();
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Conflict');
+    fireEvent.click(screen.getByRole('button', { name: 'Review conflict' }));
+    const dialog = screen.getByRole('dialog', { name: 'Cannot combine these selections' });
+    expect(dialog).toHaveTextContent('src/types/product.ts#Product');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove incompatible change' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick View · Arc Headphones');
+    expect(screen.getByRole('button', { name: 'View combined' })).toBeVisible();
   });
 });

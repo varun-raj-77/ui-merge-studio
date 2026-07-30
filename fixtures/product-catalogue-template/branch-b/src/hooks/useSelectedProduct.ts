@@ -1,6 +1,14 @@
-import { useState } from 'react';
 import type { Product } from '../types/product';
+import {
+  closePreviewProductFromUser,
+  openPreviewProductFromUser,
+  useCataloguePreviewContext
+} from '../state/previewContext';
 export function useSelectedProduct() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  return { selectedId, openProduct: (product: Product) => setSelectedId(product.id), closeProduct: () => setSelectedId(null) };
+  const preview = useCataloguePreviewContext();
+  return {
+    selectedId: preview.catalogue.quickViewOpen ? preview.catalogue.selectedProductId : null,
+    openProduct: (product: Product) => openPreviewProductFromUser(product),
+    closeProduct: closePreviewProductFromUser
+  };
 }
