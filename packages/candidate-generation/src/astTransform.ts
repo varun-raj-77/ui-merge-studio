@@ -4,6 +4,7 @@ import traverseModule, { type NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
 import type { ImportRequirement, TestFileSlice } from '../../source-analysis/src/types';
 import type { ModuleRecord } from '../../source-analysis/src/sourceIndex';
+import type { CandidateLiteral } from './types';
 
 const generate = ((generateModule as unknown as { default?: typeof generateModule }).default ?? generateModule);
 const traverse = ((traverseModule as unknown as { default?: typeof traverseModule }).default ?? traverseModule);
@@ -30,6 +31,39 @@ export function replaceDeclaration(code: string, path: string, name: string, sou
   const next = `${code.slice(0, range.start)}${sourceDeclaration}${code.slice(range.end)}`; parseModule(next, path); return next;
 }
 export function insertDeclaration(code: string, path: string, sourceDeclaration: string) { const separator = code.endsWith('\n') ? '' : '\n'; const next = `${code}${separator}${sourceDeclaration}\n`; parseModule(next, path); return next; }
+
+function literalNode(value: CandidateLiteral): t.Expression {
+  if (value === null) return t.nullLiteral();
+  if (typeof value === 'string') return t.stringLiteral(value);
+  if (typeof value === 'number') return t.numericLiteral(value);
+  if (typeof value === 'boolean') return t.booleanLiteral(value);
+  if (Array.isArray(value)) return t.arrayExpression(value.map(literalNode));
+  return t.objectExpression(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => t.objectProperty(t.stringLiteral(key), literalNode(item))));
+}
+
+export function configureExportedConst(code: string, path: string, name: string, value: CandidateLiteral) {
+  const ast = parseModule(code, path);
+  let configured = false;
+  traverse(ast, {
+    VariableDeclarator(declarationPath) {
+      if (!t.isIdentifier(declarationPath.node.id, { name })) return;
+      const declaration = declarationPath.parentPath;
+      const exported = declaration.parentPath;
+      if (!declaration.isVariableDeclaration({ kind: 'const' }) || !exported?.isExportNamedDeclaration()) {
+        throw new Error(`Configured declaration ${name} in ${path} must be an exported const.`);
+      }
+      const next = literalNode(value);
+      declarationPath.node.init = t.isTSAsExpression(declarationPath.node.init)
+        ? t.tsAsExpression(next, declarationPath.node.init.typeAnnotation)
+        : next;
+      configured = true;
+    }
+  });
+  if (!configured) throw new Error(`Configured declaration ${name} was not found in ${path}.`);
+  const output = `${generate(ast, { comments: true, compact: false, retainLines: false }).code}\n`;
+  parseModule(output, path);
+  return output;
+}
 
 function importKey(requirement: ImportRequirement) { return `${requirement.source}:${requirement.kind}:${requirement.imported}:${requirement.local}`; }
 function importSpecifier(requirement: ImportRequirement) {

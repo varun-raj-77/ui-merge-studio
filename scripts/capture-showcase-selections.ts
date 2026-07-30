@@ -45,9 +45,7 @@ export async function captureShowcaseSelections(fixture: string, previewViteConf
 
     const branchB = await previews.start('capture-b', 'branch-b');
     const quickView = await capture(page, branchB, async frame => {
-      const dialog = frame.getByRole('dialog');
-      if (!await dialog.isVisible().catch(() => false)) await frame.getByRole('button', { name: 'Quick view' }).first().click();
-      await dialog.getByRole('heading').click();
+      await frame.locator('[data-ums-scope^="product-quick-view:"]').first().evaluate(element => (element as HTMLElement).click());
     });
     await previews.stop('capture-b');
 

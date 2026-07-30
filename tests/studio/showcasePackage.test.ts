@@ -1,35 +1,59 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { validatePublicShowcaseReport } from '../../packages/showcase-evidence/src/schema';
+import { canonicalSelectionKey, validatePublicShowcaseReport } from '../../packages/showcase-evidence/src/schema';
 import { canonicalArtifactBytes, generatedManifestPath, hashArtifactBytes, hashDirectory, manifestHash, publicRoot, readAndValidateReport } from '../../scripts/showcase-lib';
 
-describe('prepared Showcase package', () => {
-  it('validates the sanitized report, generated manifest, commits, and four artifact hashes', () => {
+describe('prepared Showcase candidate matrix', () => {
+  const fixture = resolve(import.meta.dirname, '../../fixtures/generated/product-catalogue');
+  const git = (args: string[]) => execFileSync('git', ['-c', `safe.directory=${fixture.replaceAll('\\', '/')}`, ...args], { cwd: fixture, encoding: 'utf8' });
+  it('validates every canonical state, artifact hash, and verification record', () => {
     const report = readAndValidateReport();
-    expect(report.selectedFeatureIds).toEqual(['category-sidebar', 'quick-view']);
+    expect(report.candidates).toHaveLength(2 ** report.productIds.length * 2);
     expect(report.refusal).toMatchObject({ status: 'refused', conflictKind: 'changed-dependency-contract', contractPath: 'src/types/product.ts' });
-    expect(report.repository.candidateCommit).toMatch(/^[a-f0-9]{40}$/);
-    expect(report.verification.every(item => item.result === 'passed' && item.exitCode === 0)).toBe(true);
-    for (const artifact of report.artifacts) {
-      const path = resolve(publicRoot, artifact.path.replace(/^\/+/, ''));
+    for (const candidate of report.candidates) {
+      expect(candidate.key).toBe(canonicalSelectionKey(candidate.selection));
+      expect(candidate.candidateCommit).toMatch(/^[a-f0-9]{40}$/);
+      expect(candidate.verification.every(item => item.result === 'passed' && item.exitCode === 0)).toBe(true);
+      const path = resolve(publicRoot, candidate.artifact.path.replace(/^\/+/, ''));
       expect(existsSync(resolve(path, 'index.html'))).toBe(true);
-      expect(hashDirectory(path)).toBe(artifact.sha256);
+      expect(hashDirectory(path)).toBe(candidate.artifact.sha256);
     }
     expect(JSON.parse(readFileSync(generatedManifestPath, 'utf8'))).toEqual(report);
   });
-  it('refuses malformed, absolute-path, missing-commit, and stale-manifest evidence', () => {
+
+  it('is click-order independent and records exact instance configuration', () => {
     const report = readAndValidateReport();
-    expect(() => validatePublicShowcaseReport({ ...report, repository: { ...report.repository, candidateCommit: '' } })).toThrow(/commit/i);
-    expect(() => validatePublicShowcaseReport({ ...report, fixture: 'C:\\Users\\person\\fixture' })).toThrow();
-    expect(manifestHash({ ...report, repository: { ...report.repository, candidateBranch: 'stale-result' } })).not.toBe(report.manifestSha256);
+    const key = canonicalSelectionKey({ sidebar: true, quickViewProductIds: ['p-104', 'p-102', 'p-104'] });
+    expect(key).toBe(canonicalSelectionKey({ sidebar: true, quickViewProductIds: ['p-102', 'p-104'] }));
+    const candidate = report.candidates.find(item => item.key === key)!;
+    expect(candidate.configuredSource).toEqual({ path: 'src/config/quickViewTargets.ts', declaration: 'quickViewTargetIds', productIds: ['p-102', 'p-104'] });
+    expect(candidate.excludedChanges.some(item => /Promotional|inventory/i.test(`${item.path} ${item.symbol} ${item.reason}`))).toBe(true);
+    const configured = git(['show', `${candidate.candidateCommit}:src/config/quickViewTargets.ts`]);
+    expect(configured).toContain('"p-102", "p-104"');
+    expect(configured).not.toContain('p-101');
+    const grid = git(['show', `${candidate.candidateCommit}:src/features/catalogue/ProductGrid.tsx`]);
+    expect(grid.match(/quickViewTargetIds/g)).toHaveLength(2);
+    const changed = git(['diff', '--name-only', `${report.repository.commonBaseCommit}..${candidate.candidateCommit}`]);
+    expect(changed).not.toContain('src/utils/inventorySummary.ts');
+    expect(changed).not.toContain('PromotionalBanner.tsx');
   });
+
+  it('refuses malformed, absolute-path, incomplete-matrix, and stale-manifest evidence', () => {
+    const report = readAndValidateReport();
+    expect(() => validatePublicShowcaseReport({ ...report, candidates: report.candidates.slice(1) })).toThrow(/matrix/i);
+    expect(() => validatePublicShowcaseReport({ ...report, fixture: 'C:\\Users\\person\\fixture' })).toThrow();
+    expect(manifestHash({ ...report, productIds: [...report.productIds, 'p-999'] })).not.toBe(report.manifestSha256);
+  });
+
   it('canonically hashes text artifact line endings while preserving content changes', () => {
     const lf = Buffer.from('<main>Showcase</main>\n');
     const crlf = Buffer.from('<main>Showcase</main>\r\n');
     expect(hashArtifactBytes('index.html', crlf)).toBe(hashArtifactBytes('index.html', lf));
     expect(hashArtifactBytes('index.html', Buffer.from('<main>Changed</main>\n'))).not.toBe(hashArtifactBytes('index.html', lf));
   });
+
   it('does not newline-normalize binary artifacts', () => {
     const binary = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     expect(canonicalArtifactBytes('preview.png', binary)).toEqual(binary);

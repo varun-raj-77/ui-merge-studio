@@ -1,111 +1,102 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type FrameLocator, type Page } from '@playwright/test';
 
-const url = '/?mode=showcase';
+const url = '/?mode=showcase&view=compare';
+const branchA = (page: Page) => page.frameLocator('iframe[title="Branch A live application"]');
+const branchB = (page: Page) => page.frameLocator('iframe[title="Branch B live application"]');
+const combined = (page: Page) => page.frameLocator('iframe[title="Combined live application"]');
+
 async function noOverflow(page: Page) {
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true);
 }
-async function centerInside(region: Locator, control: Locator) {
-  const [box, child] = await Promise.all([region.boundingBox(), control.boundingBox()]);
-  expect(box).not.toBeNull(); expect(child).not.toBeNull();
-  const x = child!.x + child!.width / 2; const y = child!.y + child!.height / 2;
-  expect(x).toBeGreaterThanOrEqual(box!.x); expect(x).toBeLessThanOrEqual(box!.x + box!.width);
-  expect(y).toBeGreaterThanOrEqual(box!.y); expect(y).toBeLessThanOrEqual(box!.y + box!.height);
-}
-async function openComparison(page: Page) {
-  await page.getByRole('button', { name: 'Try interactive sample' }).click();
-  await expect(page.getByRole('heading', { name: 'Choose the interface you want.' })).toBeVisible();
+
+async function cardHasQuickView(frame: FrameLocator, product: string, expected: boolean) {
+  const button = frame.getByRole('heading', { name: product }).locator('xpath=ancestor::article').getByRole('button', { name: 'Quick view' });
+  if (expected) await expect(button).toBeVisible(); else await expect(button).toHaveCount(0);
 }
 
-test.describe('Product Catalogue Showcase', () => {
-  test('compact landing communicates product at 1366 × 768 and 1440 × 900', async ({ page }) => {
-    for (const viewport of [{ width: 1366, height: 768 }, { width: 1440, height: 900 }]) {
-      await page.setViewportSize(viewport); await page.goto(url);
-      await expect(page.getByRole('heading', { name: 'Compare React branches. Keep the best parts.' })).toBeInViewport();
-      await expect(page.getByRole('button', { name: 'Try interactive sample' })).toBeInViewport();
-      await expect(page.getByRole('link', { name: 'Run locally' }).first()).toBeInViewport();
-      await expect(page.getByText('Interactive sample — no Git operations run in your browser.')).toBeInViewport();
-      await noOverflow(page);
-      await page.screenshot({ path: `docs/evidence/product-catalogue-showcase/landing-${viewport.width}.png`, fullPage: false });
-    }
+test.describe('Product Catalogue selection workspace', () => {
+  test('play mode preserves normal application interaction without selecting', async ({ page }) => {
+    await page.goto(url);
+    await expect(page.getByRole('button', { name: 'Play' })).toHaveAttribute('aria-pressed', 'true');
+    await branchA(page).getByRole('button', { name: 'Desk' }).click();
+    await expect(branchA(page).getByText('2 products')).toBeVisible();
+    await branchB(page).getByRole('button', { name: 'Quick view' }).first().click();
+    await expect(branchB(page).getByRole('dialog', { name: 'Arc Headphones quick view' })).toBeVisible();
+    await branchB(page).getByRole('button', { name: 'Close quick view' }).click();
+    await expect(page.getByText('Baseline · no feature scopes selected')).toBeVisible();
   });
 
-  test('baseline stays visible while free selection, branch switching, and interactions work', async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(url); await openComparison(page);
-    await expect(page.getByLabel('Baseline product catalogue')).toBeVisible();
-    await expect(page.getByLabel('Branch A product catalogue')).toBeVisible();
-    await expect(page.getByText('0 of 2 required features selected')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Create combined version' })).toBeDisabled();
-    await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/initial-empty.png', fullPage: true });
-    const sidebar = page.getByLabel('Branch A product catalogue').getByRole('complementary', { name: 'Category sidebar' });
-    await centerInside(sidebar, sidebar.getByRole('button', { name: 'Collapse category sidebar' }));
-    await centerInside(sidebar, sidebar.getByRole('button', { name: 'Audio' }));
-    await sidebar.getByRole('button', { name: 'Collapse category sidebar' }).click();
-    await expect(sidebar.getByRole('button', { name: 'Expand category sidebar' })).toBeVisible();
-    await sidebar.getByRole('button', { name: 'Expand category sidebar' }).click();
-    await sidebar.getByRole('button', { name: 'Desk' }).click();
-    await expect(page.getByLabel('Branch A product catalogue')).toContainText('2 products');
-    await sidebar.getByRole('button', { name: 'Select category sidebar' }).click();
-    await expect(page.getByRole('status')).toContainText('Selected Category sidebar from Branch A');
-    await page.getByRole('button', { name: 'View technical evidence' }).click();
-    await expect(page.getByText('src/features/catalogue/CategorySidebar.tsx')).toBeVisible();
-    await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/baseline-branch-a-selected.png', fullPage: true });
-    await page.getByRole('tab', { name: 'Branch B' }).click();
-    await expect(page.getByLabel('Baseline product catalogue')).toBeVisible();
-    const branchB = page.getByLabel('Branch B product catalogue');
-    await branchB.getByRole('button', { name: /Quick view/ }).first().click();
-    await expect(branchB.getByRole('dialog')).toBeVisible();
-    await expect(branchB.getByRole('button', { name: 'Close quick view' })).toBeFocused();
+  test('selects with pointer and keyboard, exposes evidence, and composes exact mixed states', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(url);
+    await page.getByRole('button', { name: 'Select' }).click();
+    await expect(branchA(page).locator('[data-ums-scope]')).toHaveCount(1);
+    await expect(branchB(page).locator('[data-ums-scope]')).toHaveCount(5);
+    await expect(branchB(page).locator('[data-ums-scope]:not(.quick-view-scope)')).toHaveCount(0);
+
+    const speaker = branchB(page).getByRole('button', { name: 'Select Quick View on Studio Speaker' });
+    await speaker.focus();
+    await speaker.press('Enter');
+    await expect(branchB(page).locator('[data-ums-scope="product-quick-view:p-102"]')).toHaveAttribute('data-ums-selected', '');
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Carry Case' }).hover();
+    await expect(page.getByText('Quick View · Carry Case').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Info' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Quick View · Carry Case' });
+    await expect(dialog).toContainText('ProductCardWithQuickView');
+    await dialog.getByRole('tab', { name: 'dependencies' }).click();
+    await expect(dialog).toContainText('useSelectedProduct');
     await page.keyboard.press('Escape');
-    await expect(branchB.getByRole('dialog')).toBeHidden();
-    await branchB.getByRole('button', { name: 'Select quick-view inspector' }).click();
-    await expect(page.getByText('src/features/catalogue/ProductQuickView.tsx')).toBeVisible();
-    await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/baseline-branch-b-selected.png', fullPage: true });
+    await expect(dialog).toHaveCount(0);
+
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Carry Case' }).click();
+    await expect(combined(page).getByRole('button', { name: 'Quick view' })).toHaveCount(2);
+    await cardHasQuickView(combined(page), 'Studio Speaker', true);
+    await cardHasQuickView(combined(page), 'Carry Case', true);
+    await cardHasQuickView(combined(page), 'Arc Headphones', false);
+
+    await branchA(page).getByRole('button', { name: 'Select Category sidebar' }).click();
+    await expect(combined(page).getByRole('complementary', { name: 'Category sidebar' })).toBeVisible();
+    await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/workspace-two-quickviews-sidebar.png', fullPage: true });
+
+    await branchB(page).getByRole('button', { name: 'Deselect Quick View on Studio Speaker' }).press('Enter');
+    await expect(combined(page).getByRole('button', { name: 'Quick view' })).toHaveCount(1);
+    await cardHasQuickView(combined(page), 'Studio Speaker', false);
+    await cardHasQuickView(combined(page), 'Carry Case', true);
   });
 
-  test('safe result is focused and unsupported siblings are prevented', async ({ page }) => {
-    await page.goto(url); await openComparison(page);
-    await page.getByRole('button', { name: 'Select category sidebar' }).click();
-    await page.getByRole('tab', { name: 'Branch B' }).click();
-    await page.getByRole('button', { name: 'Select quick-view inspector' }).click();
-    const create = page.getByRole('button', { name: 'Create combined version' });
-    await expect(create).toBeEnabled();
-    await create.click();
-    await expect(page.getByRole('heading', { name: 'Combined result' })).toBeVisible();
-    await expect(page.getByText('Success. Your combined version includes both selected features.')).toBeVisible();
-    await expect(page.getByText(/Excluded: Promotional banner and inventory summary/)).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Combined result' }).locator('xpath=..').locator('xpath=..')).toBeFocused();
-    const combined = page.getByLabel('Combined result product catalogue');
-    await combined.getByRole('button', { name: 'Collapse category sidebar' }).click();
-    await combined.getByRole('button', { name: 'Expand category sidebar' }).click();
-    await combined.getByRole('button', { name: 'Desk' }).click();
-    await combined.getByRole('button', { name: /Quick view/ }).first().click();
-    await combined.getByRole('button', { name: 'Close quick view' }).click();
-    await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/combined-result.png', fullPage: true });
-
-    await page.getByRole('button', { name: 'View refusal example' }).click();
-    const refusal = page.locator('#refusal-example');
-    await expect(refusal).toContainText('refused an unsafe Product-ID combination');
-    await expect(refusal).toContainText('No broken candidate branch was generated');
-    await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/refusal.png', fullPage: true });
-
-    await page.getByRole('button', { name: 'Clear' }).click();
-    await page.getByRole('tab', { name: 'Branch A' }).click();
-    await expect(page.getByText('Workspace essentials, 20% off')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Select promotional banner' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Create combined version' })).toBeDisabled();
+  test('selection order resolves to the same canonical artifact and clear-all returns to baseline', async ({ page }) => {
+    await page.goto(url);
+    await page.getByRole('button', { name: 'Select' }).click();
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Carry Case' }).click();
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Studio Speaker' }).click();
+    await expect(combined(page).getByRole('button', { name: 'Quick view' })).toHaveCount(2);
+    const first = await page.getByTitle('Combined live application').getAttribute('src');
+    await page.getByRole('button', { name: 'Clear all' }).click();
+    await expect(combined(page).getByRole('button', { name: 'Quick view' })).toHaveCount(0);
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Studio Speaker' }).click();
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Carry Case' }).click();
+    await expect(combined(page).getByRole('button', { name: 'Quick view' })).toHaveCount(2);
+    expect(await page.getByTitle('Combined live application').getAttribute('src')).toBe(first);
+    await page.getByRole('button', { name: 'Clear all' }).click();
+    await expect(page.getByText('Baseline · no feature scopes selected')).toBeVisible();
   });
 
-  test('mobile comparison remains usable and baseline is one branch-switch action away', async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 }); await page.goto(url); await openComparison(page);
-    await expect(page.getByLabel('Baseline product catalogue')).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Branch A' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Branch B' })).toBeVisible();
-    await page.getByRole('button', { name: 'Select category sidebar' }).click();
-    await page.getByRole('tab', { name: 'Branch B' }).click();
-    await page.getByRole('button', { name: 'Select quick-view inspector' }).click();
-    await page.getByRole('button', { name: 'Create combined version' }).click();
-    await expect(page.getByRole('heading', { name: 'Combined result' })).toBeInViewport();
+  test('mobile uses one preview at a time with reachable tray, evidence, and no overflow', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(url);
+    await page.getByRole('button', { name: 'Select' }).click();
+    await page.getByRole('button', { name: 'Branch B', exact: true }).click();
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Arc Headphones' }).click();
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Task Lamp' }).focus();
+    await page.getByRole('button', { name: 'Info' }).click();
+    await expect(page.getByRole('dialog', { name: 'Quick View · Task Lamp' })).toBeVisible();
+    await page.getByRole('button', { name: 'Close technical evidence' }).click();
+    await branchB(page).getByRole('button', { name: 'Select Quick View on Task Lamp' }).click();
+    await page.getByRole('button', { name: 'Combined', exact: true }).click();
+    await expect(combined(page).getByRole('button', { name: 'Quick view' })).toHaveCount(2);
+    await page.getByRole('button', { name: 'Remove Quick View · Arc Headphones' }).click();
+    await expect(combined(page).getByRole('button', { name: 'Quick view' })).toHaveCount(1);
     await noOverflow(page);
-    await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/mobile-comparison.png', fullPage: true });
+    await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/workspace-mobile-instance-selection.png', fullPage: true });
   });
 });

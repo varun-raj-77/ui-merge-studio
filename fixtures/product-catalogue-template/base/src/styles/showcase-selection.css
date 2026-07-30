@@ -1,0 +1,41 @@
+[data-ums-scope] {
+  position: relative;
+  transition: outline-color 180ms ease, box-shadow 180ms ease;
+}
+
+body[data-ums-show-changes] [data-ums-scope] {
+  outline: 1px solid #6558c9;
+  outline-offset: 3px;
+}
+
+body[data-ums-mode="select"] [data-ums-scope] {
+  cursor: crosshair;
+}
+
+body[data-ums-mode="select"] [data-ums-scope]:is(:hover, :focus) {
+  z-index: 3;
+  outline: 3px solid #6558c9;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px #6558c922;
+}
+
+body[data-ums-mode="select"] [data-ums-scope]:is(:hover, :focus)::after {
+  content: attr(data-ums-label);
+  position: absolute;
+  z-index: 8;
+  left: 6px;
+  top: 6px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  background: #171914;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+body[data-ums-mode="select"] [data-ums-scope][data-ums-selected] {
+  outline-color: #20815c;
+  box-shadow: 0 0 0 5px #20815c22;
+}

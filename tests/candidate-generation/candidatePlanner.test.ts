@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
-import { findDeclarationRange, parseModule, reconcileExport, reconcileImport, reconstructTestModule, replaceDeclaration } from '../../packages/candidate-generation/src/astTransform';
+import { configureExportedConst, findDeclarationRange, parseModule, reconcileExport, reconcileImport, reconstructTestModule, replaceDeclaration } from '../../packages/candidate-generation/src/astTransform';
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
 import { GitSourceRepository } from '../../packages/source-analysis/src/gitModel';
 import { buildSourceIndex } from '../../packages/source-analysis/src/sourceIndex';
@@ -13,13 +13,14 @@ function selection(branch:string,path:string,line:number,componentName:string,pr
 async function realArtifacts(){
   const analyzer=new FeatureSliceAnalyzer(fixture);
   return Promise.all([
-    analyzer.analyze({baseRef:'main',branchRef:'branch-a',expectedBranchCommit:await repository.resolveRef('branch-a'),selection:selection('branch-a','src/features/catalogue/CategorySidebar.tsx',5,'CategorySidebar','left')}),
-    analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:selection('branch-b','src/features/catalogue/ProductQuickView.tsx',5,'ProductQuickView','right')})
+    analyzer.analyze({baseRef:'main',branchRef:'branch-a',expectedBranchCommit:await repository.resolveRef('branch-a'),selection:selection('branch-a','src/features/catalogue/CategorySidebar.tsx',13,'CategorySidebar','left')}),
+    analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:selection('branch-b','src/features/catalogue/ProductCardWithQuickView.tsx',6,'ProductCardWithQuickView','right')})
   ]);
 }
 
 describe('candidate transformation utilities',()=>{
   test('reconciles named aliases and exports without duplication and replaces declarations by AST identity',()=>{let code="import { A } from './dep';\nexport function View(){return <A/>}\n";code=reconcileImport(code,'src/View.tsx',{source:'./dep',local:'Renamed',imported:'B',kind:'value',reason:'test'});code=reconcileImport(code,'src/View.tsx',{source:'./dep',local:'Renamed',imported:'B',kind:'value',reason:'test'});code=reconcileExport(code,'src/View.tsx','View','./View');code=reconcileExport(code,'src/View.tsx','View','./View');code=replaceDeclaration(code,'src/View.tsx','View','function View(){return <Renamed/>}');expect(code.match(/Renamed/g)?.length).toBe(2);expect(code.match(/export \{ View \}/g)?.length).toBe(1);expect(findDeclarationRange(code,'src/View.tsx','View')).not.toBeNull();expect(()=>parseModule(code,'src/View.tsx')).not.toThrow();});
+  test('writes a typed exported const deterministically without duplicate values',()=>{const source="export const quickViewTargetIds = ['p-101', 'p-102'] as const;\n";const first=configureExportedConst(source,'src/config.ts','quickViewTargetIds',['p-102','p-104']);const second=configureExportedConst(source,'src/config.ts','quickViewTargetIds',['p-102','p-104']);expect(first).toBe(second);expect(first).toContain('\"p-102\", \"p-104\"');expect(first).not.toContain('p-101');});
   test('reconstructs the quick-view test without the unrelated inventory test',async()=>{const artifact=(await realArtifacts())[1];const index=await buildSourceIndex(repository,artifact.slice.repository.branchCommit);const slice=artifact.slice.testFileSlices.find(item=>item.path==='src/test/quick-view.test.tsx')!;const source=await repository.readFile(artifact.slice.repository.branchCommit,slice.path);const output=reconstructTestModule(source,slice.path,index.moduleByPath.get(slice.path)!,slice);expect(output).toContain('opens, focuses, and closes quick view');expect(output).not.toContain('inventory summary');expect(output).toContain('@testing-library/react');});
 });
 
@@ -36,4 +37,15 @@ test('builds a deterministic ready plan with selected dependencies and no unrela
   expect(paths).not.toContain('src/features/catalogue/CatalogueHeader.tsx');
   expect(paths).not.toContain('src/utils/inventorySummary.ts');
   expect(first.plan.operations.find(item=>item.target.path==='src/test/quick-view.test.tsx')?.kind).toBe('reconstruct-test-file');
+},90_000);
+
+test('plans an instance configuration after the Quick View slice exactly once',async()=>{
+  const quickView=(await realArtifacts())[1];const base=await repository.resolveRef('main');const generator=new CandidateGenerator(fixture);
+  const configuration={sliceId:quickView.analysisId,path:'src/config/quickViewTargets.ts',declaration:'quickViewTargetIds',value:['p-102','p-104']};
+  const first=await generator.preflight({repositoryRoot:fixture,baseRef:'main',expectedBaseCommit:base,candidateBranch:'showcase-s0-q-102-104',artifacts:[quickView],analyzerSchemaVersion:2,sourceConfigurations:[configuration]});
+  const second=await generator.preflight({repositoryRoot:fixture,baseRef:'main',expectedBaseCommit:base,candidateBranch:'showcase-s0-q-102-104',artifacts:[quickView],analyzerSchemaVersion:2,sourceConfigurations:[configuration]});
+  expect(first).toEqual(second);
+  expect(first.plan.status,JSON.stringify(first.plan.unresolved,null,2)).toBe('ready');
+  expect(first.plan.operations.filter(item=>item.kind==='configure-exported-const')).toHaveLength(1);
+  expect(first.plan.operations.filter(item=>item.target.path==='src/config/quickViewTargets.ts'&&item.kind==='add-file')).toHaveLength(1);
 },90_000);

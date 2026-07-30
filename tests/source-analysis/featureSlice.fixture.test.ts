@@ -16,7 +16,7 @@ const paths = (slice: Awaited<ReturnType<typeof analyze>>) => new Set(slice.incl
 
 describe('Product Catalogue fixture feature slices', () => {
   test('maps CategorySidebar and follows its dependencies while excluding the promotion', async () => {
-    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 5, 'CategorySidebar', 'left');
+    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 13, 'CategorySidebar', 'left');
     const first = await analyze('branch-a', source);
     const second = await analyze('branch-a', source);
     const included = paths(first);
@@ -38,8 +38,8 @@ describe('Product Catalogue fixture feature slices', () => {
     expect(second).toEqual(first);
   });
 
-  test('maps ProductQuickView and excludes independent newest-first sorting', async () => {
-    const source = selection('branch-b', 'src/features/catalogue/ProductQuickView.tsx', 5, 'ProductQuickView', 'right');
+  test('maps ProductCardWithQuickView, its target configuration, and excludes the inventory sibling', async () => {
+    const source = selection('branch-b', 'src/features/catalogue/ProductCardWithQuickView.tsx', 6, 'ProductCardWithQuickView', 'right');
     const first = await analyze('branch-b', source);
     const second = await analyze('branch-b', source);
     const included = paths(first);
@@ -49,19 +49,20 @@ describe('Product Catalogue fixture feature slices', () => {
       'src/hooks/useSelectedProduct.ts',
       'src/features/catalogue/ProductCardWithQuickView.tsx',
       'src/features/catalogue/ProductGrid.tsx',
+      'src/config/quickViewTargets.ts',
       'src/features/catalogue/quick-view.css',
       'src/test/quick-view.test.tsx'
     ]) expect(included.has(path), path).toBe(true);
     expect(included.has('src/utils/inventorySummary.ts')).toBe(false);
     expect(included.has('src/features/catalogue/CatalogueHeader.tsx')).toBe(false);
     const tests = first.testFileSlices.find(item => item.path === 'src/test/quick-view.test.tsx')!;
-    expect(tests.includedUnits.map(item => item.title)).toEqual(['opens, focuses, and closes quick view']);
+    expect(tests.includedUnits.map(item => item.title)).toEqual(['enables quick view only for configured stable product IDs', 'opens, focuses, and closes quick view']);
     expect(tests.excludedUnits.map(item => item.title)).toEqual(['keeps the inventory summary as a separate branch change']);
     expect(second).toEqual(first);
   });
 
   test('refuses stale branch commits and stale source locations', async () => {
-    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 5, 'CategorySidebar', 'left');
+    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 13, 'CategorySidebar', 'left');
     const analyzer = new FeatureSliceAnalyzer(fixture);
     expect((await analyzer.analyze({ baseRef: 'main', branchRef: 'branch-a', expectedBranchCommit: '0'.repeat(40), selection: source })).slice.status).toBe('refused');
     expect((await analyzer.analyze({ baseRef: 'main', branchRef: 'branch-a', expectedBranchCommit: await repository.resolveRef('branch-a'), selection: { ...source, line: 999 } })).slice.status).toBe('refused');

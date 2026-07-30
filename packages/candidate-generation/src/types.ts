@@ -13,7 +13,23 @@ export type CandidateOperationKind =
   | 'reconstruct-source-file'
   | 'add-style-file'
   | 'replace-style-file'
-  | 'add-asset';
+  | 'add-asset'
+  | 'configure-exported-const';
+
+export type CandidateLiteral =
+  | string
+  | number
+  | boolean
+  | null
+  | CandidateLiteral[]
+  | { [key: string]: CandidateLiteral };
+
+export interface CandidateSourceConfiguration {
+  sliceId: string;
+  path: string;
+  declaration: string;
+  value: CandidateLiteral;
+}
 
 export interface CandidateGenerationRequest {
   repositoryRoot: string;
@@ -22,6 +38,7 @@ export interface CandidateGenerationRequest {
   candidateBranch: string;
   artifacts: FeatureSliceArtifact[];
   analyzerSchemaVersion: number;
+  sourceConfigurations?: CandidateSourceConfiguration[];
 }
 export interface CandidateOperation {
   id: string;
@@ -37,6 +54,7 @@ export interface CandidateOperation {
   testSlice?: TestFileSlice;
   declarationNames?: string[];
   exportRequirement?: { exported: string; imported: string; source: string };
+  sourceConfiguration?: CandidateSourceConfiguration;
 }
 export interface CandidateConflict {
   id: string;

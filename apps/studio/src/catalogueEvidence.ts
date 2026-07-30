@@ -1,31 +1,25 @@
 import manifestJson from './generated/showcaseRun.json';
-import { validatePublicShowcaseReport } from '../../../packages/showcase-evidence/src/schema';
+import { validatePublicShowcaseReport, type PublicCandidate, type PublicFeature } from '../../../packages/showcase-evidence/src/schema';
+import type { ShowcaseScope } from './showcaseSelection';
 
-export type CatalogueFeatureId = 'category-sidebar' | 'quick-view';
-export type CatalogueBranch = 'Branch A' | 'Branch B';
-export interface CatalogueFeatureEvidence {
-  id: CatalogueFeatureId; name: string; branch: CatalogueBranch; declaration: string; sourceFile: string;
-  dependencies: { path: string; reason: string }[]; inclusionReason: string; siblingExclusion: string;
-  compatibility: 'recorded-safe' | 'unrecorded';
+export const catalogueManifest = validatePublicShowcaseReport(manifestJson);
+export const catalogueFeatures = Object.fromEntries(catalogueManifest.features.map(feature => [feature.id, feature])) as Record<PublicFeature['id'], PublicFeature>;
+export const catalogueCandidates = new Map(catalogueManifest.candidates.map(candidate => [candidate.key, candidate]));
+export const recordedRefusal = catalogueManifest.refusal;
+
+export function resolveCatalogueCandidate(key: string): PublicCandidate {
+  const candidate = catalogueCandidates.get(key);
+  if (!candidate) throw new Error(`Generated Showcase candidate ${key} is missing.`);
+  return candidate;
 }
 
-const manifest = validatePublicShowcaseReport(manifestJson);
-const generatedFeature = (id: 'category-sidebar' | 'quick-view', siblingExclusion: string): CatalogueFeatureEvidence => {
-  const feature = manifest.features.find(item => item.id === id)!;
+export function evidenceForScope(scope: ShowcaseScope) {
+  const feature = catalogueFeatures[scope.featureId === 'product-quick-view' ? 'quick-view' : 'category-sidebar'];
   return {
-    id, name: feature.name, branch: feature.branchLabel, declaration: feature.selectedBoundary, sourceFile: feature.sourceFile,
-    dependencies: feature.supportingFiles, inclusionReason: `Captured from the rendered ${feature.branchLabel} boundary at line ${feature.sourceLine}.`,
-    siblingExclusion, compatibility: 'recorded-safe'
+    ...feature,
+    instanceId: scope.kind === 'feature-instance' ? scope.instanceId : null,
+    configuration: scope.kind === 'feature-instance'
+      ? { path: 'src/config/quickViewTargets.ts', declaration: 'quickViewTargetIds' }
+      : null
   };
-};
-
-export const catalogueEvidence: Record<CatalogueFeatureId, CatalogueFeatureEvidence> = {
-  'category-sidebar': generatedFeature('category-sidebar', 'Promotional banner'),
-  'quick-view': generatedFeature('quick-view', 'Inventory summary')
-};
-export const recordedSafePair: CatalogueFeatureId[] = ['category-sidebar','quick-view'];
-export const recordedRefusal = manifest.refusal;
-export function combinationOutcome(selected: CatalogueFeatureId[]) {
-  const ids=new Set(selected);
-  return selected.length===2&&recordedSafePair.every(id=>ids.has(id))?'recorded-safe' as const:'unrecorded' as const;
 }

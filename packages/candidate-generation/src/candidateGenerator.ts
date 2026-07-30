@@ -8,11 +8,20 @@ import { buildSourceIndex, type ImportBinding, type ModuleRecord } from '../../s
 import { GitSourceRepository, validateRepositoryPath } from '../../source-analysis/src/gitModel';
 import { featureSliceVersion, type FeatureSliceArtifact, type ImportRequirement } from '../../source-analysis/src/types';
 import { isSourceIdentity } from '../../shared/src/sourceIdentity';
-import { findDeclarationRange, insertDeclaration, parseModule, reconcileExport, reconcileImport, reconstructAddedModule, reconstructTestModule, replaceDeclaration } from './astTransform';
+import { configureExportedConst, findDeclarationRange, insertDeclaration, parseModule, reconcileExport, reconcileImport, reconstructAddedModule, reconstructTestModule, replaceDeclaration } from './astTransform';
 import { candidateGenerationVersion, type AppliedOperation, type CandidateConflict, type CandidateGenerationReport, type CandidateGenerationRequest, type CandidateOperation, type CandidatePlan, type CandidatePreflight, type CandidateUnresolved, type ExcludedSourceChange, type VerificationResult } from './types';
 
 const execFileAsync = promisify(execFile);
 const textHash = (value: string | Buffer) => createHash('sha256').update((Buffer.isBuffer(value)?value.toString('utf8'):value).replace(/\r\n/g,'\n')).digest('hex');
+const sourceIndexCache = new Map<string, ReturnType<typeof buildSourceIndex>>();
+function cachedSourceIndex(repository: GitSourceRepository, repositoryRoot: string, commit: string) {
+  const key = `${repositoryRoot}:${commit}`;
+  const existing = sourceIndexCache.get(key);
+  if (existing) return existing;
+  const created = buildSourceIndex(repository, commit);
+  sourceIndexCache.set(key, created);
+  return created;
+}
 const textPath = (path:string) => /\.(?:[cm]?[jt]sx?|css|json|html|md|yml|yaml)$/.test(path);
 const formattedText = (value:string|Buffer) => `${(Buffer.isBuffer(value)?value.toString('utf8'):value).replace(/\r\n/g,'\n').trimEnd()}\n`;
 const stable = <T>(items: T[], key: (item: T) => string) => [...items].sort((a,b) => key(a).localeCompare(key(b)));
@@ -20,11 +29,11 @@ function operationId(value: Omit<CandidateOperation,'id'|'sliceIds'|'evidenceEdg
 function branchValid(value: string) { return /^[a-z][a-z0-9-]{0,62}$/.test(value) && value !== 'main'; }
 function importRequirement(binding: ImportBinding, reason: string): ImportRequirement { return { source: binding.source, local: binding.local, imported: binding.imported, kind: binding.kind, reason }; }
 function importKey(item: Pick<ImportRequirement,'source'|'local'|'imported'|'kind'>) { return `${item.source}:${item.local}:${item.imported}:${item.kind}`; }
-function operationOrder(operation: CandidateOperation) { const rank: Record<CandidateOperation['kind'],number> = { 'add-file':0,'add-style-file':0,'add-asset':0,'replace-style-file':0,'reconstruct-source-file':0,'insert-import-specifier':1,'insert-export':2,'insert-declaration':3,'replace-declaration':3,'replace-jsx-region':3,'reconstruct-test-file':4 }; return `${operation.target.path}:${rank[operation.kind]}:${operation.target.symbol ?? ''}:${operation.id}`; }
+function operationOrder(operation: CandidateOperation) { const rank: Record<CandidateOperation['kind'],number> = { 'add-file':0,'add-style-file':0,'add-asset':0,'replace-style-file':0,'reconstruct-source-file':0,'insert-import-specifier':1,'insert-export':2,'insert-declaration':3,'replace-declaration':3,'replace-jsx-region':3,'reconstruct-test-file':4,'configure-exported-const':5 }; return `${operation.target.path}:${rank[operation.kind]}:${operation.target.symbol ?? ''}:${operation.id}`; }
 
 export interface VerificationCommand { name: string; executable: string; args: string[] }
 export interface CandidateProgressEvent { stage: string; message: string; sliceId?: string; path?: string; verification?: string }
-export interface CandidateGeneratorOptions { artifactRoot?: string; verificationCommands?: VerificationCommand[]; onStage?: (stage: CandidateGenerationReport['stage']) => void; onProgress?: (event: CandidateProgressEvent) => void }
+export interface CandidateGeneratorOptions { artifactRoot?: string; verificationCommands?: VerificationCommand[]; onStage?: (stage: CandidateGenerationReport['stage']) => void; onProgress?: (event: CandidateProgressEvent) => void; onWorktreePrepared?: (worktreePath: string) => Promise<void> | void; onVerifiedWorkspace?: (worktreePath: string) => Promise<void> | void }
 class CandidateRefusal extends Error { constructor(message: string) { super(message); this.name = 'CandidateRefusal'; } }
 class VerificationFailure extends Error { constructor(message: string) { super(message); this.name = 'VerificationFailure'; } }
 
@@ -56,13 +65,14 @@ export class CandidateGenerator {
       branchBefore = await this.tryResolve(immutable.candidateBranch);
       this.options.onProgress?.({stage:'preparing-workspace',message:'Preparing an isolated candidate workspace.'});
       worktreePath = await mkdtemp(join(tmpdir(),'ui-merge-studio-candidate-')); report.repository.worktreePath=worktreePath;
-      await this.git(['worktree','add','--detach',worktreePath,immutable.expectedBaseCommit]); report.stage='transform'; this.options.onStage?.('transform');
+      await this.git(['worktree','add','--detach',worktreePath,immutable.expectedBaseCommit]); await this.options.onWorktreePrepared?.(worktreePath); report.stage='transform'; this.options.onStage?.('transform');
       await this.applyPlan(preflight.plan, worktreePath, report.appliedOperations);
       this.options.onProgress?.({stage:'checking-changed-files',message:'Checking that the changed-file set exactly matches the plan.'});
       const plannedPaths = new Set(preflight.plan.operations.map(item=>item.target.path)); const tracked=(await this.git(['diff','--name-only'],worktreePath)).split(/\r?\n/).filter(Boolean);const untracked=(await this.git(['ls-files','--others','--exclude-standard'],worktreePath)).split(/\r?\n/).filter(Boolean);const actualPaths = new Set([...tracked,...untracked]);
       if ([...actualPaths].some(path=>!plannedPaths.has(path)) || [...plannedPaths].some(path=>!actualPaths.has(path))) throw new CandidateRefusal(`Candidate changed-file set does not match the deterministic plan. Planned: ${[...plannedPaths].sort().join(', ')}; actual: ${[...actualPaths].sort().join(', ')}.`);
       await this.git(['add','-A'],worktreePath); try{await this.git(['diff','--cached','--check'],worktreePath);}catch(error){const value=error as Error&{stdout?:string;stderr?:string};throw new CandidateRefusal(`Candidate whitespace check failed: ${(value.stdout??value.stderr??value.message).trim()}`);}
       report.stage='verify'; this.options.onStage?.('verify'); await this.verify(worktreePath, report.verification, preflight.plan);
+      await this.options.onVerifiedWorkspace?.(worktreePath);
       this.options.onProgress?.({stage:'writing-tree',message:'Writing and comparing the verified candidate tree.'});
       const tree = await this.git(['write-tree'],worktreePath); report.repository.candidateTree=tree;
       const currentCandidate = await this.tryResolve(immutable.candidateBranch);
@@ -96,7 +106,7 @@ export class CandidateGenerator {
     if (resolve(request.repositoryRoot)!==this.repositoryRoot) reject('The immutable request repository does not match the configured generator repository.');
     if (!branchValid(request.candidateBranch)) reject(`Invalid candidate branch name: ${request.candidateBranch}.`);
     if (request.analyzerSchemaVersion!==featureSliceVersion) reject(`Unsupported analyzer schema version ${request.analyzerSchemaVersion}.`);
-    if (request.artifacts.length!==2) reject('Exactly two resolved feature-slice artifacts are required.');
+    if (request.artifacts.length < 1 || request.artifacts.length > 2) reject('One or two resolved feature-slice artifacts are required.');
     let base=''; try { base=await this.repository.resolveRef(request.baseRef); } catch(error){ reject(`Base ref resolution failed: ${error instanceof Error?error.message:String(error)}`); }
     if (base && base!==request.expectedBaseCommit) reject(`Stale base commit: expected ${request.expectedBaseCommit}, current ${base}.`);
     try{if((await this.repository.git(['status','--porcelain']))!=='')reject('The source repository working tree is dirty; candidate generation is refused.');}catch(error){reject(`Repository cleanliness inspection failed: ${error instanceof Error?error.message:String(error)}`);}
@@ -112,16 +122,25 @@ export class CandidateGenerator {
       try { const current=await this.repository.resolveRef(slice.repository.branchRef); if(current!==slice.repository.branchCommit) reject(`Feature branch ${slice.repository.branchRef} moved from ${slice.repository.branchCommit} to ${current}.`,'<slice>',id); const merge=await this.repository.mergeBase(request.baseRef,slice.repository.branchRef); if(merge!==request.expectedBaseCommit) reject(`Slice ${id} no longer shares the expected merge base.`,'<slice>',id); } catch(error){ reject(`Feature branch validation failed for ${id}: ${error instanceof Error?error.message:String(error)}`,'<slice>',id); }
       const evidence=new Set(slice.evidence.map(item=>item.id)); for(const change of slice.includedChanges) if(!change.evidenceEdgeIds.length||change.evidenceEdgeIds.some(edge=>!evidence.has(edge))) reject(`Included change ${change.branchChangeId} has missing evidence.` ,change.path,id);
       if (slice.unresolvedDependencies.length) reject(`Resolved slice ${id} unexpectedly contains unresolved dependencies.`,'<slice>',id);
-      try { validateRepositoryPath(slice.selection.repositoryRelativePath); const index=await buildSourceIndex(this.repository,slice.repository.branchCommit); const selected=index.moduleByPath.get(slice.selection.repositoryRelativePath)?.declarations.find(item=>item.name===slice.selection.componentName&&item.startLine===slice.selection.line); if(!selected) reject(`Slice ${id} source selection is no longer valid at its recorded location.`,slice.selection.repositoryRelativePath,id); } catch(error){ reject(`Slice ${id} path validation failed: ${error instanceof Error?error.message:String(error)}`,'<slice>',id); }
+      try { validateRepositoryPath(slice.selection.repositoryRelativePath); const index=await cachedSourceIndex(this.repository,this.repositoryRoot,slice.repository.branchCommit); const selected=index.moduleByPath.get(slice.selection.repositoryRelativePath)?.declarations.find(item=>item.name===slice.selection.componentName&&item.startLine===slice.selection.line); if(!selected) reject(`Slice ${id} source selection is no longer valid at its recorded location.`,slice.selection.repositoryRelativePath,id); } catch(error){ reject(`Slice ${id} path validation failed: ${error instanceof Error?error.message:String(error)}`,'<slice>',id); }
     }
     const branchRefs=new Set(request.artifacts.map(item=>item.slice.repository.branchRef)); if(branchRefs.size!==request.artifacts.length) reject('Duplicate or conflicting source branch identities were supplied.');
+    for (const configuration of request.sourceConfigurations ?? []) {
+      const artifact = request.artifacts.find(item => item.analysisId === configuration.sliceId);
+      if (!artifact) { reject(`Configuration ${configuration.path} does not reference a selected slice.`, configuration.path, configuration.sliceId); continue; }
+      try { validateRepositoryPath(configuration.path); } catch (error) { reject(error instanceof Error ? error.message : String(error), configuration.path, configuration.sliceId); continue; }
+      const change = artifact.slice.includedChanges.find(item => item.path === configuration.path);
+      const file = artifact.slice.changedFiles.find(item => item.path === configuration.path);
+      if (!change || file?.status !== 'added') reject('Configured source must be a fully included file added by its selected slice.', configuration.path, configuration.sliceId);
+      if (!configuration.declaration) reject('Configured source declaration is required.', configuration.path, configuration.sliceId);
+    }
     return unresolved;
   }
 
   private async buildOperations(request: CandidateGenerationRequest, operations: CandidateOperation[], unresolved: CandidateUnresolved[]) {
-    const baseIndex=await buildSourceIndex(this.repository,request.expectedBaseCommit);
+    const baseIndex=await cachedSourceIndex(this.repository,this.repositoryRoot,request.expectedBaseCommit);
     for(const artifact of stable(request.artifacts,item=>item.analysisId)) {
-      const slice=artifact.slice; const sourceIndex=await buildSourceIndex(this.repository,slice.repository.branchCommit); const changed=new Map(slice.changedFiles.map(item=>[item.path,item])); const includedByPath=new Map<string,typeof slice.includedChanges>();
+      const slice=artifact.slice; const sourceIndex=await cachedSourceIndex(this.repository,this.repositoryRoot,slice.repository.branchCommit); const changed=new Map(slice.changedFiles.map(item=>[item.path,item])); const includedByPath=new Map<string,typeof slice.includedChanges>();
       for(const change of slice.includedChanges){const list=includedByPath.get(change.path)??[];list.push(change);includedByPath.set(change.path,list);} const processed=new Set<string>();
       for(const testSlice of slice.testFileSlices) {
         if(!includedByPath.has(testSlice.path))continue; processed.add(testSlice.path); const file=changed.get(testSlice.path); if(!file){this.unresolved(unresolved,testSlice.path,artifact.analysisId,'Included test file is missing from the analyzed Git change set.');continue;} if(testSlice.mode!=='test-units'){this.unresolved(unresolved,testSlice.path,artifact.analysisId,`Test slicing mode ${testSlice.mode} cannot be reconstructed safely.`);continue;} if(file.status!=='added'){this.unresolved(unresolved,testSlice.path,artifact.analysisId,'Modified pre-existing test files are not yet supported by deterministic test reconstruction.');continue;}
@@ -149,6 +168,16 @@ export class CandidateGenerator {
         if(!selectedNames.size&&!moduleLevel)this.unresolved(unresolved,path,artifact.analysisId,'Modified module has no supported declaration or module-level integration operation.');
       }
     }
+    for (const configuration of stable(request.sourceConfigurations ?? [], item => `${item.path}:${item.declaration}`)) {
+      const artifact = request.artifacts.find(item => item.analysisId === configuration.sliceId)!;
+      const source = await this.gitBlobText(artifact.slice.repository.branchCommit, configuration.path);
+      let output = '';
+      try { output = configureExportedConst(source, configuration.path, configuration.declaration, configuration.value); }
+      catch (error) { this.unresolved(unresolved, configuration.path, configuration.sliceId, error instanceof Error ? error.message : String(error)); continue; }
+      const operation = this.operation('configure-exported-const', artifact, configuration.path, configuration.declaration, null, source, textHash(output), [], `Write canonical configuration for exported const ${configuration.declaration}.`);
+      operation.sourceConfiguration = configuration;
+      operations.push(operation);
+    }
   }
 
   private operation(kind:CandidateOperation['kind'],artifact:FeatureSliceArtifact,path:string,symbol:string|null,sourceRegion:CandidateOperation['source']['region'],sourceContent:string|Buffer,expectedHash:string,evidence:string[],detail:string,requirement?:ImportRequirement,testSlice?:CandidateOperation['testSlice'],baseHash:string|null=null,targetHash:string|null=null,targetRegion:CandidateOperation['target']['region']=null): CandidateOperation {
@@ -157,7 +186,7 @@ export class CandidateGenerator {
   private normalizeOperations(operations:CandidateOperation[]) {
     const map=new Map<string,CandidateOperation>();
     for(const operation of stable(operations,operationOrder)) {
-      const semanticKey=JSON.stringify({kind:operation.kind,target:operation.target,expectedContentHash:operation.postcondition.expectedContentHash,importRequirement:operation.importRequirement,exportRequirement:operation.exportRequirement,declarationNames:operation.declarationNames});
+      const semanticKey=JSON.stringify({kind:operation.kind,target:operation.target,expectedContentHash:operation.postcondition.expectedContentHash,importRequirement:operation.importRequirement,exportRequirement:operation.exportRequirement,declarationNames:operation.declarationNames,sourceConfiguration:operation.sourceConfiguration});
       const existing=map.get(semanticKey);
       if(existing){existing.sliceIds=stable([...new Set([...existing.sliceIds,...operation.sliceIds])],value=>value);existing.evidenceEdgeIds=stable([...new Set([...existing.evidenceEdgeIds,...operation.evidenceEdgeIds])],value=>value);}
       else map.set(semanticKey,{...operation});
@@ -209,8 +238,9 @@ export class CandidateGenerator {
       else if(operation.kind==='insert-import-specifier'){const current=await readFile(target,'utf8');const next=reconcileImport(current,operation.target.path,operation.importRequirement!);if(next===current)status='deduplicated';else await writeFile(target,next,'utf8');}
       else if(operation.kind==='insert-export'){const current=await readFile(target,'utf8');const item=operation.exportRequirement!;const next=reconcileExport(current,operation.target.path,item.exported,item.source,item.imported);if(next===current)status='deduplicated';else await writeFile(target,next,'utf8');}
       else if(['replace-declaration','replace-jsx-region','insert-declaration'].includes(operation.kind)){const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const range=findDeclarationRange(source,operation.source.path,operation.target.symbol!);if(!range)throw new CandidateRefusal(`Source declaration ${operation.target.symbol} disappeared from ${operation.source.path}.`);const snippet=source.slice(range.start,range.end);if(textHash(snippet)!==operation.source.contentHash)throw new CandidateRefusal(`Source declaration hash changed for ${operation.target.symbol}.`);const current=await readFile(target,'utf8');if(operation.precondition.targetContentHash){const targetRange=findDeclarationRange(current,operation.target.path,operation.target.symbol!);if(!targetRange||textHash(current.slice(targetRange.start,targetRange.end))!==operation.precondition.targetContentHash)throw new CandidateRefusal(`Target declaration precondition failed for ${operation.target.symbol} in ${operation.target.path}.`);}const next=operation.kind==='insert-declaration'?insertDeclaration(current,operation.target.path,snippet):replaceDeclaration(current,operation.target.path,operation.target.symbol!,snippet);await writeFile(target,next,'utf8');}
-      else if(operation.kind==='reconstruct-source-file'){const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const index=await buildSourceIndex(this.repository,operation.source.branchCommit);const module=index.moduleByPath.get(operation.source.path);if(!module)throw new CandidateRefusal(`Source module ${operation.source.path} disappeared.`);const output=reconstructAddedModule(source,operation.source.path,module,operation.declarationNames??[]);if(textHash(output)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Reconstructed source content differs from the planned output for ${operation.target.path}.`);await mkdir(dirname(target),{recursive:true});await writeFile(target,output,'utf8');}
-      else if(operation.kind==='reconstruct-test-file'){if(reconstructedTests.has(operation.target.path)){status='deduplicated';}else{const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const index=await buildSourceIndex(this.repository,operation.source.branchCommit);const module=index.moduleByPath.get(operation.source.path);if(!module)throw new CandidateRefusal(`Source test module ${operation.source.path} disappeared.`);const output=reconstructTestModule(source,operation.source.path,module,operation.testSlice!);if(textHash(output)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Reconstructed test content differs from the planned output for ${operation.target.path}.`);await mkdir(dirname(target),{recursive:true});await writeFile(target,output,'utf8');reconstructedTests.add(operation.target.path);}}
+      else if(operation.kind==='reconstruct-source-file'){const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const index=await cachedSourceIndex(this.repository,this.repositoryRoot,operation.source.branchCommit);const module=index.moduleByPath.get(operation.source.path);if(!module)throw new CandidateRefusal(`Source module ${operation.source.path} disappeared.`);const output=reconstructAddedModule(source,operation.source.path,module,operation.declarationNames??[]);if(textHash(output)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Reconstructed source content differs from the planned output for ${operation.target.path}.`);await mkdir(dirname(target),{recursive:true});await writeFile(target,output,'utf8');}
+      else if(operation.kind==='reconstruct-test-file'){if(reconstructedTests.has(operation.target.path)){status='deduplicated';}else{const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const index=await cachedSourceIndex(this.repository,this.repositoryRoot,operation.source.branchCommit);const module=index.moduleByPath.get(operation.source.path);if(!module)throw new CandidateRefusal(`Source test module ${operation.source.path} disappeared.`);const output=reconstructTestModule(source,operation.source.path,module,operation.testSlice!);if(textHash(output)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Reconstructed test content differs from the planned output for ${operation.target.path}.`);await mkdir(dirname(target),{recursive:true});await writeFile(target,output,'utf8');reconstructedTests.add(operation.target.path);}}
+      else if(operation.kind==='configure-exported-const'){const configuration=operation.sourceConfiguration!;const current=await readFile(target,'utf8');const next=configureExportedConst(current,operation.target.path,configuration.declaration,configuration.value);if(textHash(next)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Configured source content differs from the planned output for ${operation.target.path}.`);if(next===current)status='deduplicated';else await writeFile(target,next,'utf8');}
       else throw new CandidateRefusal(`Unsupported operation kind ${operation.kind}.`);
       if(/\.[jt]sx?$/.test(operation.target.path))parseModule(await readFile(target,'utf8'),operation.target.path); applied.push({operationId:operation.id,path:operation.target.path,status,resultingContentHash:textHash(await readFile(target)),detail:operation.detail});
     }
@@ -228,7 +258,7 @@ export class CandidateGenerator {
     ];
   }
   private async verify(worktree:string,results:VerificationResult[],plan:CandidatePlan) { for(const command of this.verificationCommands ?? this.defaultVerificationCommands(plan)){this.options.onProgress?.({stage:'verification',message:`Running verification: ${command.name}.`,verification:command.name});let output='';let exitCode=0;try{const result=await execFileAsync(command.executable,command.args,{cwd:worktree,encoding:'utf8',maxBuffer:20*1024*1024,windowsHide:true});output=`${result.stdout}\n${result.stderr}`;}catch(error){const value=error as Error&{stdout?:string;stderr?:string;code?:number};output=`${value.stdout??''}\n${value.stderr??''}\n${value.message}`;exitCode=typeof value.code==='number'?value.code:1;}results.push({name:command.name,command:[command.executable,...command.args].join(' '),status:exitCode===0?'passed':'failed',exitCode,outputTail:output.trim().slice(-4000)});if(exitCode!==0)throw new VerificationFailure(`Verification command ${command.name} failed with exit code ${exitCode}.`);} }
-  private generationId(request:CandidateGenerationRequest){return createHash('sha256').update(JSON.stringify({version:candidateGenerationVersion,repositoryRoot:resolve(request.repositoryRoot),baseRef:request.baseRef,expectedBaseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch,analyzerSchemaVersion:request.analyzerSchemaVersion,sliceIds:stable(request.artifacts.map(item=>item.analysisId),value=>value)})).digest('hex').slice(0,16);}
+  private generationId(request:CandidateGenerationRequest){return createHash('sha256').update(JSON.stringify({version:candidateGenerationVersion,repositoryRoot:resolve(request.repositoryRoot),baseRef:request.baseRef,expectedBaseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch,analyzerSchemaVersion:request.analyzerSchemaVersion,sliceIds:stable(request.artifacts.map(item=>item.analysisId),value=>value),sourceConfigurations:stable(request.sourceConfigurations ?? [],item=>`${item.sliceId}:${item.path}:${item.declaration}`)})).digest('hex').slice(0,16);}
   private emptyReport(preflight:CandidatePreflight,request:CandidateGenerationRequest):CandidateGenerationReport{const excluded:ExcludedSourceChange[]=request.artifacts.flatMap(artifact=>artifact.slice.excludedChanges.map(item=>({sliceId:artifact.analysisId,path:item.path,symbol:item.symbol?.name??null,reason:item.reason})));const relativePath=`.ums/generation/${preflight.generationId}/candidate-report.json`;return{version:candidateGenerationVersion,generationId:preflight.generationId,status:'failed',stage:'validate',message:'Candidate generation has not completed.',repository:{baseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch},sliceIds:preflight.plan.sliceIds,plan:preflight.plan,appliedOperations:[],excludedSourceChanges:stable(excluded,item=>`${item.sliceId}:${item.path}:${item.symbol??''}`),conflicts:preflight.plan.conflicts,verification:[],cleanup:{worktreeRemoved:true,processesStopped:true,detail:'No worktree created.'},relativePath};}
   private unresolved(target:CandidateUnresolved[],path:string,sliceId:string,reason:string){target.push({path,sliceId,reason,manualResolution:'Use a supported non-overlapping source structure or resolve the source integration manually, then re-analyze.'});}
   private async persist(report:CandidateGenerationReport){const directory=resolve(this.artifactRoot,'.ums','generation',report.generationId);await mkdir(directory,{recursive:true});await writeFile(resolve(directory,'candidate-report.json'),`${JSON.stringify(report,null,2)}\n`,'utf8');}

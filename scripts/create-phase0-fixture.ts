@@ -24,7 +24,10 @@ const base = git(target, ['rev-parse', 'HEAD']);
 function variation(branch: string, overlayName: string, message: string) {
   git(target, ['checkout', '-b', branch, base]);
   overlay(overlayName, target);
-  git(target, ['add', '.']);
+  git(target, ['add', '-A']);
+  // Re-hash same-size replacements on Windows where checkout and overlay writes
+  // can share a coarse filesystem timestamp and otherwise look racily clean.
+  git(target, ['add', '--renormalize', '.']);
   git(target, ['commit', '-m', message]);
 }
 variation('branch-a', 'branch-a', 'Add category filter sidebar');
