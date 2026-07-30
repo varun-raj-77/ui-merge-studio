@@ -34,13 +34,13 @@ function CataloguePreview({ mode, selected, onToggle }: { mode: 'baseline' | Bra
   const selectable = mode === 'branch-a' || mode === 'branch-b';
   return <section className={`catalogue-preview ${mode}`} aria-label={`${mode === 'baseline' ? 'Baseline' : mode === 'branch-a' ? 'Branch A' : mode === 'branch-b' ? 'Branch B' : 'Combined result'} product catalogue`}>
     <header><div><span className="catalogue-mark">PC</span><div><b>Product Catalogue</b><small>Controlled sample data</small></div></div><span>{visible.length} products</span></header>
-    {hasPromotion && <div className={`change-region promotion-region ${selected.has('promotional-banner') ? 'selected' : ''}`} data-highlight="promotional-banner"><div><small>Seasonal edit</small><strong>Workspace essentials, 20% off</strong></div>{selectable && <button className="region-select" aria-pressed={selected.has('promotional-banner')} onClick={() => onToggle?.('promotional-banner')}>{selected.has('promotional-banner') ? 'Selected' : 'Select promotional banner'}</button>}</div>}
+    {hasPromotion && <div className="promotion-region"><div><small>Seasonal edit</small><strong>Workspace essentials, 20% off</strong></div></div>}
     <div className={`catalogue-body ${collapsed ? 'sidebar-collapsed' : ''}`}>
       {hasSidebar && <aside className={`change-region sidebar-region ${selected.has('category-sidebar') ? 'selected' : ''}`} data-highlight="category-sidebar" aria-label="Category sidebar">
         <button className="collapse-control" onClick={() => setCollapsed(value => !value)} aria-label={collapsed ? 'Expand category sidebar' : 'Collapse category sidebar'}>{collapsed ? '›' : '‹'}</button>
         {!collapsed && <><strong>Categories</strong><div role="group" aria-label="Product categories">{(['All','Audio','Desk','Travel'] as Category[]).map(item => <button key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}</div>{selectable && <button className="region-select" aria-pressed={selected.has('category-sidebar')} onClick={() => onToggle?.('category-sidebar')}>{selected.has('category-sidebar') ? 'Selected' : 'Select category sidebar'}</button>}</>}
       </aside>}
-      <main><div className="catalogue-heading"><div><small>{hasInventorySummary ? '5 products ready' : 'Spring collection'}</small><h3>Objects for focused work.</h3></div>{hasInventorySummary && selectable && <button className={`sort-select ${selected.has('inventory-summary') ? 'selected' : ''}`} data-highlight="inventory-summary" aria-pressed={selected.has('inventory-summary')} onClick={() => onToggle?.('inventory-summary')}>{selected.has('inventory-summary') ? 'Inventory summary selected' : 'Select inventory summary'}</button>}</div>
+      <main><div className="catalogue-heading"><div><small>{hasInventorySummary ? '5 products ready' : 'Spring collection'}</small><h3>Objects for focused work.</h3></div></div>
         <div className="product-grid">{visible.map(product => <ProductCard key={product.id} product={product} quickView={hasInspector} onOpen={(event?: unknown) => { lastTrigger.current = (event as { currentTarget?: HTMLButtonElement })?.currentTarget ?? document.activeElement as HTMLButtonElement; setActiveProduct(product); }} />)}</div>
       </main>
     </div>
@@ -62,18 +62,60 @@ function Comparison({ exit }: { exit: () => void }) {
   const [branch, setBranch] = useState<BranchView>('branch-a');
   const [selected, setSelected] = useState<CatalogueFeatureId[]>([]);
   const [showChanges, setShowChanges] = useState(true);
-  const [result, setResult] = useState<'idle' | 'combined' | 'refused' | 'unrecorded'>('idle');
-  const toggle = (id: CatalogueFeatureId) => { setResult('idle'); setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]); };
-  const evaluate = () => {
-    const outcome = combinationOutcome(selected);
-    setResult(outcome === 'recorded-safe' ? 'combined' : 'unrecorded');
+  const [result, setResult] = useState<'idle' | 'combined'>('idle');
+  const [creationState, setCreationState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [creationError, setCreationError] = useState<string | null>(null);
+  const [selectionMessage, setSelectionMessage] = useState('');
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [showRefusal, setShowRefusal] = useState(false);
+  const resultRef = useRef<HTMLElement>(null);
+  const creationLock = useRef(false);
+  const complete = selected.includes('category-sidebar') && selected.includes('quick-view');
+  const displayName = (id: CatalogueFeatureId) => id === 'category-sidebar' ? 'Category sidebar' : 'Product quick view';
+  const resetResult = () => { setResult('idle'); setCreationState('idle'); setCreationError(null); };
+  const toggle = (id: CatalogueFeatureId) => {
+    if (creationLock.current) return;
+    resetResult();
+    setSelected(current => {
+      const removing = current.includes(id);
+      setSelectionMessage(removing ? `Removed ${displayName(id)}` : `Selected ${displayName(id)} from ${catalogueEvidence[id].branch}`);
+      return removing ? current.filter(item => item !== id) : [...current, id];
+    });
   };
+  const missingGuidance = complete
+    ? 'Both required features are selected. The combined version is ready to create.'
+    : selected.includes('category-sidebar')
+      ? 'Next, select Product quick view from Branch B.'
+      : selected.includes('quick-view')
+        ? 'Next, select Category sidebar from Branch A.'
+        : 'Select Category sidebar from Branch A and Product quick view from Branch B.';
+  const createCombined = async () => {
+    if (!complete || creationLock.current) return;
+    creationLock.current = true;
+    setCreationState('loading'); setCreationError(null); setResult('idle');
+    try {
+      await new Promise(resolve => setTimeout(resolve, 80));
+      if (combinationOutcome(selected) !== 'recorded-safe') throw new Error('The recorded evidence no longer matches these selections.');
+      setResult('combined'); setCreationState('success');
+    } catch (error) {
+      setCreationState('error');
+      setCreationError(error instanceof Error ? error.message : 'The combined version could not be displayed. Please try again.');
+    } finally {
+      creationLock.current = false;
+    }
+  };
+  useEffect(() => {
+    if (result !== 'combined') return;
+    resultRef.current?.scrollIntoView?.({ behavior: 'auto', block: 'start' });
+    resultRef.current?.focus();
+  }, [result]);
   return <main className={`comparison-shell ${showChanges ? 'show-changes' : ''}`}><header className="comparison-header"><button onClick={exit} className="catalogue-wordmark"><span>UM</span>UI Merge Studio</button><span>Interactive sample — no Git operations run in your browser.</span><a href="#local" onClick={exit}>Run locally</a></header><section className="comparison-intro"><div><p className="eyebrow">Product Catalogue comparison</p><h1>Choose the interface you want.</h1><p>Hover over highlighted changes and select the parts you want.</p></div><div className="comparison-controls"><button aria-pressed={showChanges} onClick={() => setShowChanges(value => !value)}>Show changed regions</button><div role="tablist" aria-label="Focused branch"><button role="tab" aria-selected={branch === 'branch-a'} onClick={() => setBranch('branch-a')}>Branch A</button><button role="tab" aria-selected={branch === 'branch-b'} onClick={() => setBranch('branch-b')}>Branch B</button></div></div></section>
+    <ol className="workflow-steps" aria-label="Showcase workflow"><li><b>1</b> Compare branches</li><li><b>2</b> Select both features</li><li><b>3</b> Review selections</li><li><b>4</b> Create combined version</li></ol>
     <section className="comparison-grid"><div><header><b>Baseline</b><small>Always visible</small></header><CataloguePreview mode="baseline" selected={new Set()} /></div><div><header><b>{branch === 'branch-a' ? 'Branch A' : 'Branch B'}</b><small>Independent preview</small></header><CataloguePreview mode={branch} selected={new Set(selected)} onToggle={toggle} /></div></section>
-    <section className="selection-workbench"><div className="selection-tray"><header><div><strong>Your selection</strong><small>{selected.length ? `${selected.length} changed region${selected.length === 1 ? '' : 's'}` : 'Nothing selected yet'}</small></div><button disabled={!selected.length} onClick={() => { setSelected([]); setResult('idle'); }}>Clear</button></header>{!selected.length ? <p>Selection tray is empty. Choose any highlighted change from either branch.</p> : <ul>{selected.map(id => <li key={id}><span>{catalogueEvidence[id].name}<small>{catalogueEvidence[id].branch}</small></span><button onClick={() => toggle(id)} aria-label={`Remove ${catalogueEvidence[id].name}`}>×</button></li>)}</ul>}<button className="evaluate-button" disabled={!selected.length} onClick={evaluate}>Evaluate selected combination</button><button onClick={() => setResult('refused')}>Replay Product-ID refusal proof</button><small>This sample replays committed results from controlled local engine runs. Run UI Merge Studio locally to evaluate your own repository.</small></div><EvidenceDrawer selected={selected} /></section>
-    {result === 'combined' && <section className="outcome-panel success-outcome"><header><p className="eyebrow">Committed engine result</p><h2>Combined result</h2><p>Included: Collapsible category sidebar from Branch A and Product quick-view inspector from Branch B. Excluded: Promotional banner and inventory summary.</p></header><CataloguePreview mode="combined" selected={new Set(selected)} /></section>}
-    {result === 'refused' && <section className="outcome-panel refusal-outcome" role="alert"><p className="eyebrow">Stopped before mutation</p><h2>Cannot combine these selections.</h2><p>{recordedRefusal.reason}</p><strong>No candidate was attempted or created.</strong><details><summary>Technical details</summary><p><code>{recordedRefusal.contractPath}#{recordedRefusal.contractSymbol}</code></p><p>{recordedRefusal.manualResolution}</p></details></section>}
-    {result === 'unrecorded' && <section className="outcome-panel unrecorded-outcome" role="status"><h2>No recorded result for this combination.</h2><p>This hosted sample has no recorded engine result for this combination. Run locally to evaluate it.</p></section>}
+    <p className="selection-announcement" role="status" aria-live="polite">{selectionMessage}</p>
+    <section className={`selection-workbench ${showEvidence ? 'evidence-open' : ''}`}><div className="selection-tray"><header><div><strong>Review your selections</strong><small>{selected.length} of 2 required features selected</small></div><button disabled={!selected.length || creationState === 'loading'} onClick={() => { setSelected([]); resetResult(); setSelectionMessage('Selections cleared'); }}>Clear</button></header>{!selected.length ? <p>No features selected yet.</p> : <ul>{selected.map(id => <li key={id}><span><b>{displayName(id)}</b><small>{catalogueEvidence[id].branch}</small></span><button disabled={creationState === 'loading'} onClick={() => toggle(id)} aria-label={`Remove ${displayName(id)}`}>×</button></li>)}</ul>}<p id="combination-guidance" className={complete ? 'combination-guidance ready' : 'combination-guidance'}>{missingGuidance}</p><button className="evaluate-button" aria-describedby="combination-guidance" aria-busy={creationState === 'loading'} disabled={!complete || creationState === 'loading' || creationState === 'success'} onClick={createCombined}>{creationState === 'loading' ? 'Creating combined version…' : creationState === 'success' ? 'Combined version created' : 'Create combined version'}</button>{creationError && <p className="action-error" role="alert">{creationError}</p>}<div className="secondary-actions"><button aria-expanded={showEvidence} aria-controls="technical-evidence" disabled={!selected.length} onClick={() => setShowEvidence(value => !value)}>{showEvidence ? 'Hide technical evidence' : 'View technical evidence'}</button><button aria-expanded={showRefusal} aria-controls="refusal-example" onClick={() => setShowRefusal(value => !value)}>{showRefusal ? 'Hide refusal example' : 'View refusal example'}</button></div><small>This hosted sample replays committed engine results. Run UI Merge Studio locally to evaluate your own repository.</small></div>{showEvidence && <div id="technical-evidence"><EvidenceDrawer selected={selected} /></div>}</section>
+    {result === 'combined' && <section ref={resultRef} tabIndex={-1} className="outcome-panel success-outcome" aria-labelledby="combined-result-heading"><header><p className="eyebrow">Combined version created</p><h2 id="combined-result-heading">Combined result</h2><p className="success-message" role="status" aria-live="polite">Success. Your combined version includes both selected features.</p><p>Included: Category sidebar from Branch A and Product quick view from Branch B. Excluded: Promotional banner and inventory summary.</p></header><CataloguePreview mode="combined" selected={new Set(selected)} /></section>}
+    {showRefusal && <section id="refusal-example" className="outcome-panel refusal-outcome" aria-labelledby="refusal-heading"><p className="eyebrow">Separate refusal example</p><h2 id="refusal-heading">UI Merge Studio refused an unsafe Product-ID combination.</h2><p>Product quick view depends on the existing string-based Product ID contract. The incompatible example replaces that shared contract, so automatic integration would be unsafe.</p><p>{recordedRefusal.reason}</p><strong>No broken candidate branch was generated.</strong><details><summary>View refusal evidence</summary><p><code>{recordedRefusal.contractPath}#{recordedRefusal.contractSymbol}</code></p><p>{recordedRefusal.manualResolution}</p></details></section>}
   </main>;
 }
 

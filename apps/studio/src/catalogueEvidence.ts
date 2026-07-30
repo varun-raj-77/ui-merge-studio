@@ -1,7 +1,7 @@
 import manifestJson from './generated/showcaseRun.json';
 import { validatePublicShowcaseReport } from '../../../packages/showcase-evidence/src/schema';
 
-export type CatalogueFeatureId = 'category-sidebar' | 'promotional-banner' | 'quick-view' | 'inventory-summary';
+export type CatalogueFeatureId = 'category-sidebar' | 'quick-view';
 export type CatalogueBranch = 'Branch A' | 'Branch B';
 export interface CatalogueFeatureEvidence {
   id: CatalogueFeatureId; name: string; branch: CatalogueBranch; declaration: string; sourceFile: string;
@@ -21,19 +21,7 @@ const generatedFeature = (id: 'category-sidebar' | 'quick-view', siblingExclusio
 
 export const catalogueEvidence: Record<CatalogueFeatureId, CatalogueFeatureEvidence> = {
   'category-sidebar': generatedFeature('category-sidebar', 'Promotional banner'),
-  'quick-view': generatedFeature('quick-view', 'Inventory summary'),
-  'promotional-banner': {
-    id:'promotional-banner',name:'Promotional banner',branch:'Branch A',declaration:'PromotionalBanner',
-    sourceFile:'src/features/catalogue/CatalogueHeader.tsx',dependencies:[],
-    inclusionReason:'Visible unrelated Branch A change; no candidate was recorded for selecting it.',
-    siblingExclusion:'Collapsible category sidebar',compatibility:'unrecorded'
-  },
-  'inventory-summary': {
-    id:'inventory-summary',name:'Inventory summary',branch:'Branch B',declaration:'inventorySummary',
-    sourceFile:'src/utils/inventorySummary.ts',dependencies:[],
-    inclusionReason:'Visible unrelated Branch B change; no candidate was recorded for selecting it.',
-    siblingExclusion:'Product quick-view inspector',compatibility:'unrecorded'
-  }
+  'quick-view': generatedFeature('quick-view', 'Inventory summary')
 };
 export const recordedSafePair: CatalogueFeatureId[] = ['category-sidebar','quick-view'];
 export const recordedRefusal = manifest.refusal;

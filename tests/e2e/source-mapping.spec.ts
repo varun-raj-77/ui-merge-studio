@@ -4,6 +4,7 @@ test('replays rendered Product Catalogue selections with generated source eviden
   await page.goto('/?mode=showcase&view=compare');
 
   await page.getByRole('button', { name: 'Select category sidebar' }).click();
+  await page.getByRole('button', { name: 'View technical evidence' }).click();
   const sidebarEvidence = page.locator('.evidence-drawer details').filter({ hasText: 'Collapsible category sidebar' });
   await expect(sidebarEvidence).toContainText('CategorySidebar');
   await expect(sidebarEvidence).toContainText('src/features/catalogue/CategorySidebar.tsx');

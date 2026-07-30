@@ -6,6 +6,7 @@ import './studio.css';
 import './slice.css';
 import './showcase.css';
 import './catalogue-showcase.css';
+import './catalogue-flow.css';
 const query = new URLSearchParams(window.location.search);
 const showcase = query.get('mode') === 'showcase' || (import.meta.env.PROD && query.get('mode') !== 'local');
 createRoot(document.getElementById('root')!).render(<StrictMode>{showcase ? <CatalogueShowcase /> : <App />}</StrictMode>);

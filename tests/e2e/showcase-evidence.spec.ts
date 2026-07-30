@@ -33,7 +33,8 @@ test.describe('Product Catalogue Showcase', () => {
     await page.setViewportSize({ width: 1440, height: 900 }); await page.goto(url); await openComparison(page);
     await expect(page.getByLabel('Baseline product catalogue')).toBeVisible();
     await expect(page.getByLabel('Branch A product catalogue')).toBeVisible();
-    await expect(page.getByText('Nothing selected yet')).toBeVisible();
+    await expect(page.getByText('0 of 2 required features selected')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create combined version' })).toBeDisabled();
     await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/initial-empty.png', fullPage: true });
     const sidebar = page.getByLabel('Branch A product catalogue').getByRole('complementary', { name: 'Category sidebar' });
     await centerInside(sidebar, sidebar.getByRole('button', { name: 'Collapse category sidebar' }));
@@ -44,6 +45,8 @@ test.describe('Product Catalogue Showcase', () => {
     await sidebar.getByRole('button', { name: 'Desk' }).click();
     await expect(page.getByLabel('Branch A product catalogue')).toContainText('2 products');
     await sidebar.getByRole('button', { name: 'Select category sidebar' }).click();
+    await expect(page.getByRole('status')).toContainText('Selected Category sidebar from Branch A');
+    await page.getByRole('button', { name: 'View technical evidence' }).click();
     await expect(page.getByText('src/features/catalogue/CategorySidebar.tsx')).toBeVisible();
     await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/baseline-branch-a-selected.png', fullPage: true });
     await page.getByRole('tab', { name: 'Branch B' }).click();
@@ -59,14 +62,18 @@ test.describe('Product Catalogue Showcase', () => {
     await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/baseline-branch-b-selected.png', fullPage: true });
   });
 
-  test('safe result excludes siblings, incompatible pair refuses, and unrecorded pair is honest', async ({ page }) => {
+  test('safe result is focused and unsupported siblings are prevented', async ({ page }) => {
     await page.goto(url); await openComparison(page);
     await page.getByRole('button', { name: 'Select category sidebar' }).click();
     await page.getByRole('tab', { name: 'Branch B' }).click();
     await page.getByRole('button', { name: 'Select quick-view inspector' }).click();
-    await page.getByRole('button', { name: 'Evaluate selected combination' }).click();
+    const create = page.getByRole('button', { name: 'Create combined version' });
+    await expect(create).toBeEnabled();
+    await create.click();
     await expect(page.getByRole('heading', { name: 'Combined result' })).toBeVisible();
-    await expect(page.getByText(/Excluded: Promotional banner and Newest-first sorting/)).toBeVisible();
+    await expect(page.getByText('Success. Your combined version includes both selected features.')).toBeVisible();
+    await expect(page.getByText(/Excluded: Promotional banner and inventory summary/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Combined result' }).locator('xpath=..').locator('xpath=..')).toBeFocused();
     const combined = page.getByLabel('Combined result product catalogue');
     await combined.getByRole('button', { name: 'Collapse category sidebar' }).click();
     await combined.getByRole('button', { name: 'Expand category sidebar' }).click();
@@ -75,21 +82,17 @@ test.describe('Product Catalogue Showcase', () => {
     await combined.getByRole('button', { name: 'Close quick view' }).click();
     await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/combined-result.png', fullPage: true });
 
-    await page.getByRole('button', { name: 'Clear' }).click();
-    await page.getByRole('tab', { name: 'Branch A' }).click();
-    await page.getByRole('button', { name: 'Select promotional banner' }).click();
-    await page.getByRole('tab', { name: 'Branch B' }).click();
-    await page.getByRole('button', { name: 'Select quick-view inspector' }).click();
-    await page.getByRole('button', { name: 'Evaluate selected combination' }).click();
-    await expect(page.getByRole('alert')).toContainText('product IDs to numbers');
-    await expect(page.getByRole('alert')).toContainText('No candidate was attempted or created');
+    await page.getByRole('button', { name: 'View refusal example' }).click();
+    const refusal = page.locator('#refusal-example');
+    await expect(refusal).toContainText('refused an unsafe Product-ID combination');
+    await expect(refusal).toContainText('No broken candidate branch was generated');
     await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/refusal.png', fullPage: true });
 
     await page.getByRole('button', { name: 'Clear' }).click();
     await page.getByRole('tab', { name: 'Branch A' }).click();
-    await page.getByRole('button', { name: 'Select promotional banner' }).click();
-    await page.getByRole('button', { name: 'Evaluate selected combination' }).click();
-    await expect(page.getByRole('status')).toContainText('no recorded engine result');
+    await expect(page.getByText('Workspace essentials, 20% off')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Select promotional banner' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Create combined version' })).toBeDisabled();
   });
 
   test('mobile comparison remains usable and baseline is one branch-switch action away', async ({ page }) => {
@@ -97,6 +100,11 @@ test.describe('Product Catalogue Showcase', () => {
     await expect(page.getByLabel('Baseline product catalogue')).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Branch A' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Branch B' })).toBeVisible();
+    await page.getByRole('button', { name: 'Select category sidebar' }).click();
+    await page.getByRole('tab', { name: 'Branch B' }).click();
+    await page.getByRole('button', { name: 'Select quick-view inspector' }).click();
+    await page.getByRole('button', { name: 'Create combined version' }).click();
+    await expect(page.getByRole('heading', { name: 'Combined result' })).toBeInViewport();
     await noOverflow(page);
     await page.screenshot({ path: 'docs/evidence/product-catalogue-showcase/mobile-comparison.png', fullPage: true });
   });
