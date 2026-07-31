@@ -12,5 +12,8 @@
 - Search and sort fields are present in the protocol, but the controlled fixture has no real visible search or sort controls, so those fields deliberately fall back to empty search and `featured` sort rather than claiming a UI proof.
 - Scroll transfer uses clamped normalized ratios. It preserves relative position across sufficiently similar layouts but intentionally does not promise exact pixel alignment across structurally different candidates.
 - Capability fallbacks are deterministic and non-blocking, but a repository adapter must provide stable category and product identifiers for meaningful cross-version restoration.
+- Selection capabilities depend on repository or fixture metadata that identifies a safe source boundary. Arbitrary DOM elements are not selectable because visual containment alone cannot prove declaration ownership, dependencies, tests, or safe isolation.
+- The controlled catalogue supports the Category sidebar as a whole feature, each Quick View as an instance, and all five Quick Views as one atomic all-instances action. Category-option subsets are described but deliberately unavailable until a configurable source transform is implemented.
+- Route and page ownership are retained and grouped in the selection dock. Feature relocation is excluded; future multi-route integrations must render each feature only on its original route.
 
 Correct refusal is a product capability, not a failure to be hidden.

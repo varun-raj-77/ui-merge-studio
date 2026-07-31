@@ -14,3 +14,7 @@
 - Let the most recent intentional preview interaction own only the fields it changed; Studio-applied updates never echo as user intent.
 - Negotiate route, viewport, normalized scroll, category, selected product, and Quick View against each preview's declared capabilities, preserving compatible fields and announcing deterministic fallbacks.
 - Reapply the latest context after every preview-ready event and candidate artifact change. Discover rendered Quick View targets inside the repository adapter, not by scraping application DOM from the Studio shell.
+- Describe every selectable visible change with a generic capability level, source branch, original route, page identity, support state, and optional evidence identity; keep Product Catalogue declarations in its adapter.
+- Treat whole features, individual instances, and all-instances actions as different product operations. Expand an all-instances action atomically into existing instance scopes so candidate generation remains unchanged.
+- Retain route and page ownership on integration selections and group the selection dock by that ownership. Features remain on their original routes; UI Merge Studio does not relocate or visually paste cross-route selections together.
+- Represent configurable subsets before execution is available, but refuse them with a plain-language reason until a verified configurable source transform exists.

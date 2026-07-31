@@ -315,6 +315,36 @@ button:focus-visible, a:focus-visible {
 .context-notice p { margin: 0; }
 .context-notice p + p { margin-top: 5px; }
 
+.capability-notice {
+  position: fixed;
+  z-index: 73;
+  top: 64px;
+  right: clamp(12px, 2vw, 26px);
+  width: min(410px, calc(100vw - 24px));
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid #dfc28c;
+  border-radius: 11px;
+  background: #fff9ed;
+  box-shadow: 0 10px 28px #49361517;
+  color: #69440e;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.capability-notice div { flex: 1; }
+.capability-notice p { margin: 2px 0 0; }
+.capability-notice button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+}
+
 .preview-workspace {
   width: min(1600px, 100%);
   display: grid;
@@ -357,6 +387,23 @@ button:focus-visible, a:focus-visible {
 .preview-dot.branch-a { background: #e76f58; }
 .workspace-preview h2 { margin: 0; font-size: 13px; letter-spacing: -.01em; }
 .workspace-preview header p { margin: 2px 0 0; color: var(--cat-muted); font-size: 10px; }
+.preview-capability-actions { justify-content: flex-end; }
+.preview-capability-actions button {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--cat-line-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--cat-ink);
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.preview-capability-actions button:first-child {
+  border-color: #cec7f5;
+  background: var(--cat-accent-soft);
+  color: #4c3eb1;
+}
 .artifact-stage { position: relative; background: #fff; }
 .artifact-stage iframe,
 .combined-stage iframe {
@@ -494,6 +541,21 @@ button:focus-visible, a:focus-visible {
   overflow-x: auto;
   padding: 3px;
   scrollbar-width: thin;
+}
+.selection-route-group {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 4px;
+}
+.selection-route-group > strong {
+  color: #c9c8c0;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .02em;
+}
+.selection-route-group > div {
+  display: flex;
+  gap: 7px;
 }
 
 .history-actions {
@@ -654,7 +716,8 @@ button:focus-visible, a:focus-visible {
 }
 
 .evidence-dialog,
-.conflict-dialog {
+.conflict-dialog,
+.capability-dialog {
   width: min(500px, 100%);
   max-height: min(720px, calc(100vh - 40px));
   overflow: auto;
@@ -666,7 +729,8 @@ button:focus-visible, a:focus-visible {
 }
 
 .evidence-dialog > header,
-.conflict-dialog > header {
+.conflict-dialog > header,
+.capability-dialog > header {
   display: flex;
   align-items: start;
   justify-content: space-between;
@@ -675,7 +739,8 @@ button:focus-visible, a:focus-visible {
 }
 
 .evidence-dialog > header span,
-.conflict-dialog > header span {
+.conflict-dialog > header span,
+.capability-dialog > header span {
   color: var(--cat-accent);
   font-size: 9px;
   font-weight: 850;
@@ -685,9 +750,11 @@ button:focus-visible, a:focus-visible {
 
 .conflict-dialog > header span { color: var(--cat-danger); }
 .evidence-dialog h2,
-.conflict-dialog h2 { margin: 4px 0 0; font-size: 23px; letter-spacing: -.035em; }
+.conflict-dialog h2,
+.capability-dialog h2 { margin: 4px 0 0; font-size: 23px; letter-spacing: -.035em; }
 .evidence-dialog > header button,
-.conflict-dialog > header button {
+.conflict-dialog > header button,
+.capability-dialog > header button {
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
@@ -696,6 +763,41 @@ button:focus-visible, a:focus-visible {
   background: #fff;
   font-size: 19px;
   cursor: pointer;
+}
+
+.capability-dialog dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.capability-dialog dl > div,
+.capability-dialog > section {
+  padding: 11px 12px;
+  border: 1px solid var(--cat-line);
+  border-radius: 10px;
+  background: #faf9f5;
+}
+.capability-dialog dt {
+  color: var(--cat-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.capability-dialog dd,
+.capability-dialog > section p {
+  margin: 3px 0 0;
+  color: var(--cat-ink);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.capability-dialog > section { margin-top: 9px; }
+.capability-dialog > section strong { font-size: 11px; }
+.capability-dialog .capability-unavailable {
+  border-color: #dfc28c;
+  background: #fff9ed;
+  color: #69440e;
 }
 
 .evidence-tabs {
@@ -872,7 +974,14 @@ button:focus-visible, a:focus-visible {
   .workspace-heading { padding: 18px 12px 10px; }
   .workspace-heading h1 { font-size: 27px; }
   .workspace-heading p { font-size: 10px; }
-  .context-notice {
+  .workspace-preview > header { flex-wrap: wrap; gap: 8px; }
+  .preview-capability-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .preview-capability-actions button:first-child { flex: 1; }
+  .context-notice,
+  .capability-notice {
     top: auto;
     right: 10px;
     bottom: 76px;
@@ -949,6 +1058,11 @@ button:focus-visible, a:focus-visible {
     width: min(360px, calc(100vw - 16px));
   }
   .selection-chip { width: 100%; }
+  .selection-route-group { width: 100%; }
+  .selection-route-group > div {
+    flex-direction: column;
+    width: 100%;
+  }
   .selection-chip > span:first-child { flex: 1; }
   .clear-selections { grid-column: 1; }
   .view-combined,
@@ -956,11 +1070,13 @@ button:focus-visible, a:focus-visible {
 
   .modal-backdrop { align-items: end; padding: 0; }
   .evidence-dialog,
-  .conflict-dialog {
+  .conflict-dialog,
+  .capability-dialog {
     width: 100%;
     max-height: 84vh;
     border-radius: 19px 19px 0 0;
   }
+  .capability-dialog dl { grid-template-columns: 1fr; }
   .dependency-groups { grid-template-columns: 1fr; }
   .conflict-dialog footer { align-items: stretch; flex-direction: column-reverse; }
 }

@@ -3,14 +3,26 @@ import type { PublicArtifact, PublicCandidate } from '../../../packages/showcase
 import { catalogueManifest, evidenceForScope, recordedRefusal, resolveCatalogueCandidate } from './catalogueEvidence';
 import { catalogueProduct } from './catalogueProducts';
 import {
+  catalogueCapabilityForScope,
+  catalogueCapabilityFromRuntime,
+  catalogueScopesForCapability,
+  catalogueSelectionCapabilities,
+  quickViewAllCapabilityId,
+  type CatalogueSourceBranch
+} from './catalogueSelectionCapabilities';
+import {
   candidateKey,
   emptyShowcaseSelection,
   hasQuickViewSelection,
-  scopeFromRuntime,
+  scopeIdentityKey,
   scopeKey,
   showcaseSelectionReducer,
   type ShowcaseScope
 } from './showcaseSelection';
+import {
+  selectionCapabilityCompatibility,
+  type SelectionCapability
+} from './selectionCapability';
 import {
   initialSelectionHistory,
   selectionHistoryReducer,
@@ -74,21 +86,31 @@ interface ArtifactFrameProps {
   selectedScopes: string[];
   selectionEnabled?: boolean;
   visibilitySignal?: boolean;
-  onToggle?: (scope: string) => void;
+  resolveCapability?: (scope: string, visibleLabel: string) => SelectionCapability<CatalogueSourceBranch>;
+  onToggle?: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
+  onUnsupportedCapability?: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
+  onDetailsCapability?: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
   onHistoryShortcut?: (action: 'undo' | 'redo') => void;
   onContextMessage: (message: PreviewContextMessage) => void;
 }
 
-function contextualControlLabel(scope: string, selected: boolean) {
+function contextualControlLabel(capability: SelectionCapability, selected: boolean) {
+  if (!capability.supported) return 'Why unavailable';
   if (selected) return 'Added';
-  return scope === 'category-sidebar' ? 'Add sidebar' : 'Add Quick View';
+  if (capability.kind === 'whole-feature') return 'Add sidebar';
+  if (capability.kind === 'all-instances') return 'Add all';
+  if (capability.kind === 'configurable-subset') return 'Configure';
+  return 'Add Quick View';
 }
 
 function installContextualControls(
   frame: HTMLIFrameElement | null,
   enabled: boolean,
   selectedScopes: string[],
-  onToggle?: (scope: string) => void
+  resolveCapability?: (scope: string, visibleLabel: string) => SelectionCapability<CatalogueSourceBranch>,
+  onToggle?: (capability: SelectionCapability<CatalogueSourceBranch>) => void,
+  onUnsupportedCapability?: (capability: SelectionCapability<CatalogueSourceBranch>) => void,
+  onDetailsCapability?: (capability: SelectionCapability<CatalogueSourceBranch>) => void
 ) {
   const document = frame?.contentDocument;
   if (!document?.body) return;
@@ -104,7 +126,6 @@ function installContextualControls(
         overflow: hidden; pointer-events: none;
       }
       .ums-context-add {
-        position: fixed;
         display: inline-flex; align-items: center; gap: 5px;
         min-height: 30px; padding: 6px 9px;
         border: 1px solid #34342f; border-radius: 9px;
@@ -114,6 +135,17 @@ function installContextualControls(
         opacity: .9; pointer-events: auto; cursor: pointer;
         transition: opacity 180ms ease, transform 180ms ease;
       }
+      .ums-context-control-group {
+        position: fixed; display: flex; gap: 5px;
+        pointer-events: auto;
+      }
+      .ums-context-details {
+        min-height: 30px; padding: 6px 8px;
+        border: 1px solid #34342f; border-radius: 9px;
+        background: #fff; color: #34342f;
+        font: 800 10px/1 system-ui, sans-serif;
+        cursor: pointer;
+      }
       .ums-context-add:hover, .ums-context-add:focus-visible { opacity: 1; transform: translateY(-1px); }
       [data-ums-scope][data-ums-selected] {
         outline: 2px solid #715ee8; outline-offset: 3px;
@@ -121,6 +153,9 @@ function installContextualControls(
       }
       .ums-context-add[data-selected] {
         border-color: #715ee8; background: #715ee8;
+      }
+      .ums-context-add[data-unsupported] {
+        border-color: #9a6b29; background: #fff8e9; color: #69440e;
       }
       .ums-context-add:focus-visible { outline: 3px solid #d8f27a; outline-offset: 2px; }
       @media (prefers-reduced-motion: reduce) {
@@ -149,40 +184,75 @@ function installContextualControls(
   document.querySelectorAll<HTMLElement>('[data-ums-scope]').forEach(element => {
     const scope = element.dataset.umsScope;
     if (!scope) return;
+    const visibleLabel = element.dataset.umsLabel ?? scope;
+    const capability = resolveCapability?.(scope, visibleLabel);
+    if (!capability) return;
     activeScopes.add(scope);
     element.toggleAttribute('data-ums-selected', selected.has(scope));
-    let control = layer!.querySelector<HTMLButtonElement>(`.ums-context-add[data-scope="${CSS.escape(scope)}"]`);
+    let group = layer!.querySelector<HTMLElement>(`.ums-context-control-group[data-scope="${CSS.escape(scope)}"]`);
+    if (!group) {
+      group = document.createElement('div');
+      group.className = 'ums-context-control-group';
+      group.dataset.scope = scope;
+      layer!.append(group);
+    }
+    let control = group.querySelector<HTMLButtonElement>('.ums-context-add');
     if (!control) {
       control = document.createElement('button');
       control.type = 'button';
       control.className = 'ums-context-add';
       control.dataset.scope = scope;
-      layer!.append(control);
+      group.append(control);
+    }
+    let details = group.querySelector<HTMLButtonElement>('.ums-context-details');
+    if (!details) {
+      details = document.createElement('button');
+      details.type = 'button';
+      details.className = 'ums-context-details';
+      details.textContent = 'Details';
+      group.append(details);
     }
     const isSelected = selected.has(scope);
-    const text = `${isSelected ? '✓' : '+'} ${contextualControlLabel(scope, isSelected)}`;
+    const text = `${isSelected ? '✓' : capability.supported ? '+' : 'i'} ${contextualControlLabel(capability, isSelected)}`;
     if (control.textContent !== text) control.textContent = text;
+    control.dataset.capabilityKind = capability.kind;
+    control.dataset.pageId = capability.pageId;
+    control.dataset.route = capability.route;
     control.toggleAttribute('data-selected', isSelected);
-    control.setAttribute('aria-label', `${isSelected ? 'Remove' : 'Add'} ${element.dataset.umsLabel ?? scope}`);
+    control.toggleAttribute('data-unsupported', !capability.supported);
+    control.setAttribute(
+      'aria-label',
+      capability.supported
+        ? `${isSelected ? 'Remove' : 'Add'} ${visibleLabel}`
+        : `${capability.label} unavailable: ${capability.unsupportedReason}`
+    );
+    control.title = capability.supported ? capability.label : capability.unsupportedReason ?? '';
     const rect = element.getBoundingClientRect();
     const frameWidth = document.defaultView?.innerWidth ?? 0;
     const frameHeight = document.defaultView?.innerHeight ?? 0;
-    const offset = scope === 'category-sidebar' ? 126 : 112;
-    control.style.top = `${Math.max(8, rect.top + 9)}px`;
-    control.style.left = `${Math.max(8, Math.min(frameWidth - offset, rect.right - offset))}px`;
-    control.hidden = rect.bottom < 0 || rect.top > frameHeight;
+    const offset = capability.kind === 'whole-feature' ? 196 : 182;
+    group.style.top = `${Math.max(8, rect.top + 9)}px`;
+    group.style.left = `${Math.max(8, Math.min(frameWidth - offset, rect.right - offset))}px`;
+    group.hidden = rect.bottom < 0 || rect.top > frameHeight;
     control.onclick = event => {
       event.preventDefault();
       event.stopPropagation();
-      onToggle?.(scope);
+      if (capability.supported) onToggle?.(capability);
+      else onUnsupportedCapability?.(capability);
+    };
+    details.setAttribute('aria-label', `Details for ${capability.label}`);
+    details.onclick = event => {
+      event.preventDefault();
+      event.stopPropagation();
+      onDetailsCapability?.(capability);
     };
   });
-  layer?.querySelectorAll<HTMLButtonElement>('.ums-context-add').forEach(control => {
-    if (!activeScopes.has(control.dataset.scope ?? '')) control.remove();
+  layer?.querySelectorAll<HTMLElement>('.ums-context-control-group').forEach(group => {
+    if (!activeScopes.has(group.dataset.scope ?? '')) group.remove();
   });
   const reposition = () => {
-    layer?.querySelectorAll<HTMLButtonElement>('.ums-context-add').forEach(control => {
-      const scope = control.dataset.scope;
+    layer?.querySelectorAll<HTMLElement>('.ums-context-control-group').forEach(group => {
+      const scope = group.dataset.scope;
       const element = scope
         ? document.querySelector<HTMLElement>(`[data-ums-scope="${CSS.escape(scope)}"]`)
         : null;
@@ -190,10 +260,10 @@ function installContextualControls(
       const rect = element.getBoundingClientRect();
       const frameWidth = document.defaultView?.innerWidth ?? 0;
       const frameHeight = document.defaultView?.innerHeight ?? 0;
-      const offset = scope === 'category-sidebar' ? 126 : 112;
-      control.style.top = `${Math.max(8, rect.top + 9)}px`;
-      control.style.left = `${Math.max(8, Math.min(frameWidth - offset, rect.right - offset))}px`;
-      control.hidden = rect.bottom < 0 || rect.top > frameHeight;
+      const offset = scope === 'category-sidebar' ? 196 : 182;
+      group.style.top = `${Math.max(8, rect.top + 9)}px`;
+      group.style.left = `${Math.max(8, Math.min(frameWidth - offset, rect.right - offset))}px`;
+      group.hidden = rect.bottom < 0 || rect.top > frameHeight;
     });
   };
   (layer as HTMLElement & { __umsReposition?: () => void }).__umsReposition = reposition;
@@ -217,20 +287,29 @@ function ArtifactFrame({
   selectedScopes,
   selectionEnabled = false,
   visibilitySignal,
+  resolveCapability,
   onToggle,
+  onUnsupportedCapability,
+  onDetailsCapability,
   onHistoryShortcut,
   onContextMessage
 }: ArtifactFrameProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const scopeObserver = useRef<MutationObserver | null>(null);
   const shortcutCleanup = useRef<(() => void) | null>(null);
+  const resolveCapabilityRef = useRef(resolveCapability);
   const toggleRef = useRef(onToggle);
+  const unsupportedCapabilityRef = useRef(onUnsupportedCapability);
+  const detailsCapabilityRef = useRef(onDetailsCapability);
   const historyShortcutRef = useRef(onHistoryShortcut);
   const contextMessageRef = useRef(onContextMessage);
   const contextRef = useRef(context);
   const selectedScopesRef = useRef(selectedScopes);
   const applySequence = useRef(0);
+  resolveCapabilityRef.current = resolveCapability;
   toggleRef.current = onToggle;
+  unsupportedCapabilityRef.current = onUnsupportedCapability;
+  detailsCapabilityRef.current = onDetailsCapability;
   historyShortcutRef.current = onHistoryShortcut;
   contextMessageRef.current = onContextMessage;
   contextRef.current = context;
@@ -242,7 +321,16 @@ function ArtifactFrame({
       showChanges: false,
       selectedScopes
     }, location.origin);
-    installContextualControls(frame.current, selectionEnabled, selectedScopes, scope => toggleRef.current?.(scope));
+    installContextualControls(
+      frame.current,
+      selectionEnabled,
+      selectedScopes,
+      (scope, label) => resolveCapabilityRef.current?.(scope, label)
+        ?? catalogueCapabilityFromRuntime(scope, 'branch-a', label),
+      capability => toggleRef.current?.(capability),
+      capability => unsupportedCapabilityRef.current?.(capability),
+      capability => detailsCapabilityRef.current?.(capability)
+    );
   };
   const postContext = () => {
     applySequence.current += 1;
@@ -269,7 +357,16 @@ function ArtifactFrame({
     }
     if (selectionEnabled && body) {
       scopeObserver.current = new MutationObserver(() => {
-        installContextualControls(frame.current, true, selectedScopesRef.current, scope => toggleRef.current?.(scope));
+        installContextualControls(
+          frame.current,
+          true,
+          selectedScopesRef.current,
+          (scope, label) => resolveCapabilityRef.current?.(scope, label)
+            ?? catalogueCapabilityFromRuntime(scope, 'branch-a', label),
+          capability => toggleRef.current?.(capability),
+          capability => unsupportedCapabilityRef.current?.(capability),
+          capability => detailsCapabilityRef.current?.(capability)
+        );
       });
       scopeObserver.current.observe(body, { childList: true, subtree: true });
     }
@@ -326,6 +423,15 @@ function ArtifactFrame({
 function scopeLabel(scope: ShowcaseScope) {
   if (scope.kind === 'feature') return 'Category sidebar';
   return `Quick View · ${catalogueProduct(scope.instanceId)?.name ?? scope.instanceId}`;
+}
+
+function pageLabel(pageId: string) {
+  if (pageId === 'product-catalogue') return 'Catalogue';
+  return pageId
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 function useDialogFocus(close: () => void, opener?: RefObject<HTMLElement | null>) {
@@ -427,6 +533,65 @@ function EvidenceDialog({ scope, candidate, opener, close }: {
   </div>;
 }
 
+function capabilityKindLabel(kind: SelectionCapability['kind']) {
+  if (kind === 'whole-feature') return 'Whole feature';
+  if (kind === 'feature-instance') return 'Feature instance';
+  if (kind === 'all-instances') return 'All instances';
+  if (kind === 'configurable-subset') return 'Configurable subset';
+  return 'Unsupported selection';
+}
+
+function capabilityTargetLabels(capability: SelectionCapability) {
+  return (capability.targetIds ?? []).map(id => (
+    catalogueProduct(id)?.name ?? id.charAt(0).toUpperCase() + id.slice(1)
+  ));
+}
+
+function CapabilityDetailsDialog({
+  capability,
+  close
+}: {
+  capability: SelectionCapability<CatalogueSourceBranch>;
+  close: () => void;
+}) {
+  const dialog = useDialogFocus(close);
+  const targets = capabilityTargetLabels(capability);
+  const configurableChild: SelectionCapability | undefined = catalogueSelectionCapabilities.find(item => (
+    item.parentCapabilityId === capability.id && item.kind === 'configurable-subset'
+  ));
+  return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
+    <section ref={dialog} className="capability-dialog" role="dialog" aria-modal="true" aria-labelledby="capability-title">
+      <header>
+        <div><span>Selection details</span><h2 id="capability-title">{capability.label}</h2></div>
+        <button onClick={close} aria-label="Close selection details">×</button>
+      </header>
+      <dl>
+        <div><dt>Selection level</dt><dd>{capabilityKindLabel(capability.kind)}</dd></div>
+        <div><dt>Source branch</dt><dd>{capability.sourceBranch === 'branch-a' ? 'Version A' : 'Version B'}</dd></div>
+        <div><dt>Original route</dt><dd>{capability.route}</dd></div>
+        <div><dt>Workspace</dt><dd>{capability.pageId}</dd></div>
+        <div><dt>Availability</dt><dd>{capability.supported ? 'Supported' : 'Not available yet'}</dd></div>
+      </dl>
+      <section>
+        <strong>What will be included</strong>
+        <p>{targets.length > 0
+          ? targets.join(', ')
+          : capability.kind === 'whole-feature'
+            ? 'The complete visible feature and its verified dependencies.'
+            : 'No independently executable selection is available.'}</p>
+      </section>
+      {!capability.supported && <section className="capability-unavailable">
+        <strong>Why it cannot be added</strong>
+        <p>{capability.unsupportedReason}</p>
+      </section>}
+      {configurableChild && <section className="capability-unavailable">
+        <strong>{configurableChild.label} · Not available yet</strong>
+        <p>{configurableChild.unsupportedReason}</p>
+      </section>}
+    </section>
+  </div>;
+}
+
 function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }: {
   quickCount: number;
   close: () => void;
@@ -456,7 +621,7 @@ function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }:
   </div>;
 }
 
-function PreviewPanel({ preview, title, subtitle, artifact, active, context, selectedScopes, onToggle, onHistoryShortcut, onContextMessage }: {
+function PreviewPanel({ preview, title, subtitle, artifact, active, context, selectedScopes, onToggle, onUnsupportedCapability, onDetailsCapability, onHistoryShortcut, onContextMessage }: {
   preview: ComparisonPreview;
   title: string;
   subtitle: string;
@@ -464,12 +629,26 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, sel
   active: boolean;
   context: PreviewContext;
   selectedScopes: string[];
-  onToggle: (scope: string) => void;
+  onToggle: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
+  onUnsupportedCapability: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
+  onDetailsCapability: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
   onHistoryShortcut: (action: 'undo' | 'redo') => void;
   onContextMessage: (message: PreviewContextMessage) => void;
 }) {
+  const bulkCapability = preview === 'branch-b'
+    ? catalogueCapabilityFromRuntime(quickViewAllCapabilityId, 'branch-b')
+    : null;
+  const bulkSelected = selectedScopes.includes(quickViewAllCapabilityId);
   return <article className={`workspace-preview ${active ? 'mobile-active' : ''}`} data-view={preview}>
-    <header><div><span className={`preview-dot ${preview}`} /><div><h2>{title}</h2><p>{subtitle}</p></div></div></header>
+    <header>
+      <div><span className={`preview-dot ${preview}`} /><div><h2>{title}</h2><p>{subtitle}</p></div></div>
+      {bulkCapability && <div className="preview-capability-actions">
+        <button onClick={() => onToggle(bulkCapability)}>
+          {bulkSelected ? 'Remove Quick View from all products' : 'Add Quick View to all products'}
+        </button>
+        <button onClick={() => onDetailsCapability(bulkCapability)}>Details</button>
+      </div>}
+    </header>
     <div className="artifact-stage">
       <ArtifactFrame
         artifact={artifact}
@@ -479,7 +658,10 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, sel
         selectedScopes={selectedScopes}
         selectionEnabled
         visibilitySignal={active}
+        resolveCapability={(scope, label) => catalogueCapabilityFromRuntime(scope, preview, label)}
         onToggle={onToggle}
+        onUnsupportedCapability={onUnsupportedCapability}
+        onDetailsCapability={onDetailsCapability}
         onHistoryShortcut={onHistoryShortcut}
         onContextMessage={onContextMessage}
       />
@@ -518,14 +700,19 @@ function Comparison({ exit }: { exit: () => void }) {
   const [showConflict, setShowConflict] = useState(false);
   const [showConflictEvidence, setShowConflictEvidence] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [capabilityNotice, setCapabilityNotice] = useState<SelectionCapability<CatalogueSourceBranch> | null>(null);
+  const [detailsCapability, setDetailsCapability] = useState<SelectionCapability<CatalogueSourceBranch> | null>(null);
   const evidenceOpener = useRef<HTMLElement | null>(null);
   const lastContextRevision = useRef<Record<string, number>>({});
   const desiredKey = candidateKey(selection);
   const refused = selection.incompatibleProductId && hasQuickViewSelection(selection);
-  const selectedScopeKeys = selection.scopes.map(scopeKey);
   const branchAArtifact = catalogueManifest.artifacts.find(item => item.kind === 'branch-a')!;
   const branchBArtifact = catalogueManifest.artifacts.find(item => item.kind === 'branch-b')!;
   const quickCount = selection.scopes.filter(scope => scope.featureId === 'product-quick-view').length;
+  const selectedScopeKeys = [
+    ...selection.scopes.map(scopeKey),
+    ...(quickCount === catalogueManifest.productIds.length ? [quickViewAllCapabilityId] : [])
+  ];
   const selectionCount = selection.scopes.length + (selection.incompatibleProductId ? 1 : 0);
 
   function performHistoryAction(action: 'undo' | 'redo') {
@@ -606,24 +793,66 @@ function Comparison({ exit }: { exit: () => void }) {
     }
     commitSelection(next, `Removed ${scopeLabel(scope)}`, true);
   };
-  const toggleRuntimeScope = (branch: ComparisonPreview, raw: string) => {
-    const scope = scopeFromRuntime(raw, catalogueManifest.productIds);
-    if (!scope || scope.branch !== branch) return;
-    const alreadySelected = selection.scopes.some(item => scopeKey(item) === scopeKey(scope));
-    const removingLastQuickView = scope.featureId === 'product-quick-view'
-      && alreadySelected
-      && quickCount === 1;
-    let next = showcaseSelectionReducer(selection, { type: 'toggle-scope', scope });
+  const toggleCapability = (
+    branch: CatalogueSourceBranch,
+    capability: SelectionCapability<CatalogueSourceBranch>
+  ) => {
+    if (!capability.supported || capability.sourceBranch !== branch) {
+      setCapabilityNotice(capability);
+      return;
+    }
+    const scopes = catalogueScopesForCapability(capability);
+    if (scopes.length === 0) {
+      setCapabilityNotice({
+        ...capability,
+        kind: 'unsupported',
+        supported: false,
+        unsupportedReason: `${capability.label} has no verified source selection.`
+      });
+      return;
+    }
+    const alreadySelected = scopes.every(scope => (
+      selection.scopes.some(item => scopeIdentityKey(item) === scopeIdentityKey(scope))
+    ));
+    if (!alreadySelected) {
+      const compatibility = selectionCapabilityCompatibility([
+        ...selection.scopes.map(catalogueCapabilityForScope),
+        capability
+      ]);
+      if (!compatibility.compatible) {
+        setCapabilityNotice({
+          ...capability,
+          kind: 'unsupported',
+          supported: false,
+          unsupportedReason: compatibility.reason
+        });
+        return;
+      }
+    }
+    let next = selection;
+    for (const scope of scopes) {
+      const contains = next.scopes.some(item => scopeIdentityKey(item) === scopeIdentityKey(scope));
+      if (alreadySelected || !contains) {
+        next = showcaseSelectionReducer(
+          next,
+          { type: alreadySelected ? 'remove-scope' : 'toggle-scope', scope }
+        );
+      }
+    }
     if (!alreadySelected && window.innerWidth <= 700) {
       setDockExpanded(false);
     }
-    if (removingLastQuickView && selection.incompatibleProductId) {
+    if (alreadySelected && !hasQuickViewSelection(next) && selection.incompatibleProductId) {
       next = showcaseSelectionReducer(next, { type: 'toggle-incompatible' });
       setShowConflict(false);
     }
+    setCapabilityNotice(null);
+    const historySubject = capability.id === quickViewAllCapabilityId
+      ? 'Quick View to all products'
+      : capability.label;
     commitSelection(
       next,
-      `${alreadySelected ? 'Removed' : 'Added'} ${scopeLabel(scope)}`,
+      `${alreadySelected ? 'Removed' : 'Added'} ${historySubject}`,
       alreadySelected
     );
   };
@@ -684,6 +913,16 @@ function Comparison({ exit }: { exit: () => void }) {
     }));
   };
   const scopeSummary = useMemo(() => selection.scopes.map(scopeLabel), [selection.scopes]);
+  const selectionRouteGroups = useMemo(() => {
+    const groups = new Map<string, { route: string; pageId: string; scopes: ShowcaseScope[] }>();
+    for (const scope of selection.scopes) {
+      const key = `${scope.pageId}\u0000${scope.route}`;
+      const group = groups.get(key);
+      if (group) group.scopes.push(scope);
+      else groups.set(key, { route: scope.route, pageId: scope.pageId, scopes: [scope] });
+    }
+    return [...groups.values()].sort((left, right) => left.route.localeCompare(right.route));
+  }, [selection.scopes]);
   const historyLabels = selectionHistory.past.slice(-6).reverse();
   const activeContextNotices = workspaceState === 'combined'
     ? contextNotices.combined ?? []
@@ -723,8 +962,8 @@ function Comparison({ exit }: { exit: () => void }) {
         <button aria-pressed={mobilePreview === 'branch-b'} onClick={() => setMobilePreview('branch-b')}>Version B</button>
       </nav>
       <section className="preview-workspace">
-        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={scope => toggleRuntimeScope('branch-a', scope)} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
-        <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={scope => toggleRuntimeScope('branch-b', scope)} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-b', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
       </section>
     </section>
     <section className="result-workspace" hidden={workspaceState !== 'combined'}>
@@ -742,18 +981,30 @@ function Comparison({ exit }: { exit: () => void }) {
     {activeContextNotices.length > 0 && <aside className="context-notice" role="status" aria-live="polite">
       {activeContextNotices.map(notice => <p key={`${notice.code}:${notice.message}`}>{notice.message}</p>)}
     </aside>}
+    {capabilityNotice && <aside className="capability-notice" role="status" aria-live="polite">
+      <div>
+        <strong>{capabilityNotice.label} cannot be selected independently.</strong>
+        <p>{capabilityNotice.unsupportedReason}</p>
+      </div>
+      <button onClick={() => setCapabilityNotice(null)} aria-label="Dismiss selection explanation">×</button>
+    </aside>}
 
     {(selectionCount > 0 || selectionHistory.past.length > 0 || selectionHistory.future.length > 0) && <aside className={`selection-dock ${dockExpanded ? 'expanded' : 'collapsed'} ${refused ? 'has-conflict' : ''}`} aria-label="Current selections">
       <button className="dock-toggle" onClick={() => setDockExpanded(value => !value)} aria-expanded={dockExpanded}>
         <strong>{selectionCount} selection{selectionCount === 1 ? '' : 's'}</strong><span>{dockExpanded ? 'Minimize' : 'Review'}</span>
       </button>
       <div className="selection-chips">
-        {selection.scopes.map(scope => <SelectionChip key={scopeKey(scope)} scope={scope} openEvidence={openEvidence} remove={removeScope} />)}
-        {selection.incompatibleProductId && <span className="selection-chip conflict-chip">
-          <span>Product-ID change <b>Conflict</b></span>
-          <button onClick={() => setShowConflict(true)} aria-label="Evidence for Product-ID conflict">i</button>
-          <button onClick={removeIncompatible} aria-label="Remove incompatible Product-ID change">×</button>
-        </span>}
+        {selectionRouteGroups.map(group => <section className="selection-route-group" key={`${group.pageId}:${group.route}`}>
+          <strong>{pageLabel(group.pageId)} · {group.route}</strong>
+          <div>
+            {group.scopes.map(scope => <SelectionChip key={scopeIdentityKey(scope)} scope={scope} openEvidence={openEvidence} remove={removeScope} />)}
+            {selection.incompatibleProductId && <span className="selection-chip conflict-chip">
+              <span>Product-ID change <b>Conflict</b></span>
+              <button onClick={() => setShowConflict(true)} aria-label="Evidence for Product-ID conflict">i</button>
+              <button onClick={removeIncompatible} aria-label="Remove incompatible Product-ID change">×</button>
+            </span>}
+          </div>
+        </section>)}
       </div>
       <div className="history-actions" aria-label="Selection history controls">
         <button
@@ -795,6 +1046,7 @@ function Comparison({ exit }: { exit: () => void }) {
       {selectionHistory.announcement || (refused ? 'Cannot combine the selected Product-ID change with Quick View. Safe selections are preserved.' : `${selectionCount} selections. ${candidateStatus === 'resolving' ? 'Updating combined result.' : 'Result ready.'}`)}
     </p>
     {evidenceScope && <EvidenceDialog scope={evidenceScope} candidate={candidate} opener={evidenceOpener} close={() => setEvidenceScope(null)} />}
+    {detailsCapability && <CapabilityDetailsDialog capability={detailsCapability} close={() => setDetailsCapability(null)} />}
     {showConflict && <ConflictDialog quickCount={quickCount} close={() => setShowConflict(false)} remove={removeIncompatible} inspect={() => setShowConflictEvidence(value => !value)} showingEvidence={showConflictEvidence} />}
   </main>;
 }

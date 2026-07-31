@@ -163,7 +163,14 @@ describe('shared preview context protocol', () => {
   it('does not alter candidate keys or integration selections when only context changes', () => {
     const selected = showcaseSelectionReducer(emptyShowcaseSelection, {
       type: 'toggle-scope',
-      scope: { kind: 'feature', featureId: 'category-sidebar', branch: 'branch-a' }
+      scope: {
+        kind: 'feature',
+        featureId: 'category-sidebar',
+        branch: 'branch-a',
+        capabilityId: 'category-sidebar',
+        route: '/catalogue',
+        pageId: 'product-catalogue'
+      }
     });
     const before = candidateKey(selected);
     const context = withContext({ categoryId: 'desk', selectedProductId: 'p-105' });

@@ -16,23 +16,37 @@ import {
   acceptIntentionalContext,
   defaultPreviewContext
 } from '../../apps/studio/src/previewContext';
+import {
+  catalogueCapabilityFromRuntime,
+  catalogueScopesForCapability,
+  quickViewAllCapabilityId
+} from '../../apps/studio/src/catalogueSelectionCapabilities';
 
 const sidebar: ShowcaseScope = {
   kind: 'feature',
   featureId: 'category-sidebar',
-  branch: 'branch-a'
+  branch: 'branch-a',
+  capabilityId: 'category-sidebar',
+  route: '/catalogue',
+  pageId: 'product-catalogue'
 };
 const deskStand: ShowcaseScope = {
   kind: 'feature-instance',
   featureId: 'product-quick-view',
   branch: 'branch-b',
-  instanceId: 'p-105'
+  instanceId: 'p-105',
+  capabilityId: 'product-quick-view:p-105',
+  route: '/catalogue',
+  pageId: 'product-catalogue'
 };
 const taskLamp: ShowcaseScope = {
   kind: 'feature-instance',
   featureId: 'product-quick-view',
   branch: 'branch-b',
-  instanceId: 'p-103'
+  instanceId: 'p-103',
+  capabilityId: 'product-quick-view:p-103',
+  route: '/catalogue',
+  pageId: 'product-catalogue'
 };
 
 function reduceSelection(
@@ -195,6 +209,30 @@ describe('selection history', () => {
     const cleared = commit(added, emptyShowcaseSelection, 'Cleared 3 selections');
     const restored = selectionHistoryReducer(cleared, { type: 'undo' });
     expect(candidateKey(restored.present)).toBe(candidateKey(firstSelection));
+  });
+
+  it('undoes and redoes the all-instances capability as one atomic history action', () => {
+    const allQuickViews = catalogueScopesForCapability(
+      catalogueCapabilityFromRuntime(quickViewAllCapabilityId, 'branch-b')
+    ).reduce(
+      (state, scope) => reduceSelection(state, { type: 'toggle-scope', scope }),
+      emptyShowcaseSelection
+    );
+    const added = commit(
+      initialSelectionHistory,
+      allQuickViews,
+      'Added Quick View to all products'
+    );
+    expect(added.past).toHaveLength(1);
+    expect(added.present.scopes).toHaveLength(5);
+
+    const undone = selectionHistoryReducer(added, { type: 'undo' });
+    expect(undone.present).toEqual(emptyShowcaseSelection);
+    expect(undone.future).toHaveLength(1);
+
+    const redone = selectionHistoryReducer(undone, { type: 'redo' });
+    expect(redone.present.scopes).toHaveLength(5);
+    expect(candidateKey(redone.present)).toBe(candidateKey(allQuickViews));
   });
 });
 

@@ -8,9 +8,10 @@ import {
   type ShowcaseScope
 } from '../../apps/studio/src/showcaseSelection';
 
-const sidebar: ShowcaseScope = { kind: 'feature', featureId: 'category-sidebar', branch: 'branch-a' };
-const p102: ShowcaseScope = { kind: 'feature-instance', featureId: 'product-quick-view', branch: 'branch-b', instanceId: 'p-102' };
-const p104: ShowcaseScope = { kind: 'feature-instance', featureId: 'product-quick-view', branch: 'branch-b', instanceId: 'p-104' };
+const catalogueOwnership = { route: '/catalogue', pageId: 'product-catalogue' } as const;
+const sidebar: ShowcaseScope = { kind: 'feature', featureId: 'category-sidebar', branch: 'branch-a', capabilityId: 'category-sidebar', ...catalogueOwnership };
+const p102: ShowcaseScope = { kind: 'feature-instance', featureId: 'product-quick-view', branch: 'branch-b', instanceId: 'p-102', capabilityId: 'product-quick-view:p-102', ...catalogueOwnership };
+const p104: ShowcaseScope = { kind: 'feature-instance', featureId: 'product-quick-view', branch: 'branch-b', instanceId: 'p-104', capabilityId: 'product-quick-view:p-104', ...catalogueOwnership };
 
 function select(scopes: ShowcaseScope[]) {
   return scopes.reduce((state, scope) => showcaseSelectionReducer(state, { type: 'toggle-scope', scope }), emptyShowcaseSelection);

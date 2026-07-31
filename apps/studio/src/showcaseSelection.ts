@@ -1,9 +1,20 @@
 import { canonicalSelectionKey } from '../../../packages/showcase-evidence/src/schema';
+import {
+  catalogueCapabilityFromRuntime,
+  catalogueScopesForCapability
+} from './catalogueSelectionCapabilities';
 import type { CatalogueProductId } from './catalogueProducts';
 
-export type ShowcaseScope =
+interface ShowcaseScopeOwnership {
+  capabilityId: string;
+  route: string;
+  pageId: string;
+}
+
+export type ShowcaseScope = ShowcaseScopeOwnership & (
   | { kind: 'feature'; featureId: 'category-sidebar'; branch: 'branch-a' }
-  | { kind: 'feature-instance'; featureId: 'product-quick-view'; branch: 'branch-b'; instanceId: CatalogueProductId };
+  | { kind: 'feature-instance'; featureId: 'product-quick-view'; branch: 'branch-b'; instanceId: CatalogueProductId }
+);
 
 export interface ShowcaseSelectionState {
   scopes: ShowcaseScope[];
@@ -22,20 +33,28 @@ export function scopeKey(scope: ShowcaseScope) {
   return scope.kind === 'feature' ? scope.featureId : `${scope.featureId}:${scope.instanceId}`;
 }
 
+export function scopeIdentityKey(scope: ShowcaseScope) {
+  return `${scope.pageId}:${scope.route}:${scope.branch}:${scope.capabilityId}`;
+}
+
 export function scopeFromRuntime(value: string, productIds: readonly string[]): ShowcaseScope | null {
-  if (value === 'category-sidebar') return { kind: 'feature', featureId: 'category-sidebar', branch: 'branch-a' };
   const match = /^product-quick-view:(.+)$/.exec(value);
-  if (!match || !productIds.includes(match[1])) return null;
-  return { kind: 'feature-instance', featureId: 'product-quick-view', branch: 'branch-b', instanceId: match[1] as CatalogueProductId };
+  if (match && !productIds.includes(match[1])) return null;
+  const capability = catalogueCapabilityFromRuntime(
+    value,
+    value.startsWith('product-quick-view:') ? 'branch-b' : 'branch-a'
+  );
+  const scopes = catalogueScopesForCapability(capability);
+  return scopes.length === 1 ? scopes[0] : null;
 }
 
 export function showcaseSelectionReducer(state: ShowcaseSelectionState, action: ShowcaseSelectionAction): ShowcaseSelectionState {
   if (action.type === 'clear') return emptyShowcaseSelection;
   if (action.type === 'toggle-incompatible') return { ...state, incompatibleProductId: !state.incompatibleProductId };
-  const key = scopeKey(action.scope);
-  const contains = state.scopes.some(scope => scopeKey(scope) === key);
-  if (action.type === 'remove-scope' || contains) return { ...state, scopes: state.scopes.filter(scope => scopeKey(scope) !== key) };
-  return { ...state, scopes: [...state.scopes, action.scope].sort((left, right) => scopeKey(left).localeCompare(scopeKey(right))) };
+  const key = scopeIdentityKey(action.scope);
+  const contains = state.scopes.some(scope => scopeIdentityKey(scope) === key);
+  if (action.type === 'remove-scope' || contains) return { ...state, scopes: state.scopes.filter(scope => scopeIdentityKey(scope) !== key) };
+  return { ...state, scopes: [...state.scopes, action.scope].sort((left, right) => scopeIdentityKey(left).localeCompare(scopeIdentityKey(right))) };
 }
 
 export function candidateSelection(state: ShowcaseSelectionState) {

@@ -69,6 +69,63 @@ describe('quiet comparison workspace', () => {
     expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick View · Studio Speaker');
   });
 
+  it('explains unsupported visible boundaries without creating a selection', () => {
+    render(<CatalogueShowcase />); open();
+    installScope(
+      'Version A live application',
+      'category-sidebar:options',
+      'Customize categories',
+      '<nav>Audio Desk Travel</nav>'
+    );
+
+    const unavailable = screen.getByRole('button', {
+      name: /Customize categories unavailable/
+    });
+    expect(unavailable).toHaveAttribute('data-capability-kind', 'configurable-subset');
+    expect(unavailable).toHaveAttribute('data-route', '/catalogue');
+    expect(unavailable).toHaveAttribute('data-page-id', 'product-catalogue');
+    fireEvent.click(unavailable);
+    expect(document.querySelector('.capability-notice')).toHaveTextContent(
+      'Individual category options require a configurable source transform. This will be added in the next milestone.'
+    );
+    expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
+  });
+
+  it('adds all Quick View instances as one capability action without a new candidate shape', () => {
+    render(<CatalogueShowcase />); open();
+
+    const addAll = screen.getByRole('button', { name: 'Add Quick View to all products' });
+    fireEvent.click(addAll);
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('5 selections');
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Catalogue · /catalogue');
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    expect(screen.getByRole('region', { name: 'Selection history' })).toHaveTextContent(
+      'Added Quick View to all products'
+    );
+  });
+
+  it('describes sidebar ownership and the unavailable category customization level', () => {
+    render(<CatalogueShowcase />); open();
+    installScope(
+      'Version A live application',
+      'category-sidebar',
+      'Category sidebar',
+      '<aside>Categories</aside>'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Details for Category sidebar' }));
+    const dialog = screen.getByRole('dialog', { name: 'Category sidebar' });
+    expect(dialog).toHaveTextContent('Whole feature');
+    expect(dialog).toHaveTextContent('Version A');
+    expect(dialog).toHaveTextContent('/catalogue');
+    expect(dialog).toHaveTextContent('product-catalogue');
+    expect(dialog).toHaveTextContent('Customize categories · Not available yet');
+    expect(dialog).toHaveTextContent(
+      'Individual category options require a configurable source transform. This will be added in the next milestone.'
+    );
+    expect(dialog).not.toHaveTextContent(/\.tsx?|src\//);
+  });
+
   it('transitions to a distinct combined result and returns to comparison', async () => {
     render(<CatalogueShowcase />); open();
     const app = installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
