@@ -34,9 +34,8 @@ export const catalogueSelectionCapabilities = [
     route: catalogueRoute,
     pageId: cataloguePageId,
     parentCapabilityId: 'category-sidebar',
-    targetIds: ['audio', 'desk', 'travel'],
-    supported: false,
-    unsupportedReason: 'Individual category options require a configurable source transform. This will be added in the next milestone.',
+    targetIds: ['all', 'audio', 'desk', 'travel'],
+    supported: true,
     sourceEvidenceId: 'category-sidebar'
   },
   {

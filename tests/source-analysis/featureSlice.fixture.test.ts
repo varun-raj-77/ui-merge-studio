@@ -16,7 +16,7 @@ const paths = (slice: Awaited<ReturnType<typeof analyze>>) => new Set(slice.incl
 
 describe('Product Catalogue fixture feature slices', () => {
   test('maps CategorySidebar and follows its dependencies while excluding the promotion', async () => {
-    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 13, 'CategorySidebar', 'left');
+    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 15, 'CategorySidebar', 'left');
     const first = await analyze('branch-a', source);
     const second = await analyze('branch-a', source);
     const included = paths(first);
@@ -62,7 +62,7 @@ describe('Product Catalogue fixture feature slices', () => {
   });
 
   test('refuses stale branch commits and stale source locations', async () => {
-    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 13, 'CategorySidebar', 'left');
+    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 15, 'CategorySidebar', 'left');
     const analyzer = new FeatureSliceAnalyzer(fixture);
     expect((await analyzer.analyze({ baseRef: 'main', branchRef: 'branch-a', expectedBranchCommit: '0'.repeat(40), selection: source })).slice.status).toBe('refused');
     expect((await analyzer.analyze({ baseRef: 'main', branchRef: 'branch-a', expectedBranchCommit: await repository.resolveRef('branch-a'), selection: { ...source, line: 999 } })).slice.status).toBe('refused');

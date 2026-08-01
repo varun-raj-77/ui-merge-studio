@@ -1,4 +1,6 @@
 import type { CategoryChoice } from '../../types/category';
+import { categorySidebarConfiguration } from '../../config/categorySidebarConfiguration';
+import { categoryLabel } from '../../state/previewContext';
 import './category-sidebar.css';
 
 interface Props {
@@ -8,7 +10,7 @@ interface Props {
   onToggle: () => void;
 }
 
-const categories: CategoryChoice[] = ['All', 'Audio', 'Desk', 'Travel'];
+const categories: CategoryChoice[] = categorySidebarConfiguration.enabledCategoryIds.map(categoryLabel);
 
 export function CategorySidebar({ category, collapsed, onCategoryChange, onToggle }: Props) {
   return <aside

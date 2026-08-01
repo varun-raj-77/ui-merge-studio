@@ -69,26 +69,42 @@ describe('quiet comparison workspace', () => {
     expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick View · Studio Speaker');
   });
 
-  it('explains unsupported visible boundaries without creating a selection', () => {
+  it('opens category customization only after the whole sidebar is selected', () => {
     render(<CatalogueShowcase />); open();
     installScope(
       'Version A live application',
-      'category-sidebar:options',
-      'Customize categories',
-      '<nav>Audio Desk Travel</nav>'
+      'category-sidebar',
+      'Category sidebar',
+      '<aside>Categories</aside>'
     );
+    const customize = screen.getByRole('button', { name: 'Customize categories' });
+    expect(customize).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
+    expect(customize).toBeEnabled();
+    fireEvent.click(customize);
+    expect(screen.getByRole('dialog', { name: 'Category sidebar' })).toBeVisible();
+  });
 
-    const unavailable = screen.getByRole('button', {
-      name: /Customize categories unavailable/
-    });
-    expect(unavailable).toHaveAttribute('data-capability-kind', 'configurable-subset');
-    expect(unavailable).toHaveAttribute('data-route', '/catalogue');
-    expect(unavailable).toHaveAttribute('data-page-id', 'product-catalogue');
-    fireEvent.click(unavailable);
-    expect(document.querySelector('.capability-notice')).toHaveTextContent(
-      'Individual category options require a configurable source transform. This will be added in the next milestone.'
-    );
-    expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
+  it('applies category customization as one dock row and one undoable decision', () => {
+    render(<CatalogueShowcase />); open();
+    installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
+    fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Customize categories' }));
+    const dialog = screen.getByRole('dialog', { name: 'Category sidebar' });
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'All' }));
+    expect(within(dialog).getByRole('button', { name: 'Apply customization' })).toBeDisabled();
+    expect(dialog).toHaveTextContent('Choose a default category from the categories you kept.');
+    fireEvent.click(within(dialog).getByRole('radio', { name: 'Desk' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply customization' }));
+    const dock = screen.getByRole('complementary', { name: 'Current selections' });
+    expect(dock).toHaveTextContent('Audio, Desk, Travel');
+    expect(dock).toHaveTextContent('Default: Desk');
+    fireEvent.click(screen.getByRole('button', { name: 'History' }));
+    expect(screen.getByRole('region', { name: 'Selection history' })).toHaveTextContent('Customized Category sidebar');
+    fireEvent.click(screen.getByRole('button', { name: /^Undo$/ }));
+    expect(dock).not.toHaveTextContent('Default: Desk');
+    fireEvent.click(screen.getByRole('button', { name: /^Redo$/ }));
+    expect(dock).toHaveTextContent('Default: Desk');
   });
 
   it('adds all Quick View instances as one capability action without a new candidate shape', () => {
@@ -104,7 +120,7 @@ describe('quiet comparison workspace', () => {
     );
   });
 
-  it('describes sidebar ownership and the unavailable category customization level', () => {
+  it('describes sidebar ownership and the configurable category level', () => {
     render(<CatalogueShowcase />); open();
     installScope(
       'Version A live application',
@@ -119,10 +135,8 @@ describe('quiet comparison workspace', () => {
     expect(dialog).toHaveTextContent('Version A');
     expect(dialog).toHaveTextContent('/catalogue');
     expect(dialog).toHaveTextContent('product-catalogue');
-    expect(dialog).toHaveTextContent('Customize categories · Not available yet');
-    expect(dialog).toHaveTextContent(
-      'Individual category options require a configurable source transform. This will be added in the next milestone.'
-    );
+    expect(dialog).toHaveTextContent('Customize categories');
+    expect(dialog).toHaveTextContent('permanent default');
     expect(dialog).not.toHaveTextContent(/\.tsx?|src\//);
   });
 

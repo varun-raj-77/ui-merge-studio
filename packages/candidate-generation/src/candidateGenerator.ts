@@ -131,8 +131,22 @@ export class CandidateGenerator {
       try { validateRepositoryPath(configuration.path); } catch (error) { reject(error instanceof Error ? error.message : String(error), configuration.path, configuration.sliceId); continue; }
       const change = artifact.slice.includedChanges.find(item => item.path === configuration.path);
       const file = artifact.slice.changedFiles.find(item => item.path === configuration.path);
-      if (!change || file?.status !== 'added') reject('Configured source must be a fully included file added by its selected slice.', configuration.path, configuration.sliceId);
+      if (!change || file?.status !== 'added') reject('Select the parent feature before generating this configuration. Configured source must be a fully included file added by its selected slice.', configuration.path, configuration.sliceId);
       if (!configuration.declaration) reject('Configured source declaration is required.', configuration.path, configuration.sliceId);
+      if (configuration.expectedSourceContentHash) {
+        try {
+          const source = await this.gitBlob(artifact.slice.repository.branchCommit, configuration.path);
+          if (textHash(source) !== configuration.expectedSourceContentHash) {
+            reject(
+              'The configurable feature source changed after it was inspected. Re-analyze the selection before generating.',
+              configuration.path,
+              configuration.sliceId
+            );
+          }
+        } catch (error) {
+          reject(`Configured source inspection failed: ${error instanceof Error ? error.message : String(error)}`, configuration.path, configuration.sliceId);
+        }
+      }
     }
     return unresolved;
   }
@@ -173,7 +187,7 @@ export class CandidateGenerator {
       const source = await this.gitBlobText(artifact.slice.repository.branchCommit, configuration.path);
       let output = '';
       try { output = configureExportedConst(source, configuration.path, configuration.declaration, configuration.value); }
-      catch (error) { this.unresolved(unresolved, configuration.path, configuration.sliceId, error instanceof Error ? error.message : String(error)); continue; }
+      catch (error) { this.unresolved(unresolved, configuration.path, configuration.sliceId, `This feature configuration cannot be generated safely. ${error instanceof Error ? error.message : String(error)}`); continue; }
       const operation = this.operation('configure-exported-const', artifact, configuration.path, configuration.declaration, null, source, textHash(output), [], `Write canonical configuration for exported const ${configuration.declaration}.`);
       operation.sourceConfiguration = configuration;
       operations.push(operation);

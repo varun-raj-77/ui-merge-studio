@@ -41,7 +41,7 @@ describe('generic selection capability model', () => {
     }
   });
 
-  it('represents configurable category subsets without enabling 3B generation', () => {
+  it('represents configurable category subsets with repository-owned targets', () => {
     const capability = catalogueCapabilityFromRuntime(
       categorySubsetCapabilityId,
       'branch-a'
@@ -50,13 +50,10 @@ describe('generic selection capability model', () => {
       kind: 'configurable-subset',
       label: 'Customize categories',
       parentCapabilityId: 'category-sidebar',
-      supported: false,
-      targetIds: ['audio', 'desk', 'travel'],
+      supported: true,
+      targetIds: ['all', 'audio', 'desk', 'travel'],
       sourceEvidenceId: 'category-sidebar'
     });
-    expect(capability.unsupportedReason).toBe(
-      'Individual category options require a configurable source transform. This will be added in the next milestone.'
-    );
     expect(catalogueScopesForCapability(capability)).toEqual([]);
   });
 

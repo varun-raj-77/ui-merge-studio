@@ -13,7 +13,10 @@
 - Scroll transfer uses clamped normalized ratios. It preserves relative position across sufficiently similar layouts but intentionally does not promise exact pixel alignment across structurally different candidates.
 - Capability fallbacks are deterministic and non-blocking, but a repository adapter must provide stable category and product identifiers for meaningful cross-version restoration.
 - Selection capabilities depend on repository or fixture metadata that identifies a safe source boundary. Arbitrary DOM elements are not selectable because visual containment alone cannot prove declaration ownership, dependencies, tests, or safe isolation.
-- The controlled catalogue supports the Category sidebar as a whole feature, each Quick View as an instance, and all five Quick Views as one atomic all-instances action. Category-option subsets are described but deliberately unavailable until a configurable source transform is implemented.
+- The controlled catalogue supports the Category sidebar as a whole feature, a configured category subset with a permanent default, each Quick View as an instance, and all five Quick Views as one atomic all-instances action.
+- The hosted configured preview is an honest browser-side preview over a matching recorded candidate; it does not create a Git branch. Local candidate generation owns the deterministic AST source mutation and verification path.
+- Category configuration currently controls retained category options and the permanent default only. Heading and product-count visibility remain future 3B2 work; local branch-delivery UI and broader configurable feature families remain Milestone 4 work.
+- Configurable source generation requires an explicitly exported, slice-owned constant whose source shape and inspected content remain valid. Unknown categories, empty subsets, disabled defaults, missing parent selections, stale source, malformed syntax, and incompatible initializer shapes are refused.
 - Route and page ownership are retained and grouped in the selection dock. Feature relocation is excluded; future multi-route integrations must render each feature only on its original route.
 
 Correct refusal is a product capability, not a failure to be hidden.

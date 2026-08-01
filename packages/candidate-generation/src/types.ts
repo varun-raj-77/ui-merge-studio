@@ -29,6 +29,7 @@ export interface CandidateSourceConfiguration {
   path: string;
   declaration: string;
   value: CandidateLiteral;
+  expectedSourceContentHash?: string;
 }
 
 export interface CandidateGenerationRequest {

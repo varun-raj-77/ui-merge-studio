@@ -47,10 +47,32 @@ export function configureExportedConst(code: string, path: string, name: string,
   traverse(ast, {
     VariableDeclarator(declarationPath) {
       if (!t.isIdentifier(declarationPath.node.id, { name })) return;
+      if (configured) throw new Error(`Configured declaration ${name} is duplicated in ${path}.`);
       const declaration = declarationPath.parentPath;
       const exported = declaration.parentPath;
       if (!declaration.isVariableDeclaration({ kind: 'const' }) || !exported?.isExportNamedDeclaration()) {
         throw new Error(`Configured declaration ${name} in ${path} must be an exported const.`);
+      }
+      const current = t.isTSAsExpression(declarationPath.node.init)
+        ? declarationPath.node.init.expression
+        : declarationPath.node.init;
+      const compatibleShape = Array.isArray(value)
+        ? t.isArrayExpression(current)
+        : value !== null && typeof value === 'object'
+          ? t.isObjectExpression(current) && Object.keys(value).every(key => current.properties.some(property => (
+            t.isObjectProperty(property)
+              && !property.computed
+              && ((t.isIdentifier(property.key) && property.key.name === key)
+                || (t.isStringLiteral(property.key) && property.key.value === key))
+          )))
+          : Boolean(current) && (
+            (typeof value === 'string' && t.isStringLiteral(current))
+            || (typeof value === 'number' && t.isNumericLiteral(current))
+            || (typeof value === 'boolean' && t.isBooleanLiteral(current))
+            || (value === null && t.isNullLiteral(current))
+          );
+      if (!compatibleShape) {
+        throw new Error(`Configured declaration ${name} in ${path} has an incompatible source shape.`);
       }
       const next = literalNode(value);
       declarationPath.node.init = t.isTSAsExpression(declarationPath.node.init)

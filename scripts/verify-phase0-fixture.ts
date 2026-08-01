@@ -76,6 +76,8 @@ export function verifyFixture(repo = generated) {
     const header = git(repo, ['show', 'combined-result:src/features/catalogue/CatalogueHeader.tsx']);
     const categoryTest = git(repo, ['show', 'combined-result:src/test/category-sidebar.test.tsx']);
     const quickViewTest = git(repo, ['show', 'combined-result:src/test/quick-view.test.tsx']);
+    const categoryConfiguration = git(repo, ['show', 'combined-result:src/config/categorySidebarConfiguration.ts']);
+    const quickViewConfiguration = git(repo, ['show', 'combined-result:src/config/quickViewTargets.ts']);
     check(workspace.includes('CategorySidebar') && grid.includes('ProductCardWithQuickView'), 'candidate lacks both selected features');
     check(names.includes('src/hooks/useCategoryFilter.ts'), 'candidate lacks category dependency');
     check(names.includes('src/hooks/useSelectedProduct.ts'), 'candidate lacks quick-view dependency');
@@ -84,6 +86,16 @@ export function verifyFixture(repo = generated) {
     check(!quickViewTest.includes('inventory summary'), 'candidate contains unrelated inventory test');
     check(categoryTest.includes('filters categories'), 'candidate lacks category behavior test');
     check(quickViewTest.includes('opens, focuses, and closes quick view'), 'candidate lacks quick-view behavior test');
+    check(
+      categoryConfiguration.includes('"enabledCategoryIds": ["audio", "desk", "travel"]')
+        && categoryConfiguration.includes('"defaultCategoryId": "desk"')
+        && !categoryConfiguration.includes('"all"'),
+      'candidate lacks the exact configured category subset and Desk default'
+    );
+    check(
+      quickViewConfiguration.includes('["p-105"]') && !quickViewConfiguration.includes('p-101'),
+      'candidate lacks the exact Desk Stand Quick View configuration'
+    );
   }
 
   if (failures.length) throw new Error(failures.join('\n'));

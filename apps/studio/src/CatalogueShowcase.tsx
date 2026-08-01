@@ -38,13 +38,23 @@ import {
   type PreviewContextMessage,
   type PreviewContextNotice
 } from './previewContext';
+import {
+  categoryLabels,
+  categorySidebarRepositoryMetadata,
+  completeCategorySidebarConfiguration,
+  configuredCategoryPreviewContext,
+  createCategorySidebarConfigurationSelection,
+  normalizeCategorySidebarConfiguration,
+  CategorySidebarConfigurationRefusal,
+  type CategorySidebarConfiguration
+} from './categorySidebarConfiguration';
 
 type View = 'landing' | 'compare';
 type ComparisonPreview = 'branch-a' | 'branch-b';
 type WorkspaceState = 'comparison' | 'combined';
 type EvidenceTab = 'source' | 'dependencies' | 'verification';
 const github = 'https://github.com/varun-raj-77/ui-merge-studio';
-const focusableSelector = 'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
 function Landing({ open }: { open: () => void }) {
   return <main className="catalogue-site">
@@ -92,6 +102,21 @@ interface ArtifactFrameProps {
   onDetailsCapability?: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
   onHistoryShortcut?: (action: 'undo' | 'redo') => void;
   onContextMessage: (message: PreviewContextMessage) => void;
+  categoryConfiguration?: CategorySidebarConfiguration | null;
+}
+
+function applyConfiguredCategoryOptions(
+  document: Document | null | undefined,
+  configuration?: CategorySidebarConfiguration | null
+) {
+  if (!document) return;
+  const enabledLabels = new Set(configuration ? categoryLabels(configuration.enabledCategoryIds) : []);
+  document.querySelectorAll<HTMLButtonElement>('[aria-label="Product categories"] button').forEach(button => {
+    const retained = !configuration || enabledLabels.has(button.textContent?.trim() ?? '');
+    button.hidden = !retained;
+    button.toggleAttribute('data-ums-configuration-excluded', !retained);
+  });
+  document.documentElement?.toggleAttribute('data-ums-configured-preview', Boolean(configuration));
 }
 
 function contextualControlLabel(capability: SelectionCapability, selected: boolean) {
@@ -292,7 +317,8 @@ function ArtifactFrame({
   onUnsupportedCapability,
   onDetailsCapability,
   onHistoryShortcut,
-  onContextMessage
+  onContextMessage,
+  categoryConfiguration
 }: ArtifactFrameProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const scopeObserver = useRef<MutationObserver | null>(null);
@@ -305,6 +331,7 @@ function ArtifactFrame({
   const contextMessageRef = useRef(onContextMessage);
   const contextRef = useRef(context);
   const selectedScopesRef = useRef(selectedScopes);
+  const categoryConfigurationRef = useRef(categoryConfiguration);
   const applySequence = useRef(0);
   resolveCapabilityRef.current = resolveCapability;
   toggleRef.current = onToggle;
@@ -314,6 +341,7 @@ function ArtifactFrame({
   contextMessageRef.current = onContextMessage;
   contextRef.current = context;
   selectedScopesRef.current = selectedScopes;
+  categoryConfigurationRef.current = categoryConfiguration;
   const postState = () => {
     frame.current?.contentWindow?.postMessage({
       type: 'ums-showcase-mode',
@@ -331,6 +359,7 @@ function ArtifactFrame({
       capability => unsupportedCapabilityRef.current?.(capability),
       capability => detailsCapabilityRef.current?.(capability)
     );
+    applyConfiguredCategoryOptions(frame.current?.contentDocument, categoryConfigurationRef.current);
   };
   const postContext = () => {
     applySequence.current += 1;
@@ -355,7 +384,7 @@ function ArtifactFrame({
       contentWindow.addEventListener('keydown', listener);
       shortcutCleanup.current = () => contentWindow.removeEventListener('keydown', listener);
     }
-    if (selectionEnabled && body) {
+    if ((selectionEnabled || categoryConfigurationRef.current) && body) {
       scopeObserver.current = new MutationObserver(() => {
         installContextualControls(
           frame.current,
@@ -367,6 +396,7 @@ function ArtifactFrame({
           capability => unsupportedCapabilityRef.current?.(capability),
           capability => detailsCapabilityRef.current?.(capability)
         );
+        applyConfiguredCategoryOptions(frame.current?.contentDocument, categoryConfigurationRef.current);
       });
       scopeObserver.current.observe(body, { childList: true, subtree: true });
     }
@@ -380,7 +410,7 @@ function ArtifactFrame({
       cancelAnimationFrame(repositionFrame);
       clearTimeout(settledFrame);
     };
-  }, [selectionEnabled, selectedScopes.join(','), visibilitySignal]);
+  }, [selectionEnabled, selectedScopes.join(','), visibilitySignal, categoryConfiguration?.enabledCategoryIds.join(','), categoryConfiguration?.defaultCategoryId]);
   useEffect(postContext, [
     context.route,
     context.viewport.width,
@@ -549,10 +579,12 @@ function capabilityTargetLabels(capability: SelectionCapability) {
 
 function CapabilityDetailsDialog({
   capability,
-  close
+  close,
+  customize
 }: {
   capability: SelectionCapability<CatalogueSourceBranch>;
   close: () => void;
+  customize?: (opener: HTMLElement) => void;
 }) {
   const dialog = useDialogFocus(close);
   const targets = capabilityTargetLabels(capability);
@@ -584,10 +616,84 @@ function CapabilityDetailsDialog({
         <strong>Why it cannot be added</strong>
         <p>{capability.unsupportedReason}</p>
       </section>}
-      {configurableChild && <section className="capability-unavailable">
-        <strong>{configurableChild.label} · Not available yet</strong>
-        <p>{configurableChild.unsupportedReason}</p>
+      {configurableChild && <section className="capability-customize">
+        <strong>{configurableChild.label}</strong>
+        <p>Choose the categories retained in the result and its permanent default.</p>
+        <button onClick={event => {
+          close();
+          customize?.(event.currentTarget);
+        }}>Customize categories</button>
       </section>}
+    </section>
+  </div>;
+}
+
+function CategoryConfigurationDialog({ initial, opener, close, apply }: {
+  initial: CategorySidebarConfiguration;
+  opener: RefObject<HTMLElement | null>;
+  close: () => void;
+  apply: (configuration: CategorySidebarConfiguration) => void;
+}) {
+  const dialog = useDialogFocus(close, opener);
+  const [enabledCategoryIds, setEnabledCategoryIds] = useState<string[]>(initial.enabledCategoryIds);
+  const [defaultCategoryId, setDefaultCategoryId] = useState(initial.defaultCategoryId);
+  let configuration: CategorySidebarConfiguration | null = null;
+  let validationMessage = '';
+  try {
+    configuration = normalizeCategorySidebarConfiguration({ enabledCategoryIds, defaultCategoryId });
+  } catch (error) {
+    validationMessage = error instanceof CategorySidebarConfigurationRefusal
+      ? error.productMessage
+      : 'This category configuration cannot be applied.';
+  }
+  return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
+    <section ref={dialog} className="category-configuration-dialog" role="dialog" aria-modal="true" aria-labelledby="category-configuration-title">
+      <header>
+        <div>
+          <span>Version A · /catalogue</span>
+          <h2 id="category-configuration-title">Category sidebar</h2>
+        </div>
+        <button onClick={close} aria-label="Close category customization">×</button>
+      </header>
+      <fieldset>
+        <legend>Categories included</legend>
+        {categorySidebarRepositoryMetadata.categories.map(category => <label key={category.id}>
+          <input
+            type="checkbox"
+            checked={enabledCategoryIds.includes(category.id)}
+            onChange={event => setEnabledCategoryIds(current => event.target.checked
+              ? [...current, category.id]
+              : current.filter(id => id !== category.id))}
+          />
+          <span>{category.label}</span>
+        </label>)}
+      </fieldset>
+      <fieldset>
+        <legend>Default category</legend>
+        {categorySidebarRepositoryMetadata.categories
+          .filter(category => enabledCategoryIds.includes(category.id))
+          .map(category => <label key={category.id}>
+            <input
+              type="radio"
+              name="default-category"
+              value={category.id}
+              checked={defaultCategoryId === category.id}
+              onChange={() => setDefaultCategoryId(category.id)}
+            />
+            <span>{category.label}</span>
+          </label>)}
+      </fieldset>
+      {validationMessage && <p className="configuration-validation" role="alert">{validationMessage}</p>}
+      <footer>
+        <button className="secondary-action" onClick={close}>Cancel</button>
+        <button
+          disabled={!configuration}
+          onClick={() => {
+            if (!configuration) return;
+            apply(configuration);
+          }}
+        >Apply customization</button>
+      </footer>
     </section>
   </div>;
 }
@@ -621,7 +727,7 @@ function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }:
   </div>;
 }
 
-function PreviewPanel({ preview, title, subtitle, artifact, active, context, selectedScopes, onToggle, onUnsupportedCapability, onDetailsCapability, onHistoryShortcut, onContextMessage }: {
+function PreviewPanel({ preview, title, subtitle, artifact, active, context, selectedScopes, onToggle, onUnsupportedCapability, onDetailsCapability, onCustomizeCategories, onHistoryShortcut, onContextMessage }: {
   preview: ComparisonPreview;
   title: string;
   subtitle: string;
@@ -632,6 +738,7 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, sel
   onToggle: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
   onUnsupportedCapability: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
   onDetailsCapability: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
+  onCustomizeCategories: (opener: HTMLElement) => void;
   onHistoryShortcut: (action: 'undo' | 'redo') => void;
   onContextMessage: (message: PreviewContextMessage) => void;
 }) {
@@ -647,6 +754,12 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, sel
           {bulkSelected ? 'Remove Quick View from all products' : 'Add Quick View to all products'}
         </button>
         <button onClick={() => onDetailsCapability(bulkCapability)}>Details</button>
+      </div>}
+      {preview === 'branch-a' && <div className="preview-capability-actions">
+        <button
+          disabled={!selectedScopes.includes('category-sidebar')}
+          onClick={event => onCustomizeCategories(event.currentTarget)}
+        >Customize categories</button>
       </div>}
     </header>
     <div className="artifact-stage">
@@ -669,13 +782,19 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, sel
   </article>;
 }
 
-function SelectionChip({ scope, openEvidence, remove }: {
+function SelectionChip({ scope, openEvidence, remove, configuration }: {
   scope: ShowcaseScope;
   openEvidence: (scope: ShowcaseScope, opener: HTMLElement) => void;
   remove: (scope: ShowcaseScope) => void;
+  configuration?: CategorySidebarConfiguration | null;
 }) {
   return <span className="selection-chip">
-    <span>{scopeLabel(scope)}</span>
+    <span className="selection-chip-copy">
+      <span>{scopeLabel(scope)}</span>
+      {scope.featureId === 'category-sidebar' && configuration && <small>
+        {categoryLabels(configuration.enabledCategoryIds).join(', ')}<br />Default: {categoryLabels([configuration.defaultCategoryId])[0]}
+      </small>}
+    </span>
     <button onClick={event => openEvidence(scope, event.currentTarget)} aria-label={`Evidence for ${scopeLabel(scope)}`}>i</button>
     <button onClick={() => remove(scope)} aria-label={`Remove ${scopeLabel(scope)}`}>×</button>
   </span>;
@@ -702,7 +821,9 @@ function Comparison({ exit }: { exit: () => void }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [capabilityNotice, setCapabilityNotice] = useState<SelectionCapability<CatalogueSourceBranch> | null>(null);
   const [detailsCapability, setDetailsCapability] = useState<SelectionCapability<CatalogueSourceBranch> | null>(null);
+  const [categoryEditorOpen, setCategoryEditorOpen] = useState(false);
   const evidenceOpener = useRef<HTMLElement | null>(null);
+  const categoryEditorOpener = useRef<HTMLElement | null>(null);
   const lastContextRevision = useRef<Record<string, number>>({});
   const desiredKey = candidateKey(selection);
   const refused = selection.incompatibleProductId && hasQuickViewSelection(selection);
@@ -714,6 +835,12 @@ function Comparison({ exit }: { exit: () => void }) {
     ...(quickCount === catalogueManifest.productIds.length ? [quickViewAllCapabilityId] : [])
   ];
   const selectionCount = selection.scopes.length + (selection.incompatibleProductId ? 1 : 0);
+  const configuredPreview = useMemo(() => selection.categorySidebarConfiguration
+    ? configuredCategoryPreviewContext(previewContext, selection.categorySidebarConfiguration.configuration)
+    : { context: previewContext, notices: [] as PreviewContextNotice[] }, [
+      previewContext,
+      selection.categorySidebarConfiguration?.identity
+    ]);
 
   function performHistoryAction(action: 'undo' | 'redo') {
     const available = action === 'undo'
@@ -878,6 +1005,19 @@ function Comparison({ exit }: { exit: () => void }) {
     setShowConflict(false);
     setShowConflictEvidence(false);
   };
+  const openCategoryEditor = (opener: HTMLElement) => {
+    categoryEditorOpener.current = opener;
+    setCategoryEditorOpen(true);
+  };
+  const applyCategoryConfiguration = (configuration: CategorySidebarConfiguration) => {
+    const configured = createCategorySidebarConfigurationSelection(configuration);
+    const next = showcaseSelectionReducer(selection, {
+      type: 'configure-category-sidebar',
+      configuration: configured
+    });
+    commitSelection(next, 'Customized Category sidebar');
+    setCategoryEditorOpen(false);
+  };
   const viewCombined = () => {
     if (refused) {
       setShowConflict(true);
@@ -925,7 +1065,7 @@ function Comparison({ exit }: { exit: () => void }) {
   }, [selection.scopes]);
   const historyLabels = selectionHistory.past.slice(-6).reverse();
   const activeContextNotices = workspaceState === 'combined'
-    ? contextNotices.combined ?? []
+    ? [...configuredPreview.notices, ...(contextNotices.combined ?? [])]
     : (contextNotices[mobilePreview] ?? []).filter(notice => notice.code !== 'unsupported-quick-view');
 
   return <main
@@ -962,18 +1102,18 @@ function Comparison({ exit }: { exit: () => void }) {
         <button aria-pressed={mobilePreview === 'branch-b'} onClick={() => setMobilePreview('branch-b')}>Version B</button>
       </nav>
       <section className="preview-workspace">
-        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
-        <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-b', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-b', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
       </section>
     </section>
     <section className="result-workspace" hidden={workspaceState !== 'combined'}>
       <header className="result-header">
         <button onClick={() => setWorkspaceState('comparison')}>← Back to comparison</button>
-        <div><span>Combined result</span><h1>Built from {selection.scopes.length} selection{selection.scopes.length === 1 ? '' : 's'}</h1></div>
+        <div><span>{selection.categorySidebarConfiguration ? 'Configured preview' : 'Combined result'}</span><h1>Built from {selection.scopes.length} selection{selection.scopes.length === 1 ? '' : 's'}</h1></div>
         <div className="result-chips" aria-label="Selections used">{scopeSummary.map(label => <span key={label}>✓ {label}</span>)}</div>
       </header>
       <div className="combined-stage">
-        <ArtifactFrame artifact={candidate.artifact} title="Combined result application" previewId="combined" context={previewContext} selectedScopes={[]} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <ArtifactFrame artifact={candidate.artifact} title="Combined result application" previewId="combined" context={configuredPreview.context} categoryConfiguration={selection.categorySidebarConfiguration?.configuration} selectedScopes={[]} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
         {candidateStatus === 'resolving' && <div className="candidate-loading" role="status">Updating result…</div>}
       </div>
     </section>
@@ -997,7 +1137,7 @@ function Comparison({ exit }: { exit: () => void }) {
         {selectionRouteGroups.map(group => <section className="selection-route-group" key={`${group.pageId}:${group.route}`}>
           <strong>{pageLabel(group.pageId)} · {group.route}</strong>
           <div>
-            {group.scopes.map(scope => <SelectionChip key={scopeIdentityKey(scope)} scope={scope} openEvidence={openEvidence} remove={removeScope} />)}
+            {group.scopes.map(scope => <SelectionChip key={scopeIdentityKey(scope)} scope={scope} configuration={selection.categorySidebarConfiguration?.configuration} openEvidence={openEvidence} remove={removeScope} />)}
             {selection.incompatibleProductId && <span className="selection-chip conflict-chip">
               <span>Product-ID change <b>Conflict</b></span>
               <button onClick={() => setShowConflict(true)} aria-label="Evidence for Product-ID conflict">i</button>
@@ -1046,7 +1186,13 @@ function Comparison({ exit }: { exit: () => void }) {
       {selectionHistory.announcement || (refused ? 'Cannot combine the selected Product-ID change with Quick View. Safe selections are preserved.' : `${selectionCount} selections. ${candidateStatus === 'resolving' ? 'Updating combined result.' : 'Result ready.'}`)}
     </p>
     {evidenceScope && <EvidenceDialog scope={evidenceScope} candidate={candidate} opener={evidenceOpener} close={() => setEvidenceScope(null)} />}
-    {detailsCapability && <CapabilityDetailsDialog capability={detailsCapability} close={() => setDetailsCapability(null)} />}
+    {detailsCapability && <CapabilityDetailsDialog capability={detailsCapability} close={() => setDetailsCapability(null)} customize={openCategoryEditor} />}
+    {categoryEditorOpen && <CategoryConfigurationDialog
+      initial={selection.categorySidebarConfiguration?.configuration ?? completeCategorySidebarConfiguration}
+      opener={categoryEditorOpener}
+      close={() => setCategoryEditorOpen(false)}
+      apply={applyCategoryConfiguration}
+    />}
     {showConflict && <ConflictDialog quickCount={quickCount} close={() => setShowConflict(false)} remove={removeIncompatible} inspect={() => setShowConflictEvidence(value => !value)} showingEvidence={showConflictEvidence} />}
   </main>;
 }

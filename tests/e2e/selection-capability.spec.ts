@@ -50,10 +50,8 @@ test('bulk Quick View uses the existing candidate and remains one undoable actio
   await expect(details).toContainText('Version A');
   await expect(details).toContainText('/catalogue');
   await expect(details).toContainText('Supported');
-  await expect(details).toContainText('Customize categories · Not available yet');
-  await expect(details).toContainText(
-    'Individual category options require a configurable source transform. This will be added in the next milestone.'
-  );
+  await expect(details).toContainText('Customize categories');
+  await expect(details).toContainText('permanent default');
   await expect(details).not.toContainText(/src\/|\.tsx?/);
 });
 

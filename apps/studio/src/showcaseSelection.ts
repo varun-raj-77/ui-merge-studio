@@ -4,6 +4,7 @@ import {
   catalogueScopesForCapability
 } from './catalogueSelectionCapabilities';
 import type { CatalogueProductId } from './catalogueProducts';
+import type { CategorySidebarConfigurationSelection } from './categorySidebarConfiguration';
 
 interface ShowcaseScopeOwnership {
   capabilityId: string;
@@ -19,15 +20,21 @@ export type ShowcaseScope = ShowcaseScopeOwnership & (
 export interface ShowcaseSelectionState {
   scopes: ShowcaseScope[];
   incompatibleProductId: boolean;
+  categorySidebarConfiguration?: CategorySidebarConfigurationSelection | null;
 }
 
 export type ShowcaseSelectionAction =
   | { type: 'toggle-scope'; scope: ShowcaseScope }
   | { type: 'remove-scope'; scope: ShowcaseScope }
+  | { type: 'configure-category-sidebar'; configuration: CategorySidebarConfigurationSelection }
   | { type: 'clear' }
   | { type: 'toggle-incompatible' };
 
-export const emptyShowcaseSelection: ShowcaseSelectionState = { scopes: [], incompatibleProductId: false };
+export const emptyShowcaseSelection: ShowcaseSelectionState = {
+  scopes: [],
+  incompatibleProductId: false,
+  categorySidebarConfiguration: null
+};
 
 export function scopeKey(scope: ShowcaseScope) {
   return scope.kind === 'feature' ? scope.featureId : `${scope.featureId}:${scope.instanceId}`;
@@ -51,9 +58,20 @@ export function scopeFromRuntime(value: string, productIds: readonly string[]): 
 export function showcaseSelectionReducer(state: ShowcaseSelectionState, action: ShowcaseSelectionAction): ShowcaseSelectionState {
   if (action.type === 'clear') return emptyShowcaseSelection;
   if (action.type === 'toggle-incompatible') return { ...state, incompatibleProductId: !state.incompatibleProductId };
+  if (action.type === 'configure-category-sidebar') {
+    const hasSidebar = state.scopes.some(scope => scope.featureId === 'category-sidebar');
+    if (!hasSidebar) return state;
+    return { ...state, categorySidebarConfiguration: action.configuration };
+  }
   const key = scopeIdentityKey(action.scope);
   const contains = state.scopes.some(scope => scopeIdentityKey(scope) === key);
-  if (action.type === 'remove-scope' || contains) return { ...state, scopes: state.scopes.filter(scope => scopeIdentityKey(scope) !== key) };
+  if (action.type === 'remove-scope' || contains) return {
+    ...state,
+    scopes: state.scopes.filter(scope => scopeIdentityKey(scope) !== key),
+    categorySidebarConfiguration: action.scope.featureId === 'category-sidebar'
+      ? null
+      : state.categorySidebarConfiguration
+  };
   return { ...state, scopes: [...state.scopes, action.scope].sort((left, right) => scopeIdentityKey(left).localeCompare(scopeIdentityKey(right))) };
 }
 

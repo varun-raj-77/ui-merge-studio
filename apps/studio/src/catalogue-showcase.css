@@ -661,6 +661,13 @@ button:focus-visible, a:focus-visible {
 }
 
 .selection-chip > button:last-child { font-size: 16px; }
+.selection-chip-copy { display: grid; gap: 2px; }
+.selection-chip-copy small {
+  color: #c8c7c1;
+  font-size: 8px;
+  font-weight: 650;
+  line-height: 1.35;
+}
 .conflict-chip { border-color: #d8897c; background: #6d3028; }
 .conflict-chip b {
   margin-left: 4px;
@@ -717,7 +724,8 @@ button:focus-visible, a:focus-visible {
 
 .evidence-dialog,
 .conflict-dialog,
-.capability-dialog {
+.capability-dialog,
+.category-configuration-dialog {
   width: min(500px, 100%);
   max-height: min(720px, calc(100vh - 40px));
   overflow: auto;
@@ -730,7 +738,8 @@ button:focus-visible, a:focus-visible {
 
 .evidence-dialog > header,
 .conflict-dialog > header,
-.capability-dialog > header {
+.capability-dialog > header,
+.category-configuration-dialog > header {
   display: flex;
   align-items: start;
   justify-content: space-between;
@@ -740,7 +749,8 @@ button:focus-visible, a:focus-visible {
 
 .evidence-dialog > header span,
 .conflict-dialog > header span,
-.capability-dialog > header span {
+.capability-dialog > header span,
+.category-configuration-dialog > header span {
   color: var(--cat-accent);
   font-size: 9px;
   font-weight: 850;
@@ -751,10 +761,12 @@ button:focus-visible, a:focus-visible {
 .conflict-dialog > header span { color: var(--cat-danger); }
 .evidence-dialog h2,
 .conflict-dialog h2,
-.capability-dialog h2 { margin: 4px 0 0; font-size: 23px; letter-spacing: -.035em; }
+.capability-dialog h2,
+.category-configuration-dialog h2 { margin: 4px 0 0; font-size: 23px; letter-spacing: -.035em; }
 .evidence-dialog > header button,
 .conflict-dialog > header button,
-.capability-dialog > header button {
+.capability-dialog > header button,
+.category-configuration-dialog > header button {
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
@@ -799,6 +811,68 @@ button:focus-visible, a:focus-visible {
   background: #fff9ed;
   color: #69440e;
 }
+.capability-customize button {
+  margin-top: 10px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--cat-accent);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.category-configuration-dialog fieldset {
+  display: grid;
+  gap: 7px;
+  margin: 0 20px 14px;
+  padding: 12px;
+  border: 1px solid var(--cat-line);
+  border-radius: 12px;
+}
+.category-configuration-dialog legend {
+  padding: 0 5px;
+  color: var(--cat-muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.category-configuration-dialog label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 30px;
+  font-size: 12px;
+  font-weight: 720;
+}
+.category-configuration-dialog input { width: 17px; height: 17px; accent-color: var(--cat-accent); }
+.configuration-validation {
+  margin: -3px 20px 14px;
+  color: #8b3327;
+  font-size: 11px;
+  font-weight: 750;
+}
+.category-configuration-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 15px 20px 20px;
+  border-top: 1px solid var(--cat-line);
+}
+.category-configuration-dialog footer button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--cat-accent);
+  color: #fff;
+  font-weight: 850;
+  cursor: pointer;
+}
+.category-configuration-dialog footer button.secondary-action { border: 1px solid var(--cat-line-strong); background: #fff; color: var(--cat-ink); }
+.category-configuration-dialog footer button:disabled { cursor: not-allowed; opacity: .45; }
 
 .evidence-tabs {
   display: flex;
@@ -1071,7 +1145,8 @@ button:focus-visible, a:focus-visible {
   .modal-backdrop { align-items: end; padding: 0; }
   .evidence-dialog,
   .conflict-dialog,
-  .capability-dialog {
+  .capability-dialog,
+  .category-configuration-dialog {
     width: 100%;
     max-height: 84vh;
     border-radius: 19px 19px 0 0;
