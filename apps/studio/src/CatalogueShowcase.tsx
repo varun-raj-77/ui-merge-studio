@@ -727,13 +727,14 @@ function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }:
   </div>;
 }
 
-function PreviewPanel({ preview, title, subtitle, artifact, active, context, selectedScopes, onToggle, onUnsupportedCapability, onDetailsCapability, onCustomizeCategories, onHistoryShortcut, onContextMessage }: {
+function PreviewPanel({ preview, title, subtitle, artifact, active, context, categoryConfiguration, selectedScopes, onToggle, onUnsupportedCapability, onDetailsCapability, onCustomizeCategories, onHistoryShortcut, onContextMessage }: {
   preview: ComparisonPreview;
   title: string;
   subtitle: string;
   artifact: PublicArtifact;
   active: boolean;
   context: PreviewContext;
+  categoryConfiguration?: CategorySidebarConfiguration | null;
   selectedScopes: string[];
   onToggle: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
   onUnsupportedCapability: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
@@ -768,6 +769,7 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, sel
         title={`${title} live application`}
         previewId={preview}
         context={context}
+        categoryConfiguration={categoryConfiguration}
         selectedScopes={selectedScopes}
         selectionEnabled
         visibilitySignal={active}
@@ -1102,7 +1104,7 @@ function Comparison({ exit }: { exit: () => void }) {
         <button aria-pressed={mobilePreview === 'branch-b'} onClick={() => setMobilePreview('branch-b')}>Version B</button>
       </nav>
       <section className="preview-workspace">
-        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={configuredPreview.context} categoryConfiguration={selection.categorySidebarConfiguration?.configuration} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
         <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-b', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
       </section>
     </section>
