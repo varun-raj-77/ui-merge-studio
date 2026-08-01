@@ -85,13 +85,22 @@ describe('category sidebar permanent configuration', () => {
     expect(categorySidebarDecision(selectionHistoryReducer(undone, { type: 'redo' }).present)?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk');
   });
 
-  it('refuses configuration without the parent sidebar selection', () => {
+  it('atomically creates a configured sidebar and cannot be duplicated or downgraded by a stale Add', () => {
     const configured = showcaseSelectionReducer(emptyShowcaseSelection, { type: 'configure-category-sidebar', configuration: createCategorySidebarConfigurationSelection(proof) });
-    expect(configured).toBe(emptyShowcaseSelection);
-    expect(() => categorySidebarCandidateSourceConfiguration({
+    const decision = categorySidebarDecision(configured);
+    expect(configured.scopes).toHaveLength(1);
+    expect(decision?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk');
+    const stalePlainAdd = showcaseSelectionReducer(configured, {
+      type: 'toggle-scope',
+      scope: catalogueScopesForCapability(catalogueCapabilityFromRuntime('category-sidebar', 'branch-a'))[0]
+    });
+    expect(stalePlainAdd).toBe(configured);
+    expect(stalePlainAdd.scopes).toHaveLength(1);
+    expect(categorySidebarDecision(stalePlainAdd)?.configuration?.identity).toBe(decision?.configuration?.identity);
+    expect(categorySidebarCandidateSourceConfiguration({
       sliceId: 'slice',
-      sidebarSelected: false,
-      selection: createCategorySidebarConfigurationSelection(proof)
-    })).toThrow('Add the Category sidebar before generating its customization.');
+      sidebarSelected: Boolean(decision),
+      selection: decision?.configuration
+    }).value).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk' });
   });
 });

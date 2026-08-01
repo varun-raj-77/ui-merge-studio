@@ -23,10 +23,12 @@ describe('Showcase selection semantics', () => {
     expect(candidateSelection(state)).toEqual({ sidebar: true, quickViewProductIds: ['p-104'] });
   });
 
-  it('canonicalizes order and duplicate toggles deterministically', () => {
+  it('canonicalizes order and idempotent additions deterministically', () => {
     expect(candidateKey(select([p104, sidebar, p102]))).toBe(candidateKey(select([p102, p104, sidebar])));
-    const toggledOff = showcaseSelectionReducer(select([p102]), { type: 'toggle-scope', scope: p102 });
-    expect(candidateSelection(toggledOff)).toEqual({ sidebar: false, quickViewProductIds: [] });
+    const selected = select([p102]);
+    expect(showcaseSelectionReducer(selected, { type: 'toggle-scope', scope: p102 })).toBe(selected);
+    const removed = showcaseSelectionReducer(selected, { type: 'remove-scope', scope: p102 });
+    expect(candidateSelection(removed)).toEqual({ sidebar: false, quickViewProductIds: [] });
   });
 
   it('accepts only runtime scopes supported by the generated product matrix', () => {

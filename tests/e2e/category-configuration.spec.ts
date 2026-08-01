@@ -7,23 +7,23 @@ const combined = (page: Page) => page.frameLocator('iframe[title="Combined resul
 
 async function addAndConfigureSidebar(page: Page) {
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
-  const customize = page.getByRole('button', { name: 'Customize categories' });
+  const customize = page.getByRole('button', { name: 'Edit categories' });
   await customize.focus();
   await customize.click();
   let dialog = page.getByRole('dialog', { name: 'Category sidebar' });
   await expect(dialog.getByRole('button', { name: 'Close category customization' })).toBeFocused();
   await page.keyboard.press('Shift+Tab');
-  await expect(dialog.getByRole('button', { name: 'Apply customization' })).toBeFocused();
+  await expect(dialog.getByRole('button', { name: 'Save customization' })).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(customize).toBeFocused();
   await customize.click();
   dialog = page.getByRole('dialog', { name: 'Category sidebar' });
   await expect(dialog).toContainText('Version A · /catalogue');
   await dialog.getByRole('checkbox', { name: 'All' }).uncheck();
-  await expect(dialog.getByRole('button', { name: 'Apply customization' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Save customization' })).toBeDisabled();
   await expect(dialog).toContainText('Choose a default category from the categories you kept.');
   await dialog.getByRole('radio', { name: 'Desk' }).check();
-  await dialog.getByRole('button', { name: 'Apply customization' }).click();
+  await dialog.getByRole('button', { name: 'Save customization' }).click();
 }
 
 async function openMobileReviewIfCollapsed(page: Page) {
@@ -31,13 +31,94 @@ async function openMobileReviewIfCollapsed(page: Page) {
   if (await review.isVisible()) await review.click();
 }
 
+async function runCustomizeBeforeAddJourney(page: Page, mobile: boolean) {
+  await versionA(page).getByRole('button', { name: 'Details for Category sidebar' }).click();
+  const details = page.getByRole('dialog', { name: 'Category sidebar' });
+  await details.getByRole('button', { name: 'Customize categories' }).click();
+  let dialog = page.getByRole('dialog', { name: 'Category sidebar' });
+  await expect(dialog.getByRole('button', { name: 'Add customized sidebar' })).toBeVisible();
+  await dialog.getByRole('checkbox', { name: 'Desk' }).uncheck();
+  await dialog.getByRole('checkbox', { name: 'Travel' }).uncheck();
+  await dialog.getByRole('button', { name: 'Add customized sidebar' }).click();
+
+  const dock = page.getByRole('complementary', { name: 'Current selections' });
+  if (mobile) await page.getByRole('button', { name: '1 selection Review' }).click();
+  await expect(dock).toContainText('1 selection');
+  await expect(dock).toContainText('Category sidebar');
+  await expect(dock).toContainText('All, Audio');
+  await expect(dock).toContainText('Default: All');
+  await expect(versionA(page).getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(versionA(page).getByRole('button', { name: 'Audio', exact: true })).toBeVisible();
+  await expect(versionA(page).getByRole('button', { name: 'Desk', exact: true })).toHaveCount(0);
+  await expect(versionA(page).getByRole('button', { name: 'Travel', exact: true })).toHaveCount(0);
+  await expect(versionA(page).getByRole('button', { name: 'Remove Category sidebar' })).toContainText('Added');
+  await expect(versionA(page).getByRole('button', { name: 'Add Category sidebar' })).toHaveCount(0);
+  await expect(page.locator('.comparison-shell')).toHaveAttribute('data-context-category', 'all');
+
+  if (mobile) {
+    await page.getByRole('button', { name: '1 selection Minimize' }).click();
+    await page.getByRole('button', { name: 'Version B', exact: true }).click();
+    await expect(page.locator('article[data-view="branch-b"]')).toHaveClass(/mobile-active/);
+  }
+  const addArcQuickView = versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' });
+  await expect(addArcQuickView).toBeVisible();
+  await addArcQuickView.click();
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
+  if (mobile) {
+    const review = page.getByRole('button', { name: /2 selections Review/ });
+    if (await review.isVisible()) await review.click();
+  }
+  await page.getByRole('button', { name: 'View combined' }).click();
+  await expect(combined(page).getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(combined(page).getByRole('button', { name: 'Audio', exact: true })).toBeVisible();
+  await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toHaveCount(0);
+  await expect(combined(page).getByRole('button', { name: 'Travel', exact: true })).toHaveCount(0);
+  const arcCard = combined(page).getByRole('heading', { name: 'Arc Headphones' }).locator('xpath=ancestor::article');
+  await expect(arcCard.getByRole('button', { name: 'Quick view', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Back to comparison', exact: true }).first().click();
+  if (mobile) {
+    await page.getByRole('button', { name: 'Version A', exact: true }).click();
+    await expect(page.locator('article[data-view="branch-a"]')).toHaveClass(/mobile-active/);
+  }
+  await page.getByRole('button', { name: 'Edit categories' }).click();
+  dialog = page.getByRole('dialog', { name: 'Category sidebar' });
+  await expect(dialog.getByRole('button', { name: 'Save customization' })).toBeVisible();
+  await expect(dialog.getByRole('checkbox', { name: 'All' })).toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: 'Audio' })).toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: 'Desk' })).not.toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: 'Travel' })).not.toBeChecked();
+  await expect(dialog.getByRole('radio', { name: 'All' })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(dock).toContainText('1 selection');
+  await expect(dock).toContainText('All, Audio');
+  await expect(dock).not.toContainText('Quick View · Arc Headphones');
+  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await expect(dock).toContainText('2 selections');
+  await expect(dock).toContainText('All, Audio');
+  await expect(dock).toContainText('Quick View · Arc Headphones');
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 }
+]) {
+  test(`${viewport.name} customizes and atomically adds the sidebar from Details`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto(compareUrl);
+    await runCustomizeBeforeAddJourney(page, viewport.name === 'mobile');
+  });
+}
+
 async function runRecordedAudioConfigurationJourney(page: Page) {
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
-  await page.getByRole('button', { name: 'Customize categories' }).click();
+  await page.getByRole('button', { name: 'Edit categories' }).click();
   let dialog = page.getByRole('dialog', { name: 'Category sidebar' });
   await dialog.getByRole('checkbox', { name: 'All' }).uncheck();
   await dialog.getByRole('radio', { name: 'Audio' }).check();
-  await dialog.getByRole('button', { name: 'Apply customization' }).click();
+  await dialog.getByRole('button', { name: 'Save customization' }).click();
 
   await openMobileReviewIfCollapsed(page);
   const dock = page.getByRole('complementary', { name: 'Current selections' });
@@ -55,7 +136,7 @@ async function runRecordedAudioConfigurationJourney(page: Page) {
   await expect(combined(page).getByRole('button', { name: 'Travel', exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: 'Back to comparison', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Customize categories' }).click();
+  await page.getByRole('button', { name: 'Edit categories' }).click();
   dialog = page.getByRole('dialog', { name: 'Category sidebar' });
   await expect(dialog.getByRole('checkbox', { name: 'All' })).not.toBeChecked();
   await expect(dialog.getByRole('checkbox', { name: 'Audio' })).toBeChecked();
@@ -100,10 +181,10 @@ test('production journey persists one Travel-excluded sidebar decision everywher
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
-  await page.getByRole('button', { name: 'Customize categories' }).click();
+  await page.getByRole('button', { name: 'Edit categories' }).click();
   let dialog = page.getByRole('dialog', { name: 'Category sidebar' });
   await dialog.getByRole('checkbox', { name: 'Travel' }).uncheck();
-  await dialog.getByRole('button', { name: 'Apply customization' }).click();
+  await dialog.getByRole('button', { name: 'Save customization' }).click();
 
   const dock = page.getByRole('complementary', { name: 'Current selections' });
   await expect(dock).toContainText('All, Audio, Desk');
@@ -118,7 +199,7 @@ test('production journey persists one Travel-excluded sidebar decision everywher
   await expect(combined(page).getByRole('button', { name: 'Travel', exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back to comparison', exact: true }).first().click();
 
-  await page.getByRole('button', { name: 'Customize categories' }).click();
+  await page.getByRole('button', { name: 'Edit categories' }).click();
   dialog = page.getByRole('dialog', { name: 'Category sidebar' });
   await expect(dialog.getByRole('checkbox', { name: 'Travel' })).not.toBeChecked();
   await expect(dialog.getByRole('radio', { name: 'All' })).toBeChecked();

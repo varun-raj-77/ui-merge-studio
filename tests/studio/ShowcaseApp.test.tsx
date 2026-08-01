@@ -69,7 +69,7 @@ describe('quiet comparison workspace', () => {
     expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick View · Studio Speaker');
   });
 
-  it('opens category customization only after the whole sidebar is selected', () => {
+  it('offers customization before selection and changes to editing after the sidebar is selected', () => {
     render(<CatalogueShowcase />); open();
     installScope(
       'Version A live application',
@@ -77,25 +77,28 @@ describe('quiet comparison workspace', () => {
       'Category sidebar',
       '<aside>Categories</aside>'
     );
-    const customize = screen.getByRole('button', { name: 'Customize categories' });
-    expect(customize).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
+    const customize = screen.getByRole('button', { name: 'Customize & add' });
     expect(customize).toBeEnabled();
     fireEvent.click(customize);
-    expect(screen.getByRole('dialog', { name: 'Category sidebar' })).toBeVisible();
+    expect(within(screen.getByRole('dialog', { name: 'Category sidebar' })).getByRole('button', { name: 'Add customized sidebar' })).toBeVisible();
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Category sidebar' })).getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
+    const edit = screen.getByRole('button', { name: 'Edit categories' });
+    fireEvent.click(edit);
+    expect(within(screen.getByRole('dialog', { name: 'Category sidebar' })).getByRole('button', { name: 'Save customization' })).toBeVisible();
   });
 
   it('applies category customization as one dock row and one undoable decision', () => {
     render(<CatalogueShowcase />); open();
     installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
     fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Customize categories' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit categories' }));
     const dialog = screen.getByRole('dialog', { name: 'Category sidebar' });
     fireEvent.click(within(dialog).getByRole('checkbox', { name: 'All' }));
-    expect(within(dialog).getByRole('button', { name: 'Apply customization' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Save customization' })).toBeDisabled();
     expect(dialog).toHaveTextContent('Choose a default category from the categories you kept.');
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Desk' }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply customization' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save customization' }));
     const dock = screen.getByRole('complementary', { name: 'Current selections' });
     expect(dock).toHaveTextContent('Audio, Desk, Travel');
     expect(dock).toHaveTextContent('Default: Desk');

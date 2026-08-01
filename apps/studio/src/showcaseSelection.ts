@@ -75,8 +75,24 @@ export function showcaseSelectionReducer(state: ShowcaseSelectionState, action: 
   if (action.type === 'clear') return emptyShowcaseSelection;
   if (action.type === 'toggle-incompatible') return { ...state, incompatibleProductId: !state.incompatibleProductId };
   if (action.type === 'configure-category-sidebar') {
-    const hasSidebar = state.scopes.some(scope => scope.featureId === 'category-sidebar');
-    if (!hasSidebar) return state;
+    const sidebar = categorySidebarDecision(state);
+    if (!sidebar) {
+      const configuredSidebar: ShowcaseScope = {
+        kind: 'feature',
+        featureId: 'category-sidebar',
+        branch: action.configuration.sourceBranch,
+        capabilityId: 'category-sidebar',
+        route: action.configuration.route,
+        pageId: action.configuration.pageId,
+        configuration: action.configuration
+      };
+      return {
+        ...state,
+        scopes: [...state.scopes, configuredSidebar].sort((left, right) => (
+          scopeIdentityKey(left).localeCompare(scopeIdentityKey(right))
+        ))
+      };
+    }
     return {
       ...state,
       scopes: state.scopes.map(scope => scope.featureId === 'category-sidebar'
@@ -86,10 +102,11 @@ export function showcaseSelectionReducer(state: ShowcaseSelectionState, action: 
   }
   const key = scopeIdentityKey(action.scope);
   const contains = state.scopes.some(scope => scopeIdentityKey(scope) === key);
-  if (action.type === 'remove-scope' || contains) return {
+  if (action.type === 'remove-scope') return {
     ...state,
     scopes: state.scopes.filter(scope => scopeIdentityKey(scope) !== key)
   };
+  if (contains) return state;
   return { ...state, scopes: [...state.scopes, action.scope].sort((left, right) => scopeIdentityKey(left).localeCompare(scopeIdentityKey(right))) };
 }
 

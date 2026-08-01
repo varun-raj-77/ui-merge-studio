@@ -629,8 +629,9 @@ function CapabilityDetailsDialog({
   </div>;
 }
 
-function CategoryConfigurationDialog({ initial, opener, close, apply }: {
+function CategoryConfigurationDialog({ initial, sidebarSelected, opener, close, apply }: {
   initial: CategorySidebarConfiguration;
+  sidebarSelected: boolean;
   opener: RefObject<HTMLElement | null>;
   close: () => void;
   apply: (configuration: CategorySidebarConfiguration) => void;
@@ -693,7 +694,7 @@ function CategoryConfigurationDialog({ initial, opener, close, apply }: {
             if (!configuration) return;
             apply(configuration);
           }}
-        >Apply customization</button>
+        >{sidebarSelected ? 'Save customization' : 'Add customized sidebar'}</button>
       </footer>
     </section>
   </div>;
@@ -759,9 +760,8 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, cat
       </div>}
       {preview === 'branch-a' && <div className="preview-capability-actions">
         <button
-          disabled={!selectedScopes.includes('category-sidebar')}
           onClick={event => onCustomizeCategories(event.currentTarget)}
-        >Customize categories</button>
+        >{selectedScopes.includes('category-sidebar') ? 'Edit categories' : 'Customize & add'}</button>
       </div>}
     </header>
     <div className="artifact-stage">
@@ -1015,12 +1015,14 @@ function Comparison({ exit }: { exit: () => void }) {
     setCategoryEditorOpen(true);
   };
   const applyCategoryConfiguration = (configuration: CategorySidebarConfiguration) => {
+    const addingSidebar = !sidebarDecision;
     const configured = createCategorySidebarConfigurationSelection(configuration);
     const next = showcaseSelectionReducer(selection, {
       type: 'configure-category-sidebar',
       configuration: configured
     });
-    commitSelection(next, 'Customized Category sidebar');
+    commitSelection(next, addingSidebar ? 'Added customized Category sidebar' : 'Customized Category sidebar');
+    if (addingSidebar && window.innerWidth <= 700) setDockExpanded(false);
     setCategoryEditorOpen(false);
   };
   const viewCombined = () => {
@@ -1194,6 +1196,7 @@ function Comparison({ exit }: { exit: () => void }) {
     {detailsCapability && <CapabilityDetailsDialog capability={detailsCapability} close={() => setDetailsCapability(null)} customize={openCategoryEditor} />}
     {categoryEditorOpen && <CategoryConfigurationDialog
       initial={categoryConfigurationSelection?.configuration ?? completeCategorySidebarConfiguration}
+      sidebarSelected={Boolean(sidebarDecision)}
       opener={categoryEditorOpener}
       close={() => setCategoryEditorOpen(false)}
       apply={applyCategoryConfiguration}
