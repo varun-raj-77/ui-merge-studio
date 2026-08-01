@@ -9,7 +9,7 @@ import {
   normalizeCategorySidebarConfiguration
 } from '../../apps/studio/src/categorySidebarConfiguration';
 import { defaultPreviewContext } from '../../apps/studio/src/previewContext';
-import { candidateKey, emptyShowcaseSelection, showcaseSelectionReducer } from '../../apps/studio/src/showcaseSelection';
+import { candidateKey, categorySidebarDecision, emptyShowcaseSelection, showcaseSelectionReducer } from '../../apps/studio/src/showcaseSelection';
 import { catalogueCapabilityFromRuntime, catalogueScopesForCapability } from '../../apps/studio/src/catalogueSelectionCapabilities';
 import { initialSelectionHistory, selectionHistoryReducer } from '../../apps/studio/src/selectionHistory';
 
@@ -44,9 +44,25 @@ describe('category sidebar permanent configuration', () => {
   it('retains ownership and keeps configuration identity separate from the candidate key', () => {
     const selected = sidebarSelection();
     const configured = showcaseSelectionReducer(selected, { type: 'configure-category-sidebar', configuration: createCategorySidebarConfigurationSelection(proof) });
-    expect(configured.categorySidebarConfiguration).toMatchObject({ capabilityId: 'category-sidebar:options', sourceBranch: 'branch-a', route: '/catalogue', pageId: 'product-catalogue', identity: 'categories-audio_desk_travel--default-desk' });
+    expect(categorySidebarDecision(configured)).toMatchObject({
+      capabilityId: 'category-sidebar',
+      branch: 'branch-a',
+      route: '/catalogue',
+      pageId: 'product-catalogue',
+      configuration: {
+        capabilityId: 'category-sidebar:options',
+        sourceBranch: 'branch-a',
+        identity: 'categories-audio_desk_travel--default-desk'
+      }
+    });
+    expect(configured).not.toHaveProperty('categorySidebarConfiguration');
     expect(candidateKey(configured)).toBe(candidateKey(selected));
     expect(categorySidebarRepositoryMetadata.source).toEqual({ path: 'src/config/categorySidebarConfiguration.ts', declaration: 'categorySidebarConfiguration' });
+    expect(categorySidebarCandidateSourceConfiguration({
+      sliceId: 'category-slice',
+      sidebarSelected: true,
+      selection: categorySidebarDecision(configured)?.configuration
+    }).value).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk' });
   });
 
   it('keeps supported temporary context and explains fallback without mutating it', () => {
@@ -65,8 +81,8 @@ describe('category sidebar permanent configuration', () => {
     const applied = selectionHistoryReducer(before, { type: 'commit', selection: configured, label: 'Customized Category sidebar' });
     expect(applied.past).toHaveLength(2);
     const undone = selectionHistoryReducer(applied, { type: 'undo' });
-    expect(undone.present.categorySidebarConfiguration).toBeFalsy();
-    expect(selectionHistoryReducer(undone, { type: 'redo' }).present.categorySidebarConfiguration?.identity).toBe('categories-audio_desk_travel--default-desk');
+    expect(categorySidebarDecision(undone.present)?.configuration).toBeFalsy();
+    expect(categorySidebarDecision(selectionHistoryReducer(undone, { type: 'redo' }).present)?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk');
   });
 
   it('refuses configuration without the parent sidebar selection', () => {

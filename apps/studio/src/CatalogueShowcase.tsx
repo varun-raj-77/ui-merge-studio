@@ -12,6 +12,7 @@ import {
 } from './catalogueSelectionCapabilities';
 import {
   candidateKey,
+  categorySidebarDecision,
   emptyShowcaseSelection,
   hasQuickViewSelection,
   scopeIdentityKey,
@@ -837,11 +838,13 @@ function Comparison({ exit }: { exit: () => void }) {
     ...(quickCount === catalogueManifest.productIds.length ? [quickViewAllCapabilityId] : [])
   ];
   const selectionCount = selection.scopes.length + (selection.incompatibleProductId ? 1 : 0);
-  const configuredPreview = useMemo(() => selection.categorySidebarConfiguration
-    ? configuredCategoryPreviewContext(previewContext, selection.categorySidebarConfiguration.configuration)
+  const sidebarDecision = categorySidebarDecision(selection);
+  const categoryConfigurationSelection = sidebarDecision?.configuration ?? null;
+  const configuredPreview = useMemo(() => categoryConfigurationSelection
+    ? configuredCategoryPreviewContext(previewContext, categoryConfigurationSelection.configuration)
     : { context: previewContext, notices: [] as PreviewContextNotice[] }, [
       previewContext,
-      selection.categorySidebarConfiguration?.identity
+      categoryConfigurationSelection?.identity
     ]);
 
   function performHistoryAction(action: 'undo' | 'redo') {
@@ -1104,18 +1107,18 @@ function Comparison({ exit }: { exit: () => void }) {
         <button aria-pressed={mobilePreview === 'branch-b'} onClick={() => setMobilePreview('branch-b')}>Version B</button>
       </nav>
       <section className="preview-workspace">
-        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={configuredPreview.context} categoryConfiguration={selection.categorySidebarConfiguration?.configuration} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={configuredPreview.context} categoryConfiguration={categoryConfigurationSelection?.configuration} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
         <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-b', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
       </section>
     </section>
     <section className="result-workspace" hidden={workspaceState !== 'combined'}>
       <header className="result-header">
         <button onClick={() => setWorkspaceState('comparison')}>← Back to comparison</button>
-        <div><span>{selection.categorySidebarConfiguration ? 'Configured preview' : 'Combined result'}</span><h1>Built from {selection.scopes.length} selection{selection.scopes.length === 1 ? '' : 's'}</h1></div>
+        <div><span>{categoryConfigurationSelection ? 'Configured preview' : 'Combined result'}</span><h1>Built from {selection.scopes.length} selection{selection.scopes.length === 1 ? '' : 's'}</h1></div>
         <div className="result-chips" aria-label="Selections used">{scopeSummary.map(label => <span key={label}>✓ {label}</span>)}</div>
       </header>
       <div className="combined-stage">
-        <ArtifactFrame artifact={candidate.artifact} title="Combined result application" previewId="combined" context={configuredPreview.context} categoryConfiguration={selection.categorySidebarConfiguration?.configuration} selectedScopes={[]} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <ArtifactFrame artifact={candidate.artifact} title="Combined result application" previewId="combined" context={configuredPreview.context} categoryConfiguration={categoryConfigurationSelection?.configuration} selectedScopes={[]} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
         {candidateStatus === 'resolving' && <div className="candidate-loading" role="status">Updating result…</div>}
       </div>
     </section>
@@ -1139,7 +1142,7 @@ function Comparison({ exit }: { exit: () => void }) {
         {selectionRouteGroups.map(group => <section className="selection-route-group" key={`${group.pageId}:${group.route}`}>
           <strong>{pageLabel(group.pageId)} · {group.route}</strong>
           <div>
-            {group.scopes.map(scope => <SelectionChip key={scopeIdentityKey(scope)} scope={scope} configuration={selection.categorySidebarConfiguration?.configuration} openEvidence={openEvidence} remove={removeScope} />)}
+            {group.scopes.map(scope => <SelectionChip key={scopeIdentityKey(scope)} scope={scope} configuration={scope.featureId === 'category-sidebar' ? scope.configuration?.configuration : null} openEvidence={openEvidence} remove={removeScope} />)}
             {selection.incompatibleProductId && <span className="selection-chip conflict-chip">
               <span>Product-ID change <b>Conflict</b></span>
               <button onClick={() => setShowConflict(true)} aria-label="Evidence for Product-ID conflict">i</button>
@@ -1190,7 +1193,7 @@ function Comparison({ exit }: { exit: () => void }) {
     {evidenceScope && <EvidenceDialog scope={evidenceScope} candidate={candidate} opener={evidenceOpener} close={() => setEvidenceScope(null)} />}
     {detailsCapability && <CapabilityDetailsDialog capability={detailsCapability} close={() => setDetailsCapability(null)} customize={openCategoryEditor} />}
     {categoryEditorOpen && <CategoryConfigurationDialog
-      initial={selection.categorySidebarConfiguration?.configuration ?? completeCategorySidebarConfiguration}
+      initial={categoryConfigurationSelection?.configuration ?? completeCategorySidebarConfiguration}
       opener={categoryEditorOpener}
       close={() => setCategoryEditorOpen(false)}
       apply={applyCategoryConfiguration}

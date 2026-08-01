@@ -13,14 +13,18 @@ interface ShowcaseScopeOwnership {
 }
 
 export type ShowcaseScope = ShowcaseScopeOwnership & (
-  | { kind: 'feature'; featureId: 'category-sidebar'; branch: 'branch-a' }
+  | {
+    kind: 'feature';
+    featureId: 'category-sidebar';
+    branch: 'branch-a';
+    configuration?: CategorySidebarConfigurationSelection | null;
+  }
   | { kind: 'feature-instance'; featureId: 'product-quick-view'; branch: 'branch-b'; instanceId: CatalogueProductId }
 );
 
 export interface ShowcaseSelectionState {
   scopes: ShowcaseScope[];
   incompatibleProductId: boolean;
-  categorySidebarConfiguration?: CategorySidebarConfigurationSelection | null;
 }
 
 export type ShowcaseSelectionAction =
@@ -32,8 +36,7 @@ export type ShowcaseSelectionAction =
 
 export const emptyShowcaseSelection: ShowcaseSelectionState = {
   scopes: [],
-  incompatibleProductId: false,
-  categorySidebarConfiguration: null
+  incompatibleProductId: false
 };
 
 export function scopeKey(scope: ShowcaseScope) {
@@ -42,6 +45,19 @@ export function scopeKey(scope: ShowcaseScope) {
 
 export function scopeIdentityKey(scope: ShowcaseScope) {
   return `${scope.pageId}:${scope.route}:${scope.branch}:${scope.capabilityId}`;
+}
+
+export function categorySidebarDecision(state: ShowcaseSelectionState) {
+  return state.scopes.find((scope): scope is Extract<ShowcaseScope, { featureId: 'category-sidebar' }> => (
+    scope.featureId === 'category-sidebar'
+  )) ?? null;
+}
+
+export function scopeDecisionKey(scope: ShowcaseScope) {
+  const configurationIdentity = scope.featureId === 'category-sidebar'
+    ? scope.configuration?.identity ?? ''
+    : '';
+  return `${scopeIdentityKey(scope)}:${configurationIdentity}`;
 }
 
 export function scopeFromRuntime(value: string, productIds: readonly string[]): ShowcaseScope | null {
@@ -61,16 +77,18 @@ export function showcaseSelectionReducer(state: ShowcaseSelectionState, action: 
   if (action.type === 'configure-category-sidebar') {
     const hasSidebar = state.scopes.some(scope => scope.featureId === 'category-sidebar');
     if (!hasSidebar) return state;
-    return { ...state, categorySidebarConfiguration: action.configuration };
+    return {
+      ...state,
+      scopes: state.scopes.map(scope => scope.featureId === 'category-sidebar'
+        ? { ...scope, configuration: action.configuration }
+        : scope)
+    };
   }
   const key = scopeIdentityKey(action.scope);
   const contains = state.scopes.some(scope => scopeIdentityKey(scope) === key);
   if (action.type === 'remove-scope' || contains) return {
     ...state,
-    scopes: state.scopes.filter(scope => scopeIdentityKey(scope) !== key),
-    categorySidebarConfiguration: action.scope.featureId === 'category-sidebar'
-      ? null
-      : state.categorySidebarConfiguration
+    scopes: state.scopes.filter(scope => scopeIdentityKey(scope) !== key)
   };
   return { ...state, scopes: [...state.scopes, action.scope].sort((left, right) => scopeIdentityKey(left).localeCompare(scopeIdentityKey(right))) };
 }

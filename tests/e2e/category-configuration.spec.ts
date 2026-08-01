@@ -96,6 +96,43 @@ for (const viewport of [
   });
 }
 
+test('production journey persists one Travel-excluded sidebar decision everywhere', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(compareUrl);
+  await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
+  await page.getByRole('button', { name: 'Customize categories' }).click();
+  let dialog = page.getByRole('dialog', { name: 'Category sidebar' });
+  await dialog.getByRole('checkbox', { name: 'Travel' }).uncheck();
+  await dialog.getByRole('button', { name: 'Apply customization' }).click();
+
+  const dock = page.getByRole('complementary', { name: 'Current selections' });
+  await expect(dock).toContainText('All, Audio, Desk');
+  await expect(dock).toContainText('Default: All');
+  await expect(versionA(page).getByRole('button', { name: 'All', exact: true })).toBeVisible();
+  await expect(versionA(page).getByRole('button', { name: 'Audio', exact: true })).toBeVisible();
+  await expect(versionA(page).getByRole('button', { name: 'Desk', exact: true })).toBeVisible();
+  await expect(versionA(page).getByRole('button', { name: 'Travel', exact: true })).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'View combined' }).click();
+  await expect(combined(page).getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(combined(page).getByRole('button', { name: 'Travel', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Back to comparison', exact: true }).first().click();
+
+  await page.getByRole('button', { name: 'Customize categories' }).click();
+  dialog = page.getByRole('dialog', { name: 'Category sidebar' });
+  await expect(dialog.getByRole('checkbox', { name: 'Travel' })).not.toBeChecked();
+  await expect(dialog.getByRole('radio', { name: 'All' })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(versionA(page).getByRole('button', { name: 'Travel', exact: true })).toBeVisible();
+  await expect(dock).not.toContainText('Default: All');
+  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await expect(versionA(page).getByRole('button', { name: 'Travel', exact: true })).toHaveCount(0);
+  await expect(dock).toContainText('All, Audio, Desk');
+  await expect(dock).toContainText('Default: All');
+});
+
 test('desktop configures the sidebar atomically and composes it with Desk Stand Quick View', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
