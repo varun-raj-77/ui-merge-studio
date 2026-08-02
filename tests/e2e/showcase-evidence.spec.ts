@@ -94,7 +94,7 @@ test.describe('mode-free comparison workspace', () => {
     const conflict = page.getByRole('dialog', { name: 'Cannot combine these selections' });
     await expect(conflict).toContainText('src/types/product.ts#Product');
     await conflict.getByRole('button', { name: 'Inspect evidence' }).click();
-    await expect(conflict).toContainText('The previous verified candidate remains unchanged.');
+    await expect(conflict).toContainText('The safe Integration Plan remains available');
     await conflict.getByRole('button', { name: 'Remove incompatible change' }).click();
     await expect(conflict).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'View combined' })).toBeVisible();

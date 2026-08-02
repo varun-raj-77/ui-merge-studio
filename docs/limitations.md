@@ -14,9 +14,11 @@
 - Capability fallbacks are deterministic and non-blocking, but a repository adapter must provide stable category and product identifiers for meaningful cross-version restoration.
 - Selection capabilities depend on repository or fixture metadata that identifies a safe source boundary. Arbitrary DOM elements are not selectable because visual containment alone cannot prove declaration ownership, dependencies, tests, or safe isolation.
 - The controlled catalogue supports the Category sidebar as a whole feature, a configured category subset with a permanent default, each Quick View as an instance, and all five Quick Views as one atomic all-instances action.
-- The hosted configured preview is an honest browser-side preview over a matching recorded candidate; it does not create a Git branch. Local candidate generation owns the deterministic AST source mutation and verification path.
+- The hosted configured preview is an honest browser-side runtime projection of a canonical Integration Plan; it does not require a matching recorded candidate and does not create a Git branch. Local candidate generation owns deterministic AST source mutation and verification.
 - Category configuration controls retained options, the permanent default, heading visibility, and data-derived product-count visibility. It does not support custom heading text, count formatting, arbitrary styling, or new configurable feature families; those broader authoring and local branch-delivery concerns remain outside this milestone and in future Milestone 4 work.
 - Configurable source generation requires an explicitly exported, slice-owned constant whose source shape and inspected content remain valid. Unknown categories, empty subsets, disabled defaults, missing parent selections, stale source, malformed syntax, and incompatible initializer shapes are refused.
 - Route and page ownership are retained and grouped in the selection dock. Feature relocation is excluded; future multi-route integrations must render each feature only on its original route.
+- Plan schema version 1 fixes the foundation to `main`. Foundation choice and migration across repository metadata revisions are not yet product features.
+- The configuration-driven runtime is implemented by the Product Catalogue adapter. It proves supported feature composition, not arbitrary React runtime synthesis, backend behavior, authentication, or a framework-independent adapter.
 
 Correct refusal is a product capability, not a failure to be hidden.

@@ -17,7 +17,7 @@ test('creates, verifies, relaunches, and deterministically recognizes the extern
     if (message.type() === 'error' && !text.startsWith('Warning: [antd:')) consoleErrors.push(text);
   });
 
-  await page.goto('/');
+  await page.goto('/?mode=local');
   await page.getByRole('button', { name: /Try sample demo/ }).click();
   await expect(page.locator('.workspace-status')).toHaveText('Both live apps are ready to compare', { timeout: 120_000 });
   await expect(card(page, 'left')).toContainText(leftBranch);

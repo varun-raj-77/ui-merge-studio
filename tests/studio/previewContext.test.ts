@@ -176,7 +176,7 @@ describe('shared preview context protocol', () => {
     const context = withContext({ categoryId: 'desk', selectedProductId: 'p-105' });
     expect(context.catalogue.categoryId).toBe('desk');
     expect(candidateKey(selected)).toBe(before);
-    expect(selected.scopes).toHaveLength(1);
+    expect(selected.selections).toHaveLength(1);
   });
 
   it('does not let a scroll intent overwrite unsupported catalogue state', () => {

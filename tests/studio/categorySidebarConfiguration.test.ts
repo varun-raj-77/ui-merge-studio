@@ -95,21 +95,21 @@ describe('category sidebar permanent configuration', () => {
     const applied = selectionHistoryReducer(before, { type: 'commit', selection: configured, label: 'Customized Category sidebar' });
     expect(applied.past).toHaveLength(2);
     const undone = selectionHistoryReducer(applied, { type: 'undo' });
-    expect(categorySidebarDecision(undone.present)?.configuration).toBeFalsy();
+    expect(categorySidebarDecision(undone.present)?.configuration?.identity).toBe('categories-all_audio_desk_travel--default-all--heading-shown--counts-hidden');
     expect(categorySidebarDecision(selectionHistoryReducer(undone, { type: 'redo' }).present)?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk--heading-hidden--counts-shown');
   });
 
   it('atomically creates a configured sidebar and cannot be duplicated or downgraded by a stale Add', () => {
     const configured = showcaseSelectionReducer(emptyShowcaseSelection, { type: 'configure-category-sidebar', configuration: createCategorySidebarConfigurationSelection(proof) });
     const decision = categorySidebarDecision(configured);
-    expect(configured.scopes).toHaveLength(1);
+    expect(configured.selections).toHaveLength(1);
     expect(decision?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk--heading-hidden--counts-shown');
     const stalePlainAdd = showcaseSelectionReducer(configured, {
       type: 'toggle-scope',
       scope: catalogueScopesForCapability(catalogueCapabilityFromRuntime('category-sidebar', 'branch-a'))[0]
     });
     expect(stalePlainAdd).toBe(configured);
-    expect(stalePlainAdd.scopes).toHaveLength(1);
+    expect(stalePlainAdd.selections).toHaveLength(1);
     expect(categorySidebarDecision(stalePlainAdd)?.configuration?.identity).toBe(decision?.configuration?.identity);
     expect(categorySidebarCandidateSourceConfiguration({
       sliceId: 'slice',

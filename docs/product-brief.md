@@ -2,6 +2,6 @@
 
 UI Merge Studio lets one local developer compare running React branch implementations, select preferred rendered features, trace those features to source and required dependencies, and create one verified candidate branch.
 
-The public Product Catalogue sample demonstrates the interaction model without pretending to run Git in a browser. Baseline, Branch A, and Branch B share stable data. Its supported success and refusal evidence is generated from instrumented local engine runs; unsupported selection combinations are labelled unrecorded.
+The public Product Catalogue sample demonstrates the interaction model without pretending to run Git in a browser. Baseline, Version A, and Version B share stable data. One canonical Integration Plan drives the selection summary and any supported configured result, including configurations outside the recorded candidate matrix. Historical engine runs remain regression and parity evidence.
 
-The local engine remains authoritative for worktree creation, runtime instrumentation, Git/AST analysis, candidate mutation, and verification. The hosted sample replays only committed supported or refused outcomes and labels other combinations unrecorded.
+The local engine remains authoritative for worktree creation, runtime instrumentation, Git/AST analysis, source mutation, and verification. The hosted sample creates and previews an Integration Plan; it never claims a branch, commit, push, or deployment was created.

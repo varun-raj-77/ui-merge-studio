@@ -4,7 +4,13 @@ import { CandidateGenerator } from '../../packages/candidate-generation/src/cand
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
 import { GitSourceRepository } from '../../packages/source-analysis/src/gitModel';
 import type { SourceIdentity } from '../../packages/shared/src/sourceIdentity';
-import { categorySidebarCandidateSourceConfiguration, createCategorySidebarConfigurationSelection } from '../../apps/studio/src/categorySidebarConfiguration';
+import {
+  emptyCatalogueIntegrationPlan,
+  integrationPlanToGenerationRequest,
+  quickViewPlanDecision,
+  replacePlanSelection,
+  sidebarPlanDecision
+} from '../../apps/studio/src/catalogueIntegrationPlan';
 
 const fixture=resolve(import.meta.dirname,'../../fixtures/generated/product-catalogue');const repository=new GitSourceRepository(fixture);
 function selection(branch:string,path:string,line:number,componentName:string,previewId:string):SourceIdentity{return{boundaryId:`${componentName}-boundary`,instanceId:`${componentName}-instance`,repositoryRelativePath:path,line,column:8,componentName,exportName:componentName,branch,previewId,sessionId:`${previewId}-session`,generation:1,confidence:'exact'};}
@@ -17,10 +23,16 @@ test('generates and verifies the Product Catalogue candidate, then repeats idemp
   const base=await repository.resolveRef('main');const sourceRefs=['branch-a','branch-b','branch-incompatible'];const sourceBefore=await Promise.all(sourceRefs.map(ref=>repository.resolveRef(ref)));
   const generator=new CandidateGenerator(fixture,{artifactRoot:resolve(fixture,'..','..','..')});
   const selectedArtifacts=await artifacts();
-  const categoryConfigurationInput=createCategorySidebarConfigurationSelection({enabledCategoryIds:['travel','audio','desk'],defaultCategoryId:'desk',showHeading:false,showProductCounts:true});
+  const plan=replacePlanSelection(
+    replacePlanSelection(emptyCatalogueIntegrationPlan,sidebarPlanDecision({enabledCategoryIds:['travel','audio','desk'],defaultCategoryId:'desk',showHeading:false,showProductCounts:true})),
+    quickViewPlanDecision('p-105')
+  );
+  const projection=integrationPlanToGenerationRequest(plan);
   const request={repositoryRoot:fixture,baseRef:'main',expectedBaseCommit:base,candidateBranch:'combined-result',artifacts:selectedArtifacts,analyzerSchemaVersion:2 as const,sourceConfigurations:[
-    categorySidebarCandidateSourceConfiguration({sliceId:selectedArtifacts[0].analysisId,sidebarSelected:true,selection:categoryConfigurationInput}),
-    {sliceId:selectedArtifacts[1].analysisId,path:'src/config/quickViewTargets.ts',declaration:'quickViewTargetIds',value:['p-105']}
+    ...projection.sourceConfigurations.map(configuration=>({
+      ...configuration,
+      sliceId:configuration.declaration==='categorySidebarConfiguration'?selectedArtifacts[0].analysisId:selectedArtifacts[1].analysisId
+    }))
   ]};
   const first=await generator.generate(request);
   expect(first.status,first.message).toBe('succeeded');

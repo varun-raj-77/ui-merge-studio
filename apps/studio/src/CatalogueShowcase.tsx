@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useReducer, useRef, useState, type RefObject } from 'react';
 import type { PublicArtifact, PublicCandidate } from '../../../packages/showcase-evidence/src/schema';
 import { catalogueManifest, evidenceForScope, recordedRefusal, resolveCatalogueCandidate } from './catalogueEvidence';
+import { ConfiguredCatalogueFrame } from './ConfiguredCatalogueFrame';
+import {
+  cataloguePlanIdentity,
+  hasIncompatibleProductId,
+  integrationPlanToEvidenceSummary,
+  integrationPlanToGenerationRequest,
+  integrationPlanToPreviewModel,
+  integrationPlanToVerificationExpectations
+} from './catalogueIntegrationPlan';
 import { catalogueProduct } from './catalogueProducts';
 import {
   catalogueCapabilityForScope,
@@ -13,8 +22,8 @@ import {
 import {
   candidateKey,
   categorySidebarDecision,
-  emptyShowcaseSelection,
   hasQuickViewSelection,
+  selectionScopes,
   scopeIdentityKey,
   scopeKey,
   showcaseSelectionReducer,
@@ -73,6 +82,7 @@ function Landing({ open }: { open: () => void }) {
           <button onClick={open}>Try the interactive example</button>
           <a href="#how">How it works</a>
         </div>
+        <p className="hosted-truth">Hosted configured preview only—no Git operations run in your browser. The local tool performs verified branch delivery.</p>
       </div>
       <div className="outcome-illustration" aria-label="Compare two versions, pick visible features, and view the combined result">
         <div className="outcome-frame compare-frame"><span>01</span><b>Compare two versions</b><i><em /><em /></i></div>
@@ -591,6 +601,7 @@ function EvidenceDialog({ scope, candidate, opener, close }: {
       </div>}
       {tab === 'dependencies' && <div className="evidence-pane dependency-groups">
         {dependencyGroups(paths).map(([group, items]) => <section key={group}><h3>{group}</h3>{items.map(path => <code key={path}>{path}</code>)}</section>)}
+        <section><h3>Excluded sibling changes</h3>{evidence.excludedFiles.map(item => <p key={`${item.path}:${item.symbol}`}><code>{item.path}</code><span>{item.reason}</span></p>)}</section>
       </div>}
       {tab === 'verification' && <div className="evidence-pane verification-list">
         {verification.map(([label, passed]) => <p key={label}><span>{label}</span><strong>{passed ? 'Passed' : 'Unavailable'} <i aria-hidden="true">✓</i></strong></p>)}
@@ -767,7 +778,7 @@ function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }:
       {showingEvidence && <div className="conflict-evidence">
         <strong>{recordedRefusal.selectedBoundary}</strong>
         <p>{recordedRefusal.reason}</p>
-        <small>The previous verified candidate remains unchanged.</small>
+        <small>The safe Integration Plan remains available; no result or source is generated from this refused plan.</small>
       </div>}
       <footer>
         <button className="secondary-action" onClick={inspect}>{showingEvidence ? 'Hide evidence' : 'Inspect evidence'}</button>
@@ -866,9 +877,6 @@ function Comparison({ exit }: { exit: () => void }) {
   const [mobilePreview, setMobilePreview] = useState<ComparisonPreview>('branch-a');
   const [workspaceState, setWorkspaceState] = useState<WorkspaceState>('comparison');
   const [dockExpanded, setDockExpanded] = useState(true);
-  const initialCandidate = resolveCatalogueCandidate(candidateKey(emptyShowcaseSelection));
-  const [candidate, setCandidate] = useState(initialCandidate);
-  const [candidateStatus, setCandidateStatus] = useState<'ready' | 'resolving'>('ready');
   const [evidenceScope, setEvidenceScope] = useState<ShowcaseScope | null>(null);
   const [showConflict, setShowConflict] = useState(false);
   const [showConflictEvidence, setShowConflictEvidence] = useState(false);
@@ -879,16 +887,21 @@ function Comparison({ exit }: { exit: () => void }) {
   const evidenceOpener = useRef<HTMLElement | null>(null);
   const categoryEditorOpener = useRef<HTMLElement | null>(null);
   const lastContextRevision = useRef<Record<string, number>>({});
-  const desiredKey = candidateKey(selection);
-  const refused = selection.incompatibleProductId && hasQuickViewSelection(selection);
+  const scopes = useMemo(() => selectionScopes(selection), [selection]);
+  const previewModel = useMemo(() => integrationPlanToPreviewModel(selection), [selection]);
+  const evidenceSummary = useMemo(() => integrationPlanToEvidenceSummary(selection), [selection]);
+  const verificationProjection = useMemo(() => integrationPlanToVerificationExpectations(selection), [selection]);
+  const generationProjection = useMemo(() => previewModel.refused ? null : integrationPlanToGenerationRequest(selection), [selection, previewModel.refused]);
+  const planIdentity = cataloguePlanIdentity(selection);
+  const refused = previewModel.refused;
   const branchAArtifact = catalogueManifest.artifacts.find(item => item.kind === 'branch-a')!;
   const branchBArtifact = catalogueManifest.artifacts.find(item => item.kind === 'branch-b')!;
-  const quickCount = selection.scopes.filter(scope => scope.featureId === 'product-quick-view').length;
+  const quickCount = scopes.filter(scope => scope.featureId === 'product-quick-view').length;
   const selectedScopeKeys = [
-    ...selection.scopes.map(scopeKey),
+    ...scopes.map(scopeKey),
     ...(quickCount === catalogueManifest.productIds.length ? [quickViewAllCapabilityId] : [])
   ];
-  const selectionCount = selection.scopes.length + (selection.incompatibleProductId ? 1 : 0);
+  const selectionCount = selection.selections.length;
   const sidebarDecision = categorySidebarDecision(selection);
   const categoryConfigurationSelection = sidebarDecision?.configuration ?? null;
   const configuredPreview = useMemo(() => categoryConfigurationSelection
@@ -946,16 +959,6 @@ function Comparison({ exit }: { exit: () => void }) {
     return () => removeEventListener('keydown', listener);
   }, [selectionHistory.past.length, selectionHistory.future.length]);
 
-  useEffect(() => {
-    if (refused || candidate.key === desiredKey) return;
-    setCandidateStatus('resolving');
-    const timer = setTimeout(() => {
-      setCandidate(resolveCatalogueCandidate(desiredKey));
-      setCandidateStatus('ready');
-    }, 180);
-    return () => clearTimeout(timer);
-  }, [candidate.key, desiredKey, refused]);
-
   const commitSelection = (
     next: typeof selection,
     label: string,
@@ -970,7 +973,7 @@ function Comparison({ exit }: { exit: () => void }) {
   };
   const removeScope = (scope: ShowcaseScope) => {
     let next = showcaseSelectionReducer(selection, { type: 'remove-scope', scope });
-    if (scope.featureId === 'product-quick-view' && quickCount === 1 && selection.incompatibleProductId) {
+    if (scope.featureId === 'product-quick-view' && quickCount === 1 && hasIncompatibleProductId(selection)) {
       next = showcaseSelectionReducer(next, { type: 'toggle-incompatible' });
       setShowConflict(false);
     }
@@ -984,8 +987,8 @@ function Comparison({ exit }: { exit: () => void }) {
       setCapabilityNotice(capability);
       return;
     }
-    const scopes = catalogueScopesForCapability(capability);
-    if (scopes.length === 0) {
+    const capabilityScopes = catalogueScopesForCapability(capability);
+    if (capabilityScopes.length === 0) {
       setCapabilityNotice({
         ...capability,
         kind: 'unsupported',
@@ -994,12 +997,12 @@ function Comparison({ exit }: { exit: () => void }) {
       });
       return;
     }
-    const alreadySelected = scopes.every(scope => (
-      selection.scopes.some(item => scopeIdentityKey(item) === scopeIdentityKey(scope))
+    const alreadySelected = capabilityScopes.every(scope => (
+      scopes.some(item => scopeIdentityKey(item) === scopeIdentityKey(scope))
     ));
     if (!alreadySelected) {
       const compatibility = selectionCapabilityCompatibility([
-        ...selection.scopes.map(catalogueCapabilityForScope),
+        ...scopes.map(catalogueCapabilityForScope),
         capability
       ]);
       if (!compatibility.compatible) {
@@ -1013,8 +1016,8 @@ function Comparison({ exit }: { exit: () => void }) {
       }
     }
     let next = selection;
-    for (const scope of scopes) {
-      const contains = next.scopes.some(item => scopeIdentityKey(item) === scopeIdentityKey(scope));
+    for (const scope of capabilityScopes) {
+      const contains = selectionScopes(next).some(item => scopeIdentityKey(item) === scopeIdentityKey(scope));
       if (alreadySelected || !contains) {
         next = showcaseSelectionReducer(
           next,
@@ -1025,7 +1028,7 @@ function Comparison({ exit }: { exit: () => void }) {
     if (!alreadySelected && window.innerWidth <= 700) {
       setDockExpanded(false);
     }
-    if (alreadySelected && !hasQuickViewSelection(next) && selection.incompatibleProductId) {
+    if (alreadySelected && !hasQuickViewSelection(next) && hasIncompatibleProductId(selection)) {
       next = showcaseSelectionReducer(next, { type: 'toggle-incompatible' });
       setShowConflict(false);
     }
@@ -1110,20 +1113,27 @@ function Comparison({ exit }: { exit: () => void }) {
       [message.previewId]: message.notices
     }));
   };
-  const scopeSummary = useMemo(() => selection.scopes.map(scopeLabel), [selection.scopes]);
+  const scopeSummary = useMemo(() => scopes.map(scopeLabel), [scopes]);
   const selectionRouteGroups = useMemo(() => {
-    const groups = new Map<string, { route: string; pageId: string; scopes: ShowcaseScope[] }>();
-    for (const scope of selection.scopes) {
-      const key = `${scope.pageId}\u0000${scope.route}`;
-      const group = groups.get(key);
-      if (group) group.scopes.push(scope);
-      else groups.set(key, { route: scope.route, pageId: scope.pageId, scopes: [scope] });
-    }
-    return [...groups.values()].sort((left, right) => left.route.localeCompare(right.route));
-  }, [selection.scopes]);
+    return evidenceSummary.groups.map(group => ({
+      ...group,
+      scopes: scopes.filter(scope => scope.route === group.route && scope.pageId === group.pageId)
+    }));
+  }, [evidenceSummary, scopes]);
   const historyLabels = selectionHistory.past.slice(-6).reverse();
+  const configuredRuntimeNotices = useMemo((): PreviewContextNotice[] => {
+    const productId = configuredPreview.context.catalogue.selectedProductId;
+    if (!configuredPreview.context.catalogue.quickViewOpen
+      || !productId
+      || previewModel.quickViewProductIds.some(id => id === productId)) return [];
+    const productName = catalogueProduct(productId)?.name ?? 'the selected product';
+    return [{
+      code: 'unsupported-quick-view',
+      message: `Quick View is not included for ${productName} in this configured result. The product list remains selected.`
+    }];
+  }, [configuredPreview.context.catalogue.quickViewOpen, configuredPreview.context.catalogue.selectedProductId, previewModel.planIdentity]);
   const activeContextNotices = workspaceState === 'combined'
-    ? [...configuredPreview.notices, ...(contextNotices.combined ?? [])]
+    ? [...configuredPreview.notices, ...configuredRuntimeNotices, ...(contextNotices.combined ?? [])]
     : (contextNotices[mobilePreview] ?? []).filter(notice => notice.code !== 'unsupported-quick-view');
 
   return <main
@@ -1134,26 +1144,32 @@ function Comparison({ exit }: { exit: () => void }) {
     data-context-quick-view={previewContext.catalogue.quickViewOpen}
     data-history-past={selectionHistory.past.length}
     data-history-future={selectionHistory.future.length}
+    data-integration-plan-id={planIdentity}
+    data-preview-plan-id={previewModel.planIdentity}
+    data-generation-plan-id={generationProjection?.planIdentity ?? 'refused'}
+    data-verification-plan-id={verificationProjection.planIdentity}
+    data-evidence-plan-id={evidenceSummary.planIdentity}
+    data-historical-artifact-required="false"
   >
     <header className="workspace-commandbar">
       <button onClick={exit} className="catalogue-wordmark"><span>UM</span><i>UI Merge Studio</i></button>
       <span className="workspace-name">Product Catalogue example</span>
       {workspaceState === 'comparison' && <button
-        className={selection.incompatibleProductId ? 'experimental active' : 'experimental'}
+        className={hasIncompatibleProductId(selection) ? 'experimental active' : 'experimental'}
         disabled={!hasQuickViewSelection(selection)}
-        aria-pressed={selection.incompatibleProductId}
+        aria-pressed={hasIncompatibleProductId(selection)}
         onClick={() => commitSelection(
           showcaseSelectionReducer(selection, { type: 'toggle-incompatible' }),
-          selection.incompatibleProductId ? 'Removed Product-ID change' : 'Added Product-ID change',
-          selection.incompatibleProductId
+          hasIncompatibleProductId(selection) ? 'Removed Product-ID change' : 'Added Product-ID change',
+          hasIncompatibleProductId(selection)
         )}
-      >{selection.incompatibleProductId ? '✓ Product-ID change added' : '+ Experimental Product-ID change'}</button>}
+      >{hasIncompatibleProductId(selection) ? '✓ Product-ID change added' : '+ Experimental Product-ID change'}</button>}
     </header>
 
     <section className="comparison-view" hidden={workspaceState !== 'comparison'}>
       <header className="workspace-heading">
         <h1>Compare versions</h1>
-        <p>Preview context stays synchronized across generated candidates. The local tool creates the verified Git branch.</p>
+        <p>Preview context stays synchronized across versions and the configured result. The local tool creates the verified Git branch.</p>
       </header>
       <nav className="mobile-preview-tabs" aria-label="Preview versions">
         <button aria-pressed={mobilePreview === 'branch-a'} onClick={() => setMobilePreview('branch-a')}>Version A</button>
@@ -1167,12 +1183,24 @@ function Comparison({ exit }: { exit: () => void }) {
     <section className="result-workspace" hidden={workspaceState !== 'combined'}>
       <header className="result-header">
         <button onClick={() => setWorkspaceState('comparison')}>← Back to comparison</button>
-        <div><span>{categoryConfigurationSelection ? 'Configured preview' : 'Combined result'}</span><h1>Built from {selection.scopes.length} selection{selection.scopes.length === 1 ? '' : 's'}</h1></div>
+        <div><span>Configured preview</span><h1>Built from {scopes.length} selection{scopes.length === 1 ? '' : 's'}</h1></div>
         <div className="result-chips" aria-label="Selections used">{scopeSummary.map(label => <span key={label}>✓ {label}</span>)}</div>
       </header>
       <div className="combined-stage">
-        <ArtifactFrame artifact={candidate.artifact} title="Combined result application" previewId="combined" context={configuredPreview.context} categoryConfiguration={categoryConfigurationSelection?.configuration} selectedScopes={[]} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
-        {candidateStatus === 'resolving' && <div className="candidate-loading" role="status">Updating result…</div>}
+        <ConfiguredCatalogueFrame
+          model={previewModel}
+          title="Combined result application"
+          context={configuredPreview.context}
+          onCategoryChange={categoryId => setPreviewContext(current => ({
+            ...current,
+            catalogue: { ...current.catalogue, categoryId }
+          }))}
+          onQuickViewChange={(productId, open) => setPreviewContext(current => ({
+            ...current,
+            catalogue: { ...current.catalogue, selectedProductId: productId, quickViewOpen: open }
+          }))}
+          onHistoryShortcut={performHistoryAction}
+        />
       </div>
     </section>
 
@@ -1195,8 +1223,18 @@ function Comparison({ exit }: { exit: () => void }) {
         {selectionRouteGroups.map(group => <section className="selection-route-group" key={`${group.pageId}:${group.route}`}>
           <strong>{pageLabel(group.pageId)} · {group.route}</strong>
           <div>
-            {group.scopes.map(scope => <SelectionChip key={scopeIdentityKey(scope)} scope={scope} configuration={scope.featureId === 'category-sidebar' ? scope.configuration?.configuration : null} openEvidence={openEvidence} remove={removeScope} />)}
-            {selection.incompatibleProductId && <span className="selection-chip conflict-chip">
+            {group.rows.map(row => row.capabilityId === 'category-sidebar'
+              ? group.scopes.filter(scope => scope.featureId === 'category-sidebar').map(scope => <SelectionChip key={scopeIdentityKey(scope)} scope={scope} configuration={scope.configuration?.configuration ?? null} openEvidence={openEvidence} remove={removeScope} />)
+              : <span className="selection-chip selection-chip-group" key={row.capabilityId}>
+                <span className="selection-chip-copy"><span>{row.label}</span><small>{row.details.join(', ')}</small></span>
+                <span className="selection-chip-group-actions">
+                  {group.scopes.filter(scope => scope.featureId === 'product-quick-view').map(scope => <span key={scopeIdentityKey(scope)}>
+                    <button onClick={event => openEvidence(scope, event.currentTarget)} aria-label={`Evidence for ${scopeLabel(scope)}`}>i</button>
+                    <button onClick={() => removeScope(scope)} aria-label={`Remove ${scopeLabel(scope)}`}>×</button>
+                  </span>)}
+                </span>
+              </span>)}
+            {hasIncompatibleProductId(selection) && <span className="selection-chip conflict-chip">
               <span>Product-ID change <b>Conflict</b></span>
               <button onClick={() => setShowConflict(true)} aria-label="Evidence for Product-ID conflict">i</button>
               <button onClick={removeIncompatible} aria-label="Remove incompatible Product-ID change">×</button>
@@ -1241,9 +1279,9 @@ function Comparison({ exit }: { exit: () => void }) {
     </aside>}
 
     <p className="selection-live" role="status" aria-live="polite">
-      {selectionHistory.announcement || (refused ? 'Cannot combine the selected Product-ID change with Quick View. Safe selections are preserved.' : `${selectionCount} selections. ${candidateStatus === 'resolving' ? 'Updating combined result.' : 'Result ready.'}`)}
+      {selectionHistory.announcement || (refused ? 'Cannot combine the selected Product-ID change with Quick View. Safe selections are preserved.' : `${selectionCount} selections. Result ready.`)}
     </p>
-    {evidenceScope && <EvidenceDialog scope={evidenceScope} candidate={candidate} opener={evidenceOpener} close={() => setEvidenceScope(null)} />}
+    {evidenceScope && <EvidenceDialog scope={evidenceScope} candidate={resolveCatalogueCandidate(candidateKey(selection))} opener={evidenceOpener} close={() => setEvidenceScope(null)} />}
     {detailsCapability && <CapabilityDetailsDialog capability={detailsCapability} close={() => setDetailsCapability(null)} customize={openCategoryEditor} />}
     {categoryEditorOpen && <CategoryConfigurationDialog
       initial={categoryConfigurationSelection?.configuration ?? completeCategorySidebarConfiguration}

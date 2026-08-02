@@ -94,11 +94,11 @@ async function runCustomizeBeforeAddJourney(page: Page, mobile: boolean) {
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(dock).toContainText('1 selection');
   await expect(dock).toContainText('All, Audio');
-  await expect(dock).not.toContainText('Quick View · Arc Headphones');
+  await expect(dock).not.toContainText('Arc Headphones');
   await page.getByRole('button', { name: 'Redo', exact: true }).click();
   await expect(dock).toContainText('2 selections');
   await expect(dock).toContainText('All, Audio');
-  await expect(dock).toContainText('Quick View · Arc Headphones');
+  await expect(dock).toContainText('Quick ViewArc Headphones');
 }
 
 for (const viewport of [
@@ -225,7 +225,8 @@ test('production journey persists one Travel-excluded sidebar decision everywher
 
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(versionA(page).getByRole('button', { name: 'Travel', exact: true })).toBeVisible();
-  await expect(dock).not.toContainText('Default: All');
+  await expect(dock).toContainText('All, Audio, Desk, Travel');
+  await expect(dock).toContainText('Default: All');
   await page.getByRole('button', { name: 'Redo', exact: true }).click();
   await expect(versionA(page).getByRole('button', { name: 'Travel', exact: true })).toHaveCount(0);
   await expect(dock).toContainText('All, Audio, Desk');

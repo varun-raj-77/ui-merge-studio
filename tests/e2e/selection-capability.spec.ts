@@ -10,7 +10,7 @@ function combined(page: Page) {
   return page.frameLocator('iframe[title="Combined result application"]');
 }
 
-test('bulk Quick View uses the existing candidate and remains one undoable action', async ({ page }) => {
+test('bulk Quick View uses one canonical plan transition and remains one undoable action', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
 
@@ -26,22 +26,24 @@ test('bulk Quick View uses the existing candidate and remains one undoable actio
 
   await page.getByRole('button', { name: 'View combined' }).click();
   const combinedFrame = page.getByTitle('Combined result application');
+  const shell = page.locator('main.comparison-shell');
   await expect(combined(page).getByRole('button', { name: 'Quick view', exact: true })).toHaveCount(5);
-  const allProductsCandidate = await combinedFrame.getAttribute('src');
-  expect(allProductsCandidate).toContain(
-    'sidebar-0--quick-p-101_p-102_p-103_p-104_p-105'
-  );
+  await expect(combinedFrame).not.toHaveAttribute('src');
+  await expect(shell).toHaveAttribute('data-historical-artifact-required', 'false');
+  const allProductsPlan = await shell.getAttribute('data-integration-plan-id');
+  expect(allProductsPlan).toMatch(/^plan-v1-/);
 
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.getByTitle('Combined result application')).toBeVisible();
   await expect(dock).toContainText('0 selections');
   await expect(combined(page).getByRole('button', { name: 'Quick view', exact: true })).toHaveCount(0);
-  await expect(combinedFrame).not.toHaveAttribute('src', allProductsCandidate ?? '');
+  await expect(shell).not.toHaveAttribute('data-integration-plan-id', allProductsPlan ?? '');
 
   await page.getByRole('button', { name: 'Redo', exact: true }).click();
   await expect(dock).toContainText('5 selections');
   await expect(combined(page).getByRole('button', { name: 'Quick view', exact: true })).toHaveCount(5);
-  await expect(combinedFrame).toHaveAttribute('src', allProductsCandidate ?? '');
+  await expect(shell).toHaveAttribute('data-integration-plan-id', allProductsPlan ?? '');
+  await expect(combinedFrame).not.toHaveAttribute('src');
 
   await page.getByRole('button', { name: 'Back to comparison', exact: true }).click();
   await versionA(page).getByRole('button', { name: 'Details for Category sidebar' }).click();

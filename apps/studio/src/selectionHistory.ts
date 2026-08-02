@@ -1,6 +1,6 @@
 import {
   emptyShowcaseSelection,
-  scopeDecisionKey,
+  selectionPlanIdentity,
   type ShowcaseSelectionState
 } from './showcaseSelection';
 
@@ -39,11 +39,7 @@ export function sameSelection(
   left: ShowcaseSelectionState,
   right: ShowcaseSelectionState
 ) {
-  return left.incompatibleProductId === right.incompatibleProductId
-    && left.scopes.length === right.scopes.length
-    && left.scopes.every((scope, index) => (
-      scopeDecisionKey(scope) === scopeDecisionKey(right.scopes[index])
-    ));
+  return selectionPlanIdentity(left) === selectionPlanIdentity(right);
 }
 
 export function selectionHistoryReducer(

@@ -1,4 +1,19 @@
-import { canonicalSelectionKey } from '../../../packages/showcase-evidence/src/schema';
+import {
+  cataloguePlanIdentity,
+  canonicalizeCatalogueIntegrationPlan,
+  clearIntegrationSelections,
+  emptyCatalogueIntegrationPlan,
+  hasIncompatibleProductId,
+  historicalCandidateKeyForPlan,
+  incompatibleProductIdDecision,
+  quickViewPlanDecision,
+  quickViewPlanSelections,
+  removePlanSelection,
+  replacePlanSelection,
+  sidebarPlanDecision,
+  sidebarPlanSelection,
+  type CatalogueIntegrationPlan
+} from './catalogueIntegrationPlan';
 import {
   catalogueCapabilityFromRuntime,
   catalogueScopesForCapability
@@ -22,10 +37,7 @@ export type ShowcaseScope = ShowcaseScopeOwnership & (
   | { kind: 'feature-instance'; featureId: 'product-quick-view'; branch: 'branch-b'; instanceId: CatalogueProductId }
 );
 
-export interface ShowcaseSelectionState {
-  scopes: ShowcaseScope[];
-  incompatibleProductId: boolean;
-}
+export type ShowcaseSelectionState = CatalogueIntegrationPlan;
 
 export type ShowcaseSelectionAction =
   | { type: 'toggle-scope'; scope: ShowcaseScope }
@@ -34,10 +46,7 @@ export type ShowcaseSelectionAction =
   | { type: 'clear' }
   | { type: 'toggle-incompatible' };
 
-export const emptyShowcaseSelection: ShowcaseSelectionState = {
-  scopes: [],
-  incompatibleProductId: false
-};
+export const emptyShowcaseSelection = emptyCatalogueIntegrationPlan;
 
 export function scopeKey(scope: ShowcaseScope) {
   return scope.kind === 'feature' ? scope.featureId : `${scope.featureId}:${scope.instanceId}`;
@@ -47,8 +56,45 @@ export function scopeIdentityKey(scope: ShowcaseScope) {
   return `${scope.pageId}:${scope.route}:${scope.branch}:${scope.capabilityId}`;
 }
 
+export function selectionScopes(state: ShowcaseSelectionState): ShowcaseScope[] {
+  const canonical = canonicalizeCatalogueIntegrationPlan(state);
+  const scopes: ShowcaseScope[] = [];
+  const sidebar = sidebarPlanSelection(canonical);
+  if (sidebar) scopes.push({
+    kind: 'feature',
+    featureId: 'category-sidebar',
+    branch: 'branch-a',
+    capabilityId: 'category-sidebar',
+    route: sidebar.route,
+    pageId: sidebar.pageId,
+    configuration: {
+      capabilityId: 'category-sidebar:options',
+      sourceBranch: 'branch-a',
+      route: sidebar.route,
+      pageId: sidebar.pageId,
+      identity: sidebar.configuration.identity,
+      configuration: {
+        enabledCategoryIds: [...sidebar.configuration.enabledCategoryIds],
+        defaultCategoryId: sidebar.configuration.defaultCategoryId,
+        showHeading: sidebar.configuration.showHeading,
+        showProductCounts: sidebar.configuration.showProductCounts
+      }
+    }
+  });
+  for (const selection of quickViewPlanSelections(canonical)) scopes.push({
+    kind: 'feature-instance',
+    featureId: 'product-quick-view',
+    branch: 'branch-b',
+    instanceId: selection.targetIds[0],
+    capabilityId: selection.capabilityId,
+    route: selection.route,
+    pageId: selection.pageId
+  });
+  return scopes;
+}
+
 export function categorySidebarDecision(state: ShowcaseSelectionState) {
-  return state.scopes.find((scope): scope is Extract<ShowcaseScope, { featureId: 'category-sidebar' }> => (
+  return selectionScopes(state).find((scope): scope is Extract<ShowcaseScope, { featureId: 'category-sidebar' }> => (
     scope.featureId === 'category-sidebar'
   )) ?? null;
 }
@@ -72,58 +118,43 @@ export function scopeFromRuntime(value: string, productIds: readonly string[]): 
 }
 
 export function showcaseSelectionReducer(state: ShowcaseSelectionState, action: ShowcaseSelectionAction): ShowcaseSelectionState {
-  if (action.type === 'clear') return emptyShowcaseSelection;
-  if (action.type === 'toggle-incompatible') return { ...state, incompatibleProductId: !state.incompatibleProductId };
-  if (action.type === 'configure-category-sidebar') {
-    const sidebar = categorySidebarDecision(state);
-    if (!sidebar) {
-      const configuredSidebar: ShowcaseScope = {
-        kind: 'feature',
-        featureId: 'category-sidebar',
-        branch: action.configuration.sourceBranch,
-        capabilityId: 'category-sidebar',
-        route: action.configuration.route,
-        pageId: action.configuration.pageId,
-        configuration: action.configuration
-      };
-      return {
-        ...state,
-        scopes: [...state.scopes, configuredSidebar].sort((left, right) => (
-          scopeIdentityKey(left).localeCompare(scopeIdentityKey(right))
-        ))
-      };
-    }
-    return {
-      ...state,
-      scopes: state.scopes.map(scope => scope.featureId === 'category-sidebar'
-        ? { ...scope, configuration: action.configuration }
-        : scope)
-    };
+  if (action.type === 'clear') return clearIntegrationSelections(state);
+  if (action.type === 'toggle-incompatible') {
+    return hasIncompatibleProductId(state)
+      ? removePlanSelection(state, 'experimental-product-id')
+      : replacePlanSelection(state, incompatibleProductIdDecision());
   }
-  const key = scopeIdentityKey(action.scope);
-  const contains = state.scopes.some(scope => scopeIdentityKey(scope) === key);
-  if (action.type === 'remove-scope') return {
-    ...state,
-    scopes: state.scopes.filter(scope => scopeIdentityKey(scope) !== key)
-  };
-  if (contains) return state;
-  return { ...state, scopes: [...state.scopes, action.scope].sort((left, right) => scopeIdentityKey(left).localeCompare(scopeIdentityKey(right))) };
+  if (action.type === 'configure-category-sidebar') {
+    return replacePlanSelection(state, sidebarPlanDecision(action.configuration.configuration));
+  }
+  if (action.type === 'remove-scope') return removePlanSelection(state, action.scope.capabilityId);
+  if (state.selections.some(selection => selection.capabilityId === action.scope.capabilityId)) return state;
+  return replacePlanSelection(
+    state,
+    action.scope.featureId === 'category-sidebar'
+      ? sidebarPlanDecision()
+      : quickViewPlanDecision(action.scope.instanceId)
+  );
 }
 
 export function candidateSelection(state: ShowcaseSelectionState) {
   return {
-    sidebar: state.scopes.some(scope => scope.featureId === 'category-sidebar'),
-    quickViewProductIds: state.scopes
-      .filter((scope): scope is Extract<ShowcaseScope, { kind: 'feature-instance' }> => scope.kind === 'feature-instance')
-      .map(scope => scope.instanceId)
-      .sort()
+    sidebar: Boolean(sidebarPlanSelection(state)),
+    quickViewProductIds: quickViewPlanSelections(state).map(selection => selection.targetIds[0])
   };
 }
 
+/** Historical parity/evidence key only. Runtime preview rendering must not consume it. */
 export function candidateKey(state: ShowcaseSelectionState) {
-  return canonicalSelectionKey(candidateSelection(state));
+  return historicalCandidateKeyForPlan(state);
 }
 
 export function hasQuickViewSelection(state: ShowcaseSelectionState) {
-  return state.scopes.some(scope => scope.featureId === 'product-quick-view');
+  return quickViewPlanSelections(state).length > 0;
 }
+
+export function selectionPlanIdentity(state: ShowcaseSelectionState) {
+  return cataloguePlanIdentity(state);
+}
+
+export { hasIncompatibleProductId };

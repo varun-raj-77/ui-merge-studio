@@ -27,7 +27,7 @@ function collectConsoleErrors(page: Page) {
   return errors;
 }
 
-test('desktop preserves Desk from Version A through the exact combined candidate and back', async ({ page }) => {
+test('desktop preserves Desk from Version A through the configured result and back', async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
@@ -85,12 +85,12 @@ test('Version B becomes the latest context source and the combined result follow
   await versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' }).click();
   await productCard(versionB(page), 'Arc Headphones').getByRole('button', { name: 'Quick view', exact: true }).click();
   await page.getByRole('button', { name: 'View combined' }).click();
-  await expect(combined(page).getByLabel('Browse category')).toHaveValue('audio');
+  await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-category', 'audio');
   await expect(combined(page).getByRole('article')).toHaveCount(2);
   await expect(combined(page).getByRole('dialog', { name: 'Arc Headphones quick view' })).toBeVisible();
 });
 
-test('candidate incompatibility keeps compatible context and announces the Quick View fallback', async ({ page }) => {
+test('configured-result incompatibility keeps compatible context and announces the Quick View fallback', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
 
@@ -104,7 +104,7 @@ test('candidate incompatibility keeps compatible context and announces the Quick
   await expect(combined(page).getByRole('article')).toHaveCount(2);
   await expect(combined(page).getByRole('dialog')).toHaveCount(0);
   const notice = page.getByRole('status').filter({
-    hasText: 'Quick View is not available for Task Lamp in this candidate. The product list remains selected.'
+    hasText: 'Quick View is not included for Task Lamp in this configured result. The product list remains selected.'
   });
   await expect(notice).toBeVisible();
   await page.screenshot({
@@ -114,7 +114,7 @@ test('candidate incompatibility keeps compatible context and announces the Quick
   await expect(page.getByTitle('Combined result application')).toBeVisible();
 });
 
-test('changing the candidate in combined view reapplies context and mobile tabs retain it', async ({ page }) => {
+test('changing the plan in combined view reapplies context and mobile tabs retain it', async ({ page }) => {
   const consoleErrors = collectConsoleErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(compareUrl);
@@ -130,13 +130,13 @@ test('changing the candidate in combined view reapplies context and mobile tabs 
   await page.getByRole('button', { name: '1 selection Review' }).click();
   await page.getByRole('button', { name: 'View combined' }).click();
 
-  await expect(combined(page).getByLabel('Browse category')).toHaveValue('desk');
+  await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-category', 'desk');
   await expect(combined(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await page.getByRole('button', { name: 'Remove Quick View · Desk Stand' }).click();
-  await expect(combined(page).getByLabel('Browse category')).toHaveValue('desk');
+  await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-category', 'desk');
   await expect(combined(page).getByRole('article')).toHaveCount(2);
   await expect(page.getByRole('status').filter({
-    hasText: 'Quick View is not available for Desk Stand in this candidate.'
+    hasText: 'Quick View is not included for Desk Stand in this configured result.'
   })).toBeVisible();
 
   await page.getByRole('button', { name: '← Back to comparison' }).click();

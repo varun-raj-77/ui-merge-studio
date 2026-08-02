@@ -70,6 +70,12 @@ export function normalizeCategorySidebarConfiguration(
   input: CategorySidebarConfigurationInput,
   metadata = categorySidebarRepositoryMetadata
 ): CategorySidebarConfiguration {
+  if (!input || !Array.isArray(input.enabledCategoryIds) || typeof input.defaultCategoryId !== 'string') {
+    refuse(
+      'Choose valid sidebar categories.',
+      'enabledCategoryIds must be an array and defaultCategoryId must be a string.'
+    );
+  }
   if (typeof input.showHeading !== 'boolean' || typeof input.showProductCounts !== 'boolean') {
     refuse(
       'Choose valid sidebar appearance options.',

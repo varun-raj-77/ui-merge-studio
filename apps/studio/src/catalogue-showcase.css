@@ -310,6 +310,7 @@ button:focus-visible, a:focus-visible {
   font-size: 11px;
   line-height: 1.45;
   animation: workspace-enter 180ms ease both;
+  pointer-events: none;
 }
 
 .context-notice p { margin: 0; }
@@ -667,6 +668,25 @@ button:focus-visible, a:focus-visible {
   font-size: 8px;
   font-weight: 650;
   line-height: 1.35;
+}
+.selection-chip-group { border-radius: 14px; }
+.selection-chip-group-actions,
+.selection-chip-group-actions > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.selection-chip-group-actions button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff12;
+  color: #d9d8d2;
+  font-weight: 900;
+  cursor: pointer;
 }
 .conflict-chip { border-color: #d8897c; background: #6d3028; }
 .conflict-chip b {

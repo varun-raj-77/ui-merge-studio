@@ -9,7 +9,7 @@ const field = (panel: Locator, name: string) => panel.locator('dt', { hasText: n
 test.afterEach(async ({ request }) => { await request.delete('/api/preview').catch(() => undefined); });
 
 test('launches and maps two unrelated Vite branches without repository-specific component names', async ({ page, request }) => {
-  await page.goto('/');
+  await page.goto('/?mode=local');
   await page.getByRole('button', { name: /Try sample demo/ }).click();
   await expect(page.locator('.workspace-status')).toHaveText('Both live apps are ready to compare', { timeout: 120_000 });
   await expect(card(page, 'left')).toContainText(leftBranch);

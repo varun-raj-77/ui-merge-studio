@@ -66,7 +66,7 @@ describe('quiet comparison workspace', () => {
     expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Studio Speaker' }));
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick View · Studio Speaker');
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick ViewStudio Speaker');
   });
 
   it('offers customization before selection and changes to editing after the sidebar is selected', () => {
@@ -149,7 +149,7 @@ describe('quiet comparison workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
     fireEvent.click(screen.getByRole('button', { name: 'View combined' }));
 
-    expect(screen.getByText('Combined result')).toBeVisible();
+    expect(screen.getByText('Configured preview')).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Built from 1 selection' })).toBeVisible();
     expect(screen.getByTitle('Combined result application')).toBeVisible();
     expect(screen.getByTitle('Version A live application')).not.toBeVisible();
@@ -194,7 +194,7 @@ describe('quiet comparison workspace', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Remove incompatible change' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick View · Arc Headphones');
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick ViewArc Headphones');
     expect(screen.getByRole('button', { name: 'View combined' })).toBeVisible();
   });
 });

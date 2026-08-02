@@ -190,8 +190,8 @@ describe('selection history', () => {
 
     expect(recovered.present).toEqual(safe);
     const restored = selectionHistoryReducer(recovered, { type: 'undo' });
-    expect(restored.present.incompatibleProductId).toBe(true);
-    expect(restored.present.scopes).toEqual(safe.scopes);
+    expect(restored.present.selections.some(selection => selection.capabilityId === 'experimental-product-id')).toBe(true);
+    expect(restored.present.selections.filter(selection => selection.capabilityId !== 'experimental-product-id')).toEqual(safe.selections);
   });
 
   it('restores exact canonical candidate identities independent of click order', () => {
@@ -224,14 +224,14 @@ describe('selection history', () => {
       'Added Quick View to all products'
     );
     expect(added.past).toHaveLength(1);
-    expect(added.present.scopes).toHaveLength(5);
+    expect(added.present.selections).toHaveLength(5);
 
     const undone = selectionHistoryReducer(added, { type: 'undo' });
     expect(undone.present).toEqual(emptyShowcaseSelection);
     expect(undone.future).toHaveLength(1);
 
     const redone = selectionHistoryReducer(undone, { type: 'redo' });
-    expect(redone.present.scopes).toHaveLength(5);
+    expect(redone.present.selections).toHaveLength(5);
     expect(candidateKey(redone.present)).toBe(candidateKey(allQuickViews));
   });
 });
