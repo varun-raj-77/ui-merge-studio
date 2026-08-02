@@ -15,6 +15,7 @@ test('shows generated dependency and exclusion evidence for both selected featur
   await expect(evidence).toContainText('src/features/catalogue/CatalogueHeader.tsx');
   await evidence.getByRole('button', { name: 'Close technical evidence' }).click();
 
+  await versionB(page).getByRole('heading', { name: 'Arc Headphones' }).scrollIntoViewIfNeeded();
   await versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' }).click();
   await page.getByRole('button', { name: 'Evidence for Quick View · Arc Headphones' }).click();
   evidence = page.getByRole('dialog', { name: 'Quick View · Arc Headphones' });
@@ -28,6 +29,6 @@ test('prevents unsupported sibling changes from becoming selections', async ({ p
   await page.goto(url);
   await expect(page.getByRole('button', { name: /promotional banner/i })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /inventory summary/i })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'View combined' })).toHaveCount(0);
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'View combined' })).toBeEnabled();
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('Foundation');
 });

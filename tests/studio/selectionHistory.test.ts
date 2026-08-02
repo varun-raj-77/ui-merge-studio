@@ -21,6 +21,7 @@ import {
   catalogueScopesForCapability,
   quickViewAllCapabilityId
 } from '../../apps/studio/src/catalogueSelectionCapabilities';
+import { catalogueFoundation, changeCatalogueFoundation } from '../../apps/studio/src/catalogueIntegrationPlan';
 
 const sidebar: ShowcaseScope = {
   kind: 'feature',
@@ -233,6 +234,22 @@ describe('selection history', () => {
     const redone = selectionHistoryReducer(undone, { type: 'redo' });
     expect(redone.present.selections).toHaveLength(5);
     expect(candidateKey(redone.present)).toBe(candidateKey(allQuickViews));
+  });
+
+  it('stores complete foundation plans and restores normalized selections exactly', () => {
+    const main = [sidebar, deskStand, taskLamp].reduce(
+      (state, scope) => reduceSelection(state, { type: 'toggle-scope', scope }),
+      emptyShowcaseSelection
+    );
+    const started = commit(initialSelectionHistory, main, 'Added selections');
+    const changed = changeCatalogueFoundation(main, catalogueFoundation('branch-a')).plan;
+    const withFoundation = commit(started, changed, 'Changed foundation to Version A');
+    expect(withFoundation.present.foundation.branchRef).toBe('branch-a');
+    expect(withFoundation.present.selections.some(selection => selection.capabilityId === 'category-sidebar')).toBe(false);
+    const undone = selectionHistoryReducer(withFoundation, { type: 'undo' });
+    expect(undone.present).toEqual(main);
+    const redone = selectionHistoryReducer(undone, { type: 'redo' });
+    expect(redone.present).toEqual(changed);
   });
 });
 

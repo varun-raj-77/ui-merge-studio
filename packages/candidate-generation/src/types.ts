@@ -34,8 +34,13 @@ export interface CandidateSourceConfiguration {
 
 export interface CandidateGenerationRequest {
   repositoryRoot: string;
+  repositoryId?: string;
+  /** Exact foundation ref and pinned commit used to create the candidate worktree. */
   baseRef: string;
   expectedBaseCommit: string;
+  /** Shared analysis base. Defaults to the foundation for version-1 callers. */
+  commonBaseRef?: string;
+  expectedCommonBaseCommit?: string;
   candidateBranch: string;
   artifacts: FeatureSliceArtifact[];
   analyzerSchemaVersion: number;
@@ -71,7 +76,15 @@ export interface CandidateConflict {
 export interface CandidateUnresolved { path: string; sliceId: string | null; reason: string; manualResolution: string }
 export interface CandidatePlan {
   version: typeof candidateGenerationVersion;
-  repository: { baseCommit: string; candidateBranch: string };
+  repository: {
+    baseCommit: string;
+    candidateBranch: string;
+    repositoryId?: string;
+    foundationRef?: string;
+    foundationCommit?: string;
+    commonBaseRef?: string;
+    commonBaseCommit?: string;
+  };
   sliceIds: string[];
   operations: CandidateOperation[];
   conflicts: CandidateConflict[];

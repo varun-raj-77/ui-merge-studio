@@ -46,10 +46,12 @@ test('desktop preserves Desk from Version A through the configured result and ba
   });
 
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
+  await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
   await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
   await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
+  await expect(page.getByRole('button', { name: 'Remove Quick View · Desk Stand' })).toBeVisible();
   const deskQuickButton = productCard(versionB(page), 'Desk Stand').getByRole('button', { name: 'Quick view', exact: true });
-  await deskQuickButton.click();
+  await deskQuickButton.press('Enter');
   await expect(versionB(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-product', 'p-105');
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-quick-view', 'true');
@@ -82,8 +84,10 @@ test('Version B becomes the latest context source and the combined result follow
   await expect(versionA(page).getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true');
   await expect(versionA(page).getByRole('article')).toHaveCount(2);
 
+  await productCard(versionB(page), 'Arc Headphones').scrollIntoViewIfNeeded();
   await versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' }).click();
-  await productCard(versionB(page), 'Arc Headphones').getByRole('button', { name: 'Quick view', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove Quick View · Arc Headphones' })).toBeVisible();
+  await productCard(versionB(page), 'Arc Headphones').getByRole('button', { name: 'Quick view', exact: true }).press('Enter');
   await page.getByRole('button', { name: 'View combined' }).click();
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-category', 'audio');
   await expect(combined(page).getByRole('article')).toHaveCount(2);
@@ -96,8 +100,11 @@ test('configured-result incompatibility keeps compatible context and announces t
 
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
+  await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
   await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
-  await productCard(versionB(page), 'Task Lamp').getByRole('button', { name: 'Quick view', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove Quick View · Desk Stand' })).toBeVisible();
+  await productCard(versionB(page), 'Task Lamp').scrollIntoViewIfNeeded();
+  await productCard(versionB(page), 'Task Lamp').getByRole('button', { name: 'Quick view', exact: true }).press('Enter');
   await page.getByRole('button', { name: 'View combined' }).click();
 
   await expect(combined(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');

@@ -18,7 +18,10 @@
 - Category configuration controls retained options, the permanent default, heading visibility, and data-derived product-count visibility. It does not support custom heading text, count formatting, arbitrary styling, or new configurable feature families; those broader authoring and local branch-delivery concerns remain outside this milestone and in future Milestone 4 work.
 - Configurable source generation requires an explicitly exported, slice-owned constant whose source shape and inspected content remain valid. Unknown categories, empty subsets, disabled defaults, missing parent selections, stale source, malformed syntax, and incompatible initializer shapes are refused.
 - Route and page ownership are retained and grouped in the selection dock. Feature relocation is excluded; future multi-route integrations must render each feature only on its original route.
-- Plan schema version 1 fixes the foundation to `main`. Foundation choice and migration across repository metadata revisions are not yet product features.
+- Plan schema version 2 supports Main, Version A, or Version B as a pinned foundation. There is no automatic migration from published version-1 JSON because adding full-branch inclusion changes plan meaning; unsupported versions are refused explicitly.
 - The configuration-driven runtime is implemented by the Product Catalogue adapter. It proves supported feature composition, not arbitrary React runtime synthesis, backend behavior, authentication, or a framework-independent adapter.
+- The controlled fixture has one primary route. Route ownership and missing-route refusal are modeled, but real multi-route foundation integration remains external validation work.
+- Hosted foundation previews are adapter-driven configured runtimes. They truthfully show the canonical plan but do not check out Git; only local generation proves real foundation worktrees and full branch diffs.
+- Foundation overrides, excluding individual changes from a chosen foundation, combining two complete foundations, and permanent branch delivery remain out of scope.
 
 Correct refusal is a product capability, not a failure to be hidden.

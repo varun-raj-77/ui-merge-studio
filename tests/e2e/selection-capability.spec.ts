@@ -31,7 +31,7 @@ test('bulk Quick View uses one canonical plan transition and remains one undoabl
   await expect(combinedFrame).not.toHaveAttribute('src');
   await expect(shell).toHaveAttribute('data-historical-artifact-required', 'false');
   const allProductsPlan = await shell.getAttribute('data-integration-plan-id');
-  expect(allProductsPlan).toMatch(/^plan-v1-/);
+  expect(allProductsPlan).toMatch(/^plan-v2-/);
 
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(page.getByTitle('Combined result application')).toBeVisible();

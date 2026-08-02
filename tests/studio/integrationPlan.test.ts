@@ -8,14 +8,18 @@ import {
 import { catalogueManifest } from '../../apps/studio/src/catalogueEvidence';
 import {
   catalogueIntegrationPlanAdapter,
+  catalogueFoundation,
+  catalogueRecordedCommits,
   cataloguePlanIdentity,
   canonicalizeCatalogueIntegrationPlan,
+  changeCatalogueFoundation,
   emptyCatalogueIntegrationPlan,
   historicalCandidateKeyForPlan,
   integrationPlanToEvidenceSummary,
   integrationPlanToGenerationRequest,
   integrationPlanToPreviewModel,
   integrationPlanToVerificationExpectations,
+  incompatibleProductIdDecision,
   quickViewPlanDecision,
   replacePlanSelection,
   sidebarPlanDecision
@@ -46,8 +50,8 @@ function planFor(options: {
 describe('canonical Integration Plan', () => {
   it('has an explicit empty, versioned foundation plan', () => {
     expect(emptyCatalogueIntegrationPlan).toEqual({
-      version: 1,
-      foundation: { branchRef: 'main', role: 'base' },
+      version: 2,
+      foundation: catalogueFoundation('main'),
       selections: []
     });
   });
@@ -70,19 +74,19 @@ describe('canonical Integration Plan', () => {
   it('normalizes exact duplicates but refuses conflicting duplicate decisions', () => {
     const sidebar = sidebarPlanDecision(proofConfiguration);
     expect(canonicalizeCatalogueIntegrationPlan({
-      version: 1,
-      foundation: { branchRef: 'main', role: 'base' },
+      version: 2,
+      foundation: catalogueFoundation('main'),
       selections: [sidebar, sidebar]
     })).toEqual(planFor({ sidebar: proofConfiguration }));
     expect(() => canonicalizeCatalogueIntegrationPlan({
-      version: 1,
-      foundation: { branchRef: 'main', role: 'base' },
+      version: 2,
+      foundation: catalogueFoundation('main'),
       selections: [sidebar, sidebarPlanDecision(completeCategorySidebarConfiguration)]
     })).toThrow(/conflicting decisions/i);
   });
 
   it.each([
-    ['unsupported version', { ...emptyCatalogueIntegrationPlan, version: 2 }, /version/i],
+    ['unsupported version', { ...emptyCatalogueIntegrationPlan, version: 1 }, /version/i],
     ['unknown capability', { ...emptyCatalogueIntegrationPlan, selections: [{ capabilityId: 'unknown', capabilityKind: 'whole-feature', sourceBranch: 'branch-a', route: '/catalogue', pageId: 'product-catalogue' }] }, /not supported/i],
     ['wrong branch', { ...emptyCatalogueIntegrationPlan, selections: [{ ...sidebarPlanDecision(), sourceBranch: 'branch-b' }] }, /different source version/i],
     ['relocated route', { ...emptyCatalogueIntegrationPlan, selections: [{ ...sidebarPlanDecision(), route: '/elsewhere' }] }, /cannot be moved/i],
@@ -104,7 +108,7 @@ describe('canonical Integration Plan', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(IntegrationPlanRefusal);
       expect((error as IntegrationPlanRefusal).productMessage).toMatch(/version/i);
-      expect((error as IntegrationPlanRefusal).technicalDetail).toMatch(/Expected plan version 1/i);
+      expect((error as IntegrationPlanRefusal).technicalDetail).toMatch(/Expected plan version 2/i);
     }
   });
 
@@ -133,7 +137,7 @@ describe('Product Catalogue projections', () => {
     ]);
     expect(preview.sidebar).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk', showHeading: false, showProductCounts: true });
     expect(preview.quickViewProductIds).toEqual(['p-103', 'p-105']);
-    expect(generation.foundation).toEqual({ branchRef: 'main', role: 'base' });
+    expect(generation.foundation).toEqual(catalogueFoundation('main'));
     expect(generation.sourceConfigurations).toEqual(expect.arrayContaining([
       expect.objectContaining({ declaration: 'categorySidebarConfiguration', value: preview.sidebar }),
       expect.objectContaining({ declaration: 'quickViewTargetIds', value: ['p-103', 'p-105'] })
@@ -142,9 +146,18 @@ describe('Product Catalogue projections', () => {
     expect(verification.categories).toEqual({ all: false, audio: true, desk: true, travel: true });
     expect(verification.categoryCounts).toEqual({ all: 5, audio: 2, desk: 2, travel: 1 });
     expect(verification.quickViewByProductId).toEqual({ 'p-101': false, 'p-102': false, 'p-103': true, 'p-104': false, 'p-105': true });
-    expect(evidence.groups[0].rows).toEqual([
-      { capabilityId: 'category-sidebar', label: 'Category sidebar', sourceBranch: 'branch-a', sourceLabel: 'Version A', details: ['Audio, Desk, Travel', 'Default: Desk', 'Heading: Hidden', 'Counts: Shown'] },
-      { capabilityId: 'product-quick-view', label: 'Quick View', sourceBranch: 'branch-b', sourceLabel: 'Version B', details: ['Task Lamp', 'Desk Stand'] }
+    expect(evidence.foundation).toMatchObject({ label: 'Main', branchRef: 'main', description: 'Only explicitly selected features are added.' });
+    expect(evidence.groups).toEqual([
+      {
+        route: '/catalogue',
+        pageId: 'product-catalogue',
+        rows: [{ capabilityId: 'category-sidebar', label: 'Category sidebar', sourceBranch: 'branch-a', sourceLabel: 'Version A', details: ['Audio, Desk, Travel', 'Default: Desk', 'Heading: Hidden', 'Counts: Shown'] }]
+      },
+      {
+        route: '/catalogue',
+        pageId: 'product-catalogue',
+        rows: [{ capabilityId: 'product-quick-view', label: 'Quick View', sourceBranch: 'branch-b', sourceLabel: 'Version B', details: ['Task Lamp', 'Desk Stand'] }]
+      }
     ]);
   });
 
@@ -168,12 +181,73 @@ describe('Product Catalogue projections', () => {
     const safe = planFor({ quickViews: ['p-105'] });
     const conflicted = canonicalizeCatalogueIntegrationPlan({
       ...safe,
-      selections: [...safe.selections, {
-        capabilityId: 'experimental-product-id', capabilityKind: 'whole-feature', sourceBranch: 'branch-incompatible', route: '/catalogue', pageId: 'product-catalogue'
-      }]
+      selections: [...safe.selections, incompatibleProductIdDecision()]
     });
     expect(integrationPlanToPreviewModel(conflicted).refused).toBe(true);
     expect(() => integrationPlanToGenerationRequest(conflicted)).toThrow(/unsafe/i);
+  });
+});
+
+describe('foundation semantics', () => {
+  it('pins Main, Version A, and Version B foundations into deterministic plan identity', () => {
+    const main = planFor({ quickViews: ['p-103', 'p-105'] });
+    const versionA = changeCatalogueFoundation(main, catalogueFoundation('branch-a')).plan;
+    const versionB = changeCatalogueFoundation(planFor({ sidebar: proofConfiguration }), catalogueFoundation('branch-b')).plan;
+    expect(new Set([main, versionA, versionB].map(cataloguePlanIdentity))).toHaveLength(3);
+    expect(versionA.foundation).toEqual(catalogueFoundation('branch-a'));
+    expect(versionB.foundation).toEqual(catalogueFoundation('branch-b'));
+    expect(serializeIntegrationPlan(versionA, catalogueIntegrationPlanAdapter)).not.toContain('timestamp');
+    expect(Object.values(catalogueRecordedCommits).every(commit => /^[a-f0-9]{40}$/.test(commit))).toBe(true);
+  });
+
+  it('includes the complete Version A model and only explicit Version B additions', () => {
+    const selected = planFor({ sidebar: proofConfiguration, quickViews: ['p-105', 'p-103'] });
+    const changed = changeCatalogueFoundation(selected, catalogueFoundation('branch-a'));
+    const preview = integrationPlanToPreviewModel(changed.plan);
+    expect(changed.removedCapabilityIds).toEqual(['category-sidebar']);
+    expect(changed.announcement).toMatch(/separate selection was removed/i);
+    expect(changed.plan.selections.map(selection => selection.sourceBranch)).toEqual(['branch-b', 'branch-b']);
+    expect(preview.sidebar).toEqual(completeCategorySidebarConfiguration);
+    expect(preview.quickViewProductIds).toEqual(['p-103', 'p-105']);
+    expect(integrationPlanToVerificationExpectations(changed.plan)).toMatchObject({
+      foundation: { branchRef: 'branch-a', allChangesIncluded: true },
+      unrelatedPromotionPresent: true,
+      unrelatedInventoryPresent: false
+    });
+  });
+
+  it('includes every Version B Quick View and keeps a Version A sidebar addition', () => {
+    const selected = planFor({ sidebar: proofConfiguration, quickViews: ['p-105'] });
+    const changed = changeCatalogueFoundation(selected, catalogueFoundation('branch-b'));
+    const preview = integrationPlanToPreviewModel(changed.plan);
+    expect(changed.removedCapabilityIds).toEqual(['product-quick-view:p-105']);
+    expect(changed.plan.selections.map(selection => selection.capabilityId)).toEqual(['category-sidebar']);
+    expect(preview.quickViewProductIds).toEqual(['p-101', 'p-102', 'p-103', 'p-104', 'p-105']);
+    expect(preview.sidebar).toEqual({ ...proofConfiguration, enabledCategoryIds: ['audio', 'desk', 'travel'] });
+    expect(integrationPlanToVerificationExpectations(changed.plan).unrelatedInventoryPresent).toBe(true);
+  });
+
+  it('normalizes same-foundation decisions without duplicates', () => {
+    const direct = canonicalizeCatalogueIntegrationPlan({
+      ...planFor({ sidebar: proofConfiguration }),
+      foundation: catalogueFoundation('branch-a')
+    });
+    expect(direct.selections).toEqual([]);
+    expect(integrationPlanToPreviewModel(direct).sidebar).toEqual(completeCategorySidebarConfiguration);
+  });
+
+  it('refuses an incompatible foundation without replacing the prior safe plan', () => {
+    const safe = planFor({ quickViews: ['p-105'] });
+    expect(() => changeCatalogueFoundation(safe, catalogueFoundation('branch-incompatible'))).toThrow(/cannot be used as the foundation/i);
+    expect(safe.foundation.branchRef).toBe('main');
+    expect(integrationPlanToPreviewModel(safe).refused).toBe(false);
+  });
+
+  it('keeps foundation selection order independent', () => {
+    const first = changeCatalogueFoundation(planFor({ quickViews: ['p-105', 'p-103'] }), catalogueFoundation('branch-a')).plan;
+    const second = changeCatalogueFoundation(planFor({ quickViews: ['p-103', 'p-105'] }), catalogueFoundation('branch-a')).plan;
+    expect(first).toEqual(second);
+    expect(cataloguePlanIdentity(first)).toBe(cataloguePlanIdentity(second));
   });
 });
 

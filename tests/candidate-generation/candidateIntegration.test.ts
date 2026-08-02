@@ -1,11 +1,15 @@
 import { resolve } from 'node:path';
-import { expect, test } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { afterEach, expect, test } from 'vitest';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
 import { GitSourceRepository } from '../../packages/source-analysis/src/gitModel';
 import type { SourceIdentity } from '../../packages/shared/src/sourceIdentity';
 import {
   emptyCatalogueIntegrationPlan,
+  catalogueFoundation,
+  catalogueRepositoryId,
+  canonicalizeCatalogueIntegrationPlan,
   integrationPlanToGenerationRequest,
   quickViewPlanDecision,
   replacePlanSelection,
@@ -18,6 +22,71 @@ async function artifacts(){const analyzer=new FeatureSliceAnalyzer(fixture);retu
   analyzer.analyze({baseRef:'main',branchRef:'branch-a',expectedBranchCommit:await repository.resolveRef('branch-a'),selection:selection('branch-a','src/features/catalogue/CategorySidebar.tsx',17,'CategorySidebar','left')}),
   analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:selection('branch-b','src/features/catalogue/ProductCardWithQuickView.tsx',6,'ProductCardWithQuickView','right')})
 ]);}
+
+const phase5CandidateBranches = ['phase5-main-result', 'phase5-version-a-result', 'phase5-version-b-result'];
+afterEach(async () => {
+  for (const branch of phase5CandidateBranches) {
+    if (await repository.resolveRef(branch).catch(() => null)) await repository.git(['branch', '-D', branch]);
+  }
+});
+
+async function fixtureCommits() {
+  return {
+    main: await repository.resolveRef('main'),
+    'branch-a': await repository.resolveRef('branch-a'),
+    'branch-b': await repository.resolveRef('branch-b'),
+    'branch-incompatible': await repository.resolveRef('branch-incompatible')
+  } as const;
+}
+
+async function foundationRequest(options: {
+  foundation: 'main' | 'branch-a' | 'branch-b';
+  candidateBranch: string;
+  sidebar?: boolean;
+  quickViews?: ('p-103' | 'p-105')[];
+}) {
+  const commits = await fixtureCommits();
+  const selectedArtifacts = await artifacts();
+  let plan = canonicalizeCatalogueIntegrationPlan({
+    version: 2,
+    foundation: catalogueFoundation(options.foundation, commits),
+    selections: []
+  });
+  if (options.sidebar) plan = replacePlanSelection(plan, sidebarPlanDecision(undefined, commits['branch-a']));
+  for (const productId of options.quickViews ?? []) plan = replacePlanSelection(plan, quickViewPlanDecision(productId, commits['branch-b']));
+  const projection = integrationPlanToGenerationRequest(plan);
+  const usedArtifacts = selectedArtifacts.filter(artifact => projection.selectedCapabilities.some(selection => selection.sourceBranch === artifact.slice.repository.branchRef));
+  return {
+    plan,
+    projection,
+    commits,
+    request: {
+      repositoryRoot: fixture,
+      repositoryId: catalogueRepositoryId,
+      baseRef: projection.foundation.branchRef,
+      expectedBaseCommit: projection.foundation.commitSha,
+      commonBaseRef: 'main',
+      expectedCommonBaseCommit: projection.foundation.commonAncestorCommit,
+      candidateBranch: options.candidateBranch,
+      artifacts: usedArtifacts,
+      analyzerSchemaVersion: 2 as const,
+      sourceConfigurations: projection.sourceConfigurations.map(configuration => ({
+        ...configuration,
+        sliceId: usedArtifacts.find(artifact => artifact.slice.includedChanges.some(change => change.path === configuration.path))!.analysisId
+      }))
+    }
+  };
+}
+
+function runtimeVerify(worktree: string) {
+  const executable = process.platform === 'win32' ? process.env.ComSpec ?? 'cmd.exe' : 'npm';
+  const args = process.platform === 'win32' ? ['/d', '/s', '/c', 'npm run test:e2e'] : ['run', 'test:e2e'];
+  execFileSync(executable, args, {
+    cwd: worktree,
+    stdio: 'pipe',
+    windowsHide: true
+  });
+}
 
 test('generates and verifies the Product Catalogue candidate, then repeats idempotently',async()=>{
   const base=await repository.resolveRef('main');const sourceRefs=['branch-a','branch-b','branch-incompatible'];const sourceBefore=await Promise.all(sourceRefs.map(ref=>repository.resolveRef(ref)));
@@ -68,3 +137,102 @@ test('generates and verifies the Product Catalogue candidate, then repeats idemp
   expect(await Promise.all(sourceRefs.map(ref=>repository.resolveRef(ref)))).toEqual(sourceBefore);
   expect((await repository.git(['worktree','list','--porcelain']))).not.toContain('ui-merge-studio-candidate-');
 },240_000);
+
+test('generates deterministically from Main, Version A, and Version B foundation commits', async () => {
+  const sourceRefs = ['main', 'branch-a', 'branch-b', 'branch-incompatible'];
+  const sourceBefore = await Promise.all(sourceRefs.map(ref => repository.resolveRef(ref)));
+  const proofs = [
+    await foundationRequest({ foundation: 'main', candidateBranch: 'phase5-main-result', sidebar: true, quickViews: ['p-105'] }),
+    await foundationRequest({ foundation: 'branch-a', candidateBranch: 'phase5-version-a-result', quickViews: ['p-105', 'p-103'] }),
+    await foundationRequest({ foundation: 'branch-b', candidateBranch: 'phase5-version-b-result', sidebar: true })
+  ];
+  try {
+    for (const proof of proofs) {
+      const generator = new CandidateGenerator(fixture, {
+        artifactRoot: resolve(fixture, '..', '..', '..'),
+        onVerifiedWorkspace: runtimeVerify
+      });
+      const generationStarted = performance.now();
+      const first = await generator.generate(proof.request);
+      const generationDurationMs = Math.round(performance.now() - generationStarted);
+      console.log(`PHASE5_GENERATION_PERFORMANCE ${JSON.stringify({ foundation: proof.projection.foundation.branchRef, generationDurationMs })}`);
+      expect(first.status, first.message).toBe('succeeded');
+      expect(first.plan.repository).toMatchObject({
+        foundationRef: proof.projection.foundation.branchRef,
+        foundationCommit: proof.projection.foundation.commitSha,
+        commonBaseCommit: proof.projection.foundation.commonAncestorCommit
+      });
+      expect(await repository.git(['rev-parse', `${proof.request.candidateBranch}^`])).toBe(proof.projection.foundation.commitSha);
+      expect(first.verification.every(item => item.status === 'passed')).toBe(true);
+
+      const second = await generator.generate(proof.request);
+      expect(second.status, second.message).toBe('succeeded');
+      expect(second.repository.idempotent).toBe(true);
+      expect(second.repository.candidateTree).toBe(first.repository.candidateTree);
+
+      const candidate = proof.request.candidateBranch;
+      const workspace = await repository.readFile(candidate, 'src/features/catalogue/CatalogueWorkspace.tsx');
+      const header = await repository.readFile(candidate, 'src/features/catalogue/CatalogueHeader.tsx');
+      if (proof.projection.foundation.branchRef === 'branch-a') {
+        const foundationFiles = (await repository.git(['diff', '--name-only', 'main..branch-a'])).split(/\r?\n/).filter(Boolean);
+        const resultFiles = new Set((await repository.git(['diff', '--name-only', `main..${candidate}`])).split(/\r?\n/).filter(Boolean));
+        expect(foundationFiles.every(path => resultFiles.has(path))).toBe(true);
+        expect(workspace).toContain('CategorySidebar');
+        expect(header).toContain('PromotionalBanner');
+        expect(await repository.readFile(candidate, 'src/config/quickViewTargets.ts')).toContain('["p-103", "p-105"]');
+        expect(await repository.fileExists(candidate, 'src/utils/inventorySummary.ts')).toBe(false);
+      } else if (proof.projection.foundation.branchRef === 'branch-b') {
+        const foundationFiles = (await repository.git(['diff', '--name-only', 'main..branch-b'])).split(/\r?\n/).filter(Boolean);
+        const resultFiles = new Set((await repository.git(['diff', '--name-only', `main..${candidate}`])).split(/\r?\n/).filter(Boolean));
+        expect(foundationFiles.every(path => resultFiles.has(path))).toBe(true);
+        expect(workspace).toContain('CategorySidebar');
+        expect(header).toContain('inventorySummary');
+        expect(header).not.toContain('PromotionalBanner');
+        expect(await repository.readFile(candidate, 'src/config/quickViewTargets.ts')).toContain("'p-101', 'p-102', 'p-103', 'p-104', 'p-105'");
+      } else {
+        expect(workspace).toContain('CategorySidebar');
+        expect(header).not.toContain('PromotionalBanner');
+        expect(header).not.toContain('inventorySummary');
+        expect(await repository.readFile(candidate, 'src/config/quickViewTargets.ts')).toContain('["p-105"]');
+      }
+    }
+  } finally {
+    for (const branch of phase5CandidateBranches) {
+      if (await repository.resolveRef(branch).catch(() => null)) await repository.git(['branch', '-D', branch]);
+    }
+  }
+  expect(await Promise.all(sourceRefs.map(ref => repository.resolveRef(ref)))).toEqual(sourceBefore);
+  expect((await repository.git(['worktree', 'list', '--porcelain']))).not.toContain('ui-merge-studio-candidate-');
+}, 720_000);
+
+test('refuses the incompatible Product-ID foundation before candidate presentation', async () => {
+  const commits = await fixtureCommits();
+  const selectedArtifacts = await artifacts();
+  const quickViewArtifact = selectedArtifacts[1];
+  const branch = 'phase5-incompatible-result';
+  const generator = new CandidateGenerator(fixture, { artifactRoot: resolve(fixture, '..', '..', '..') });
+  const request = {
+    repositoryRoot: fixture,
+    repositoryId: catalogueRepositoryId,
+    baseRef: 'branch-incompatible',
+    expectedBaseCommit: commits['branch-incompatible'],
+    commonBaseRef: 'main',
+    expectedCommonBaseCommit: commits.main,
+    candidateBranch: branch,
+    artifacts: [quickViewArtifact],
+    analyzerSchemaVersion: 2 as const,
+    sourceConfigurations: [{
+      sliceId: quickViewArtifact.analysisId,
+      path: 'src/config/quickViewTargets.ts',
+      declaration: 'quickViewTargetIds',
+      value: ['p-105']
+    }]
+  };
+  const preflight = await generator.preflight(request);
+  expect(preflight.plan.status).toBe('refused');
+  expect(preflight.plan.unresolved.map(item => item.reason).join(' ')).toMatch(/shared contract.*Product/i);
+  const report = await generator.generate(request);
+  expect(report.status).toBe('refused');
+  expect(await repository.resolveRef(branch).catch(() => null)).toBeNull();
+  expect((await repository.git(['worktree', 'list', '--porcelain']))).not.toContain('ui-merge-studio-candidate-');
+}, 120_000);

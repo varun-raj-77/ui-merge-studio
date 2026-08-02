@@ -23,3 +23,11 @@ The hosted Product Catalogue now stores integration intent as one versioned cano
 Structured parity reconstructs a plan for each of the unchanged 64 historical keys and checks sidebar presence, all five stable product IDs, every selected and unselected Quick View, and historical key identity. A non-matrix Audio/Travel, Travel-default, hidden-heading, shown-counts, Arc Headphones/Carry Case plan proves configured rendering and projections without a static artifact.
 
 Performance numbers are recorded from the fresh-production Phase 4 Playwright journey rather than inferred from unit execution. See the Phase 4 completion report for the measured action-to-dock, View-combined-to-ready, Undo-to-preview, and mobile responsiveness values from the final run.
+
+## Phase 5 foundation evaluation
+
+Plan version 2 makes Main, Version A, or Version B an explicit pinned foundation. Fresh-production browser journeys prove separate foundation/addition grouping, configured A and B semantics, redundant-selection explanation, safe refusal, complete-plan history, keyboard radios, reduced motion, and mobile reachability. The configured browser remains an honest adapter projection, not a Git checkout.
+
+Local integration tests create real temporary worktrees from each selected foundation commit. The Version A proof preserves every file changed from the shared base and adds only Desk Stand and Task Lamp Quick View slices; the Version B proof preserves its complete inventory and five-Quick-View diff and adds the Version A sidebar. Each proof installs, typechecks, tests, builds, runs the fixture browser checks, repeats generation, and compares candidate trees. The intentionally incompatible Product-ID foundation is refused before a candidate branch is presented.
+
+The final fresh-production run measured 385 ms from foundation change to dock acknowledgement, 479 ms from View Combined to configured result, and 119 ms to undo the foundation change. The final isolated generation run measured 55.182 s from Main, 55.324 s from Version A, and 60.282 s from Version B before the deterministic repeats. These fixture measurements do not establish a general speed improvement; a larger foundation can add checkout, installation, and verification cost in proportion to its repository diff and dependency surface.

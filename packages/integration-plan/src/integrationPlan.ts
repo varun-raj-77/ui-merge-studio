@@ -1,4 +1,4 @@
-export const integrationPlanVersion = 1 as const;
+export const integrationPlanVersion = 2 as const;
 
 export type IntegrationCapabilityKind =
   | 'whole-feature'
@@ -10,6 +10,7 @@ export interface IntegrationSelection {
   capabilityId: string;
   capabilityKind: IntegrationCapabilityKind;
   sourceBranch: string;
+  sourceCommitSha: string;
   route: string;
   pageId: string;
   parentCapabilityId?: string;
@@ -17,18 +18,27 @@ export interface IntegrationSelection {
   configuration?: unknown;
 }
 
-export interface IntegrationPlanV1 {
+export interface IntegrationFoundation {
+  repositoryId: string;
+  branchRef: string;
+  commitSha: string;
+  commonAncestorCommit: string;
+  role: 'base';
+}
+
+export interface IntegrationPlanV2 {
   version: typeof integrationPlanVersion;
-  foundation: {
-    branchRef: string;
-    role: 'base';
-  };
+  foundation: IntegrationFoundation;
   selections: IntegrationSelection[];
 }
 
+/** Phase 4 compatibility alias. Serialized plans are versioned and remain V2. */
+export type IntegrationPlanV1 = IntegrationPlanV2;
+
 export interface IntegrationPlanAdapter<TSelection extends IntegrationSelection = IntegrationSelection> {
   id: string;
-  foundationBranch: string;
+  defaultFoundation: IntegrationFoundation;
+  normalizeFoundation(foundation: IntegrationFoundation): IntegrationFoundation;
   normalizeSelection(selection: IntegrationSelection): TSelection;
   selectionIdentity(selection: TSelection): string;
   selectionOrder(selection: TSelection): string;
@@ -48,16 +58,16 @@ export function refuseIntegrationPlan(productMessage: string, technicalDetail: s
   throw new IntegrationPlanRefusal(productMessage, technicalDetail);
 }
 
-export function createEmptyIntegrationPlan(branchRef = 'main'): IntegrationPlanV1 {
+export function createEmptyIntegrationPlan(foundation: IntegrationFoundation): IntegrationPlanV2 {
   return {
     version: integrationPlanVersion,
-    foundation: { branchRef, role: 'base' },
+    foundation,
     selections: []
   };
 }
 
 export function canonicalizeIntegrationPlan<TSelection extends IntegrationSelection>(
-  value: IntegrationPlanV1,
+  value: IntegrationPlanV2,
   adapter: IntegrationPlanAdapter<TSelection>
 ): IntegrationPlanV1 & { selections: TSelection[] } {
   if (value?.version !== integrationPlanVersion) {
@@ -66,12 +76,7 @@ export function canonicalizeIntegrationPlan<TSelection extends IntegrationSelect
       `Expected plan version ${integrationPlanVersion}; received ${(value as { version?: unknown })?.version ?? '(missing)'}.`
     );
   }
-  if (value.foundation?.role !== 'base' || value.foundation.branchRef !== adapter.foundationBranch) {
-    refuseIntegrationPlan(
-      'This integration plan does not use the supported foundation.',
-      `Expected base ${adapter.foundationBranch}; received ${value.foundation?.branchRef ?? '(missing)'}.`
-    );
-  }
+  const foundation = adapter.normalizeFoundation(value.foundation);
   if (!Array.isArray(value.selections)) {
     refuseIntegrationPlan('This integration plan is incomplete.', 'Selections must be an array.');
   }
@@ -90,7 +95,7 @@ export function canonicalizeIntegrationPlan<TSelection extends IntegrationSelect
   }
   return {
     version: integrationPlanVersion,
-    foundation: { branchRef: adapter.foundationBranch, role: 'base' },
+    foundation,
     selections: [...byIdentity.values()].sort((left, right) => (
       adapter.selectionOrder(left).localeCompare(adapter.selectionOrder(right))
     ))
@@ -120,7 +125,7 @@ function fnv1a(value: string) {
 }
 
 export function integrationPlanIdentity<TSelection extends IntegrationSelection>(
-  plan: IntegrationPlanV1,
+  plan: IntegrationPlanV2,
   adapter: IntegrationPlanAdapter<TSelection>
 ) {
   const canonical = canonicalizeIntegrationPlan(plan, adapter);
@@ -128,7 +133,7 @@ export function integrationPlanIdentity<TSelection extends IntegrationSelection>
 }
 
 export function serializeIntegrationPlan<TSelection extends IntegrationSelection>(
-  plan: IntegrationPlanV1,
+  plan: IntegrationPlanV2,
   adapter: IntegrationPlanAdapter<TSelection>
 ) {
   return stableSerialize(canonicalizeIntegrationPlan(plan, adapter));
@@ -144,5 +149,5 @@ export function parseIntegrationPlan<TSelection extends IntegrationSelection>(
   } catch {
     refuseIntegrationPlan('This integration plan cannot be opened.', 'The serialized plan is not valid JSON.');
   }
-  return canonicalizeIntegrationPlan(value as IntegrationPlanV1, adapter);
+  return canonicalizeIntegrationPlan(value as IntegrationPlanV2, adapter);
 }

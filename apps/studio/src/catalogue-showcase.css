@@ -295,6 +295,37 @@ button:focus-visible, a:focus-visible {
   line-height: 1.45;
 }
 
+.foundation-control {
+  width: min(1600px, calc(100% - 28px));
+  margin: 0 auto 12px;
+  padding: 9px 11px 10px;
+  border: 1px solid var(--cat-line);
+  border-radius: 12px;
+  background: #fff;
+}
+.foundation-control legend {
+  padding: 0 5px;
+  color: var(--cat-muted);
+  font-size: 10px;
+  font-weight: 850;
+}
+.foundation-control > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.foundation-control label {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 8px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.foundation-control label:has(input:checked) { background: #f0edff; box-shadow: inset 0 0 0 1px #c9c1fb; }
+.foundation-control input { margin: 2px 0 0; accent-color: var(--cat-accent); }
+.foundation-control label span { min-width: 0; display: grid; gap: 2px; }
+.foundation-control label strong { font-size: 11px; }
+.foundation-control label small { color: var(--cat-muted); font-size: 9px; line-height: 1.35; }
+.foundation-control .foundation-experimental { opacity: .72; }
+
 .context-notice {
   position: fixed;
   z-index: 72;
@@ -688,6 +719,8 @@ button:focus-visible, a:focus-visible {
   font-weight: 900;
   cursor: pointer;
 }
+.foundation-chip { border-color: #a99cf2; background: #4b4178; }
+.foundation-evidence-dialog code { word-break: break-all; }
 .conflict-chip { border-color: #d8897c; background: #6d3028; }
 .conflict-chip b {
   margin-left: 4px;
@@ -1068,6 +1101,10 @@ button:focus-visible, a:focus-visible {
   .workspace-heading { padding: 18px 12px 10px; }
   .workspace-heading h1 { font-size: 27px; }
   .workspace-heading p { font-size: 10px; }
+  .foundation-control { width: calc(100% - 20px); margin-bottom: 9px; padding: 7px; }
+  .foundation-control > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .foundation-control label { padding: 7px 6px; }
+  .foundation-control label small { font-size: 8px; }
   .workspace-preview > header { flex-wrap: wrap; gap: 8px; }
   .preview-capability-actions {
     width: 100%;

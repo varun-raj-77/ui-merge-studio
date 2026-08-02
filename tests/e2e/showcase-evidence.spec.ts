@@ -33,7 +33,7 @@ test.describe('mode-free comparison workspace', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(compareUrl);
     await expect(page.getByRole('button', { name: 'Play' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Select' })).toHaveCount(0);
+    await expect(page.locator('.mode-toggle')).toHaveCount(0);
     await expect(page.getByTitle('Version A live application')).toBeVisible();
     await expect(page.getByTitle('Version B live application')).toBeVisible();
     await expect(page.getByTitle('Combined result application')).not.toBeVisible();
@@ -44,7 +44,7 @@ test.describe('mode-free comparison workspace', () => {
     await expect(deskStandCard).toHaveCount(1);
     await deskStandCard.getByRole('button', { name: 'Quick view' }).click();
     await expect(versionB(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
-    await expect(page.getByRole('complementary', { name: 'Current selections' })).toHaveCount(0);
+    await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('Foundation');
     await versionB(page).getByRole('button', { name: 'Close quick view' }).click();
     await versionA(page).getByRole('button', { name: 'All' }).click();
 
@@ -61,7 +61,7 @@ test.describe('mode-free comparison workspace', () => {
     await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
     await page.getByRole('button', { name: 'View combined' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Built from 2 selections' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Main foundation · 2 explicit additions' })).toBeVisible();
     await expect(page.getByTitle('Version A live application')).not.toBeVisible();
     await expect(page.getByTitle('Version B live application')).not.toBeVisible();
     await expect(page.getByTitle('Combined result application')).toBeVisible();

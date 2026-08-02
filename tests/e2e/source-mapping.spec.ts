@@ -12,6 +12,7 @@ test('replays rendered Product Catalogue selections with generated source eviden
   await expect(evidence).toContainText('src/features/catalogue/CategorySidebar.tsx');
   await evidence.getByRole('button', { name: 'Close technical evidence' }).click();
 
+  await versionB(page).getByRole('heading', { name: 'Arc Headphones' }).scrollIntoViewIfNeeded();
   await versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' }).click();
   await page.getByRole('button', { name: 'Evidence for Quick View · Arc Headphones' }).click();
   evidence = page.getByRole('dialog', { name: 'Quick View · Arc Headphones' });

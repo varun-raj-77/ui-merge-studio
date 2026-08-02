@@ -123,7 +123,7 @@ test('ordinary sidebar is updated in place by appearance-only customization', as
   await dialog.getByRole('button', { name: 'Save customization' }).click();
   const dock = page.getByRole('complementary', { name: 'Current selections' });
   await expect(dock).toContainText('1 selection');
-  await expect(dock.locator('.selection-chip')).toHaveCount(1);
+  await expect(dock.locator('.selection-chip:not(.foundation-chip)')).toHaveCount(1);
   await expect(dock).toContainText('Heading: Hidden');
   await expect(dock).toContainText('Counts: Shown');
   await expect(versionA(page).getByText('Categories', { exact: true })).toBeHidden();

@@ -56,8 +56,10 @@ test('combined result removes a feature and Undo restores its exact candidate in
 
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
+  await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
   await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
-  await productCard(versionB(page), 'Desk Stand').getByRole('button', { name: 'Quick view', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Remove Quick View · Desk Stand' })).toBeVisible();
+  await productCard(versionB(page), 'Desk Stand').getByRole('button', { name: 'Quick view', exact: true }).press('Enter');
   await page.getByRole('button', { name: 'View combined' }).click();
   await expect(combined(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
 

@@ -20,6 +20,8 @@ import {
 } from './catalogueSelectionCapabilities';
 import type { CatalogueProductId } from './catalogueProducts';
 import type { CategorySidebarConfigurationSelection } from './categorySidebarConfiguration';
+import type { IntegrationFoundation } from '../../../packages/integration-plan/src/integrationPlan';
+import { changeCatalogueFoundation } from './catalogueIntegrationPlan';
 
 interface ShowcaseScopeOwnership {
   capabilityId: string;
@@ -44,6 +46,7 @@ export type ShowcaseSelectionAction =
   | { type: 'remove-scope'; scope: ShowcaseScope }
   | { type: 'configure-category-sidebar'; configuration: CategorySidebarConfigurationSelection }
   | { type: 'clear' }
+  | { type: 'change-foundation'; foundation: IntegrationFoundation }
   | { type: 'toggle-incompatible' };
 
 export const emptyShowcaseSelection = emptyCatalogueIntegrationPlan;
@@ -118,6 +121,7 @@ export function scopeFromRuntime(value: string, productIds: readonly string[]): 
 }
 
 export function showcaseSelectionReducer(state: ShowcaseSelectionState, action: ShowcaseSelectionAction): ShowcaseSelectionState {
+  if (action.type === 'change-foundation') return changeCatalogueFoundation(state, action.foundation).plan;
   if (action.type === 'clear') return clearIntegrationSelections(state);
   if (action.type === 'toggle-incompatible') {
     return hasIncompatibleProductId(state)

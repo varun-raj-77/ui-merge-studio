@@ -1,4 +1,6 @@
 import { canonicalSelectionKey } from '../../../packages/showcase-evidence/src/schema';
+import manifestJson from './generated/showcaseRun.json';
+import { validatePublicShowcaseReport } from '../../../packages/showcase-evidence/src/schema';
 import type { CandidateSourceConfiguration } from '../../../packages/candidate-generation/src/types';
 import {
   canonicalizeIntegrationPlan,
@@ -6,6 +8,7 @@ import {
   integrationPlanIdentity,
   refuseIntegrationPlan,
   type IntegrationPlanAdapter,
+  type IntegrationFoundation,
   type IntegrationPlanV1,
   type IntegrationSelection
 } from '../../../packages/integration-plan/src/integrationPlan';
@@ -27,11 +30,54 @@ import {
 
 export const catalogueIntegrationAdapterVersion = 1 as const;
 export const productIdCapabilityId = 'experimental-product-id';
+export const catalogueRepositoryId = 'controlled-product-catalogue';
+const recordedRepository = validatePublicShowcaseReport(manifestJson).repository;
+const commitPattern = /^[a-f0-9]{40}$/;
+
+export type CatalogueFoundationBranch = 'main' | 'branch-a' | 'branch-b' | 'branch-incompatible';
+export const catalogueFoundationLabels: Record<CatalogueFoundationBranch, string> = {
+  main: 'Main',
+  'branch-a': 'Version A',
+  'branch-b': 'Version B',
+  'branch-incompatible': 'Experimental Product-ID'
+};
+
+export const catalogueRecordedCommits: Record<CatalogueFoundationBranch, string> = {
+  main: recordedRepository.commonBaseCommit,
+  'branch-a': recordedRepository.branchA.commit,
+  'branch-b': recordedRepository.branchB.commit,
+  'branch-incompatible': recordedRepository.incompatible.commit
+};
+
+export function catalogueFoundation(
+  branchRef: CatalogueFoundationBranch,
+  commits: Partial<Record<CatalogueFoundationBranch, string>> = {}
+): IntegrationFoundation {
+  return {
+    repositoryId: catalogueRepositoryId,
+    branchRef,
+    commitSha: commits[branchRef] ?? catalogueRecordedCommits[branchRef],
+    commonAncestorCommit: commits.main ?? catalogueRecordedCommits.main,
+    role: 'base'
+  };
+}
+
+export const catalogueFoundationOptions = ([
+  ['main', 'Include only the features you select.'],
+  ['branch-a', 'Include all Version A changes, then add selected features from other versions.'],
+  ['branch-b', 'Include all Version B changes, then add selected features from other versions.']
+] as const).map(([branchRef, description]) => ({
+  branchRef,
+  label: catalogueFoundationLabels[branchRef],
+  description,
+  foundation: catalogueFoundation(branchRef)
+}));
 
 export interface CatalogueSidebarPlanSelection extends IntegrationSelection {
   capabilityId: 'category-sidebar';
   capabilityKind: 'whole-feature';
   sourceBranch: 'branch-a';
+  sourceCommitSha: string;
   route: typeof catalogueRoute;
   pageId: typeof cataloguePageId;
   configuration: CategorySidebarConfiguration & {
@@ -44,6 +90,7 @@ export interface CatalogueQuickViewPlanSelection extends IntegrationSelection {
   capabilityId: `product-quick-view:${CatalogueProductId}`;
   capabilityKind: 'feature-instance';
   sourceBranch: 'branch-b';
+  sourceCommitSha: string;
   route: typeof catalogueRoute;
   pageId: typeof cataloguePageId;
   parentCapabilityId: typeof quickViewAllCapabilityId;
@@ -54,6 +101,7 @@ export interface CatalogueIncompatiblePlanSelection extends IntegrationSelection
   capabilityId: typeof productIdCapabilityId;
   capabilityKind: 'whole-feature';
   sourceBranch: 'branch-incompatible';
+  sourceCommitSha: string;
   route: typeof catalogueRoute;
   pageId: typeof cataloguePageId;
 }
@@ -79,6 +127,12 @@ function validateOwnership(selection: IntegrationSelection, expected: {
       `${selection.capabilityId} must use ${expected.branch}; received ${selection.sourceBranch || '(missing)'}.`
     );
   }
+  if (!commitPattern.test(selection.sourceCommitSha ?? '')) {
+    refuseIntegrationPlan(
+      'This feature is missing its pinned source version.',
+      `${selection.capabilityId} requires an exact 40-character Git commit SHA.`
+    );
+  }
   if (selection.route !== (expected.route ?? catalogueRoute)
     || selection.pageId !== (expected.pageId ?? cataloguePageId)) {
     refuseIntegrationPlan(
@@ -89,8 +143,33 @@ function validateOwnership(selection: IntegrationSelection, expected: {
 }
 
 export const catalogueIntegrationPlanAdapter: IntegrationPlanAdapter<CataloguePlanSelection> = {
-  id: 'product-catalogue-v1',
-  foundationBranch: 'main',
+  id: 'product-catalogue-v2',
+  defaultFoundation: catalogueFoundation('main'),
+  normalizeFoundation(foundation) {
+    const branchRef = foundation?.branchRef as CatalogueFoundationBranch;
+    if (foundation?.role !== 'base'
+      || foundation.repositoryId !== catalogueRepositoryId
+      || !(branchRef in catalogueFoundationLabels)) {
+      refuseIntegrationPlan(
+        'This integration plan does not use a supported foundation.',
+        `Expected ${catalogueRepositoryId} and Main, Version A, Version B, or the controlled incompatible proof.`
+      );
+    }
+    if (!commitPattern.test(foundation.commitSha ?? '')
+      || !commitPattern.test(foundation.commonAncestorCommit ?? '')) {
+      refuseIntegrationPlan(
+        'The selected foundation is not pinned to verified Git history.',
+        'Foundation commit and common ancestor must be exact 40-character Git SHAs.'
+      );
+    }
+    return {
+      repositoryId: catalogueRepositoryId,
+      branchRef,
+      commitSha: foundation.commitSha,
+      commonAncestorCommit: foundation.commonAncestorCommit,
+      role: 'base'
+    };
+  },
   normalizeSelection(selection) {
     if (!selection || typeof selection !== 'object' || typeof selection.capabilityId !== 'string') {
       refuseIntegrationPlan('This integration decision is incomplete.', 'A capability ID is required.');
@@ -120,6 +199,7 @@ export const catalogueIntegrationPlanAdapter: IntegrationPlanAdapter<CataloguePl
         capabilityId: 'category-sidebar',
         capabilityKind: 'whole-feature',
         sourceBranch: 'branch-a',
+        sourceCommitSha: selection.sourceCommitSha,
         route: catalogueRoute,
         pageId: cataloguePageId,
         configuration: {
@@ -138,6 +218,7 @@ export const catalogueIntegrationPlanAdapter: IntegrationPlanAdapter<CataloguePl
         capabilityId: productIdCapabilityId,
         capabilityKind: 'whole-feature',
         sourceBranch: 'branch-incompatible',
+        sourceCommitSha: selection.sourceCommitSha,
         route: catalogueRoute,
         pageId: cataloguePageId
       };
@@ -163,6 +244,7 @@ export const catalogueIntegrationPlanAdapter: IntegrationPlanAdapter<CataloguePl
         capabilityId: `product-quick-view:${productId}`,
         capabilityKind: 'feature-instance',
         sourceBranch: 'branch-b',
+        sourceCommitSha: selection.sourceCommitSha,
         route: catalogueRoute,
         pageId: cataloguePageId,
         parentCapabilityId: quickViewAllCapabilityId,
@@ -194,11 +276,15 @@ export const catalogueIntegrationPlanAdapter: IntegrationPlanAdapter<CataloguePl
 };
 
 export const emptyCatalogueIntegrationPlan = canonicalizeCatalogueIntegrationPlan(
-  createEmptyIntegrationPlan('main')
+  createEmptyIntegrationPlan(catalogueFoundation('main'))
 );
 
 export function canonicalizeCatalogueIntegrationPlan(plan: IntegrationPlanV1) {
-  return canonicalizeIntegrationPlan(plan, catalogueIntegrationPlanAdapter) as CatalogueIntegrationPlan;
+  const canonical = canonicalizeIntegrationPlan(plan, catalogueIntegrationPlanAdapter);
+  return {
+    ...canonical,
+    selections: canonical.selections.filter(selection => selection.sourceBranch !== canonical.foundation.branchRef)
+  } as CatalogueIntegrationPlan;
 }
 
 export function cataloguePlanIdentity(plan: IntegrationPlanV1) {
@@ -223,6 +309,7 @@ export function hasIncompatibleProductId(plan: IntegrationPlanV1) {
 
 export interface CataloguePreviewModel {
   planIdentity: string;
+  foundation: IntegrationFoundation & { label: string };
   route: typeof catalogueRoute;
   pageId: typeof cataloguePageId;
   sidebar: CategorySidebarConfiguration | null;
@@ -234,13 +321,25 @@ export interface CataloguePreviewModel {
 export function integrationPlanToPreviewModel(plan: IntegrationPlanV1): CataloguePreviewModel {
   const canonical = canonicalizeCatalogueIntegrationPlan(plan);
   const sidebar = sidebarPlanSelection(canonical);
-  const quickViewProductIds = quickViewPlanSelections(canonical).map(selection => selection.targetIds[0]);
-  const incompatibleProductId = hasIncompatibleProductId(canonical);
+  const foundationBranch = canonical.foundation.branchRef as CatalogueFoundationBranch;
+  const foundationIncludesSidebar = foundationBranch === 'branch-a';
+  const foundationIncludesQuickViews = foundationBranch === 'branch-b';
+  const foundationIsIncompatible = foundationBranch === 'branch-incompatible';
+  const quickViewProductIds = foundationIncludesQuickViews
+    ? catalogueProducts.map(product => product.id)
+    : quickViewPlanSelections(canonical).map(selection => selection.targetIds[0]);
+  const incompatibleProductId = foundationIsIncompatible || hasIncompatibleProductId(canonical);
   return {
     planIdentity: cataloguePlanIdentity(canonical),
+    foundation: {
+      ...canonical.foundation,
+      label: catalogueFoundationLabels[foundationBranch]
+    },
     route: catalogueRoute,
     pageId: cataloguePageId,
-    sidebar: sidebar ? normalizeCategorySidebarConfiguration(sidebar.configuration) : null,
+    sidebar: foundationIncludesSidebar
+      ? completeCategorySidebarConfiguration
+      : sidebar ? normalizeCategorySidebarConfiguration(sidebar.configuration) : null,
     quickViewProductIds,
     incompatibleProductId,
     refused: incompatibleProductId && quickViewProductIds.length > 0
@@ -249,12 +348,13 @@ export function integrationPlanToPreviewModel(plan: IntegrationPlanV1): Catalogu
 
 export interface CatalogueGenerationProjection {
   planIdentity: string;
-  foundation: { branchRef: 'main'; role: 'base' };
+  foundation: IntegrationFoundation;
   selectedCapabilities: {
     capabilityId: string;
     sourceBranch: string;
     route: string;
     pageId: string;
+    sourceCommitSha: string;
   }[];
   sourceConfigurations: Omit<CandidateSourceConfiguration, 'sliceId'>[];
 }
@@ -269,23 +369,26 @@ export function integrationPlanToGenerationRequest(plan: IntegrationPlanV1): Cat
     );
   }
   const sourceConfigurations: CatalogueGenerationProjection['sourceConfigurations'] = [];
-  if (preview.sidebar) sourceConfigurations.push({
+  const explicitSidebar = sidebarPlanSelection(canonical);
+  const explicitQuickViews = quickViewPlanSelections(canonical).map(selection => selection.targetIds[0]);
+  if (explicitSidebar) sourceConfigurations.push({
     ...categorySidebarRepositoryMetadata.source,
-    value: categorySidebarSourceValue(preview.sidebar)
+    value: categorySidebarSourceValue(explicitSidebar.configuration)
   });
-  if (preview.quickViewProductIds.length) sourceConfigurations.push({
+  if (explicitQuickViews.length) sourceConfigurations.push({
     path: 'src/config/quickViewTargets.ts',
     declaration: 'quickViewTargetIds',
-    value: [...preview.quickViewProductIds]
+    value: [...explicitQuickViews]
   });
   return {
     planIdentity: preview.planIdentity,
-    foundation: { branchRef: 'main', role: 'base' },
+    foundation: canonical.foundation,
     selectedCapabilities: canonical.selections
       .filter(selection => selection.capabilityId !== productIdCapabilityId)
       .map(selection => ({
         capabilityId: selection.capabilityId,
         sourceBranch: selection.sourceBranch,
+        sourceCommitSha: selection.sourceCommitSha,
         route: selection.route,
         pageId: selection.pageId
       })),
@@ -295,6 +398,7 @@ export function integrationPlanToGenerationRequest(plan: IntegrationPlanV1): Cat
 
 export interface CatalogueVerificationExpectations {
   planIdentity: string;
+  foundation: { branchRef: string; commitSha: string; allChangesIncluded: boolean };
   route: typeof catalogueRoute;
   sidebarPresent: boolean;
   categories: Record<string, boolean>;
@@ -303,8 +407,8 @@ export interface CatalogueVerificationExpectations {
   countsVisible: boolean;
   categoryCounts: Record<string, number>;
   quickViewByProductId: Record<CatalogueProductId, boolean>;
-  unrelatedPromotionPresent: false;
-  unrelatedInventoryPresent: false;
+  unrelatedPromotionPresent: boolean;
+  unrelatedInventoryPresent: boolean;
 }
 
 export function integrationPlanToVerificationExpectations(plan: IntegrationPlanV1): CatalogueVerificationExpectations {
@@ -313,6 +417,11 @@ export function integrationPlanToVerificationExpectations(plan: IntegrationPlanV
   const selectedQuickViews = new Set(preview.quickViewProductIds);
   return {
     planIdentity: preview.planIdentity,
+    foundation: {
+      branchRef: preview.foundation.branchRef,
+      commitSha: preview.foundation.commitSha,
+      allChangesIncluded: true
+    },
     route: catalogueRoute,
     sidebarPresent: Boolean(preview.sidebar),
     categories: Object.fromEntries(categorySidebarRepositoryMetadata.categories.map(category => [category.id, enabled.has(category.id)])),
@@ -321,13 +430,20 @@ export function integrationPlanToVerificationExpectations(plan: IntegrationPlanV
     countsVisible: Boolean(preview.sidebar?.showProductCounts),
     categoryCounts: categoryProductCounts(),
     quickViewByProductId: Object.fromEntries(catalogueProducts.map(product => [product.id, selectedQuickViews.has(product.id)])) as Record<CatalogueProductId, boolean>,
-    unrelatedPromotionPresent: false,
-    unrelatedInventoryPresent: false
+    unrelatedPromotionPresent: preview.foundation.branchRef === 'branch-a',
+    unrelatedInventoryPresent: preview.foundation.branchRef === 'branch-b'
   };
 }
 
 export interface CatalogueEvidenceSummary {
   planIdentity: string;
+  foundation: {
+    label: string;
+    branchRef: string;
+    commitSha: string;
+    commonAncestorCommit: string;
+    description: string;
+  };
   groups: {
     route: string;
     pageId: string;
@@ -336,31 +452,90 @@ export interface CatalogueEvidenceSummary {
 }
 
 export function integrationPlanToEvidenceSummary(plan: IntegrationPlanV1): CatalogueEvidenceSummary {
+  const canonical = canonicalizeCatalogueIntegrationPlan(plan);
   const preview = integrationPlanToPreviewModel(plan);
+  const explicitSidebar = sidebarPlanSelection(canonical);
+  const explicitQuickViews = quickViewPlanSelections(canonical).map(selection => selection.targetIds[0]);
   const rows: CatalogueEvidenceSummary['groups'][number]['rows'] = [];
-  if (preview.sidebar) rows.push({
+  if (explicitSidebar) rows.push({
     capabilityId: 'category-sidebar',
     label: 'Category sidebar',
     sourceBranch: 'branch-a',
     sourceLabel: 'Version A',
     details: [
-      categoryLabels(preview.sidebar.enabledCategoryIds).join(', '),
-      `Default: ${categoryLabels([preview.sidebar.defaultCategoryId])[0]}`,
-      `Heading: ${preview.sidebar.showHeading ? 'Shown' : 'Hidden'}`,
-      `Counts: ${preview.sidebar.showProductCounts ? 'Shown' : 'Hidden'}`
+      categoryLabels(explicitSidebar.configuration.enabledCategoryIds).join(', '),
+      `Default: ${categoryLabels([explicitSidebar.configuration.defaultCategoryId])[0]}`,
+      `Heading: ${explicitSidebar.configuration.showHeading ? 'Shown' : 'Hidden'}`,
+      `Counts: ${explicitSidebar.configuration.showProductCounts ? 'Shown' : 'Hidden'}`
     ]
   });
-  if (preview.quickViewProductIds.length) rows.push({
+  if (explicitQuickViews.length) rows.push({
     capabilityId: 'product-quick-view',
     label: 'Quick View',
     sourceBranch: 'branch-b',
     sourceLabel: 'Version B',
-    details: preview.quickViewProductIds.map(id => catalogueProducts.find(product => product.id === id)!.name)
+    details: explicitQuickViews.map(id => catalogueProducts.find(product => product.id === id)!.name)
   });
   return {
     planIdentity: preview.planIdentity,
-    groups: rows.length ? [{ route: catalogueRoute, pageId: cataloguePageId, rows }] : []
+    foundation: {
+      label: preview.foundation.label,
+      branchRef: preview.foundation.branchRef,
+      commitSha: preview.foundation.commitSha,
+      commonAncestorCommit: preview.foundation.commonAncestorCommit,
+      description: preview.foundation.branchRef === 'main'
+        ? 'Only explicitly selected features are added.'
+        : `All ${preview.foundation.label} changes are included.`
+    },
+    groups: [...new Set(rows.map(row => row.sourceBranch))].map(sourceBranch => ({
+      route: catalogueRoute,
+      pageId: cataloguePageId,
+      rows: rows.filter(row => row.sourceBranch === sourceBranch)
+    }))
   };
+}
+
+export interface FoundationChangeResult {
+  plan: CatalogueIntegrationPlan;
+  removedCapabilityIds: string[];
+  announcement: string;
+}
+
+export function changeCatalogueFoundation(
+  plan: IntegrationPlanV1,
+  foundation: IntegrationFoundation
+): FoundationChangeResult {
+  const current = canonicalizeCatalogueIntegrationPlan(plan);
+  const normalizedFoundation = catalogueIntegrationPlanAdapter.normalizeFoundation(foundation);
+  const removed = current.selections.filter(selection => selection.sourceBranch === normalizedFoundation.branchRef);
+  const next = canonicalizeCatalogueIntegrationPlan({
+    ...current,
+    foundation: normalizedFoundation,
+    selections: current.selections.filter(selection => selection.sourceBranch !== normalizedFoundation.branchRef)
+  });
+  const preview = integrationPlanToPreviewModel(next);
+  if (preview.refused) {
+    const label = catalogueFoundationLabels[normalizedFoundation.branchRef as CatalogueFoundationBranch];
+    refuseIntegrationPlan(
+      `${label} cannot be used as the foundation with the current selections.`,
+      normalizedFoundation.branchRef === 'branch-incompatible'
+        ? 'This foundation replaces stable product IDs required by the selected Quick Views.'
+        : 'The selected Product-ID change conflicts with Quick Views included by this foundation.'
+    );
+  }
+  const label = catalogueFoundationLabels[normalizedFoundation.branchRef as CatalogueFoundationBranch];
+  const removedDescription = removed.length
+    ? ` ${removed.map(selection => selection.capabilityId.startsWith('product-quick-view:') ? 'Quick View' : 'Category sidebar').filter((value, index, values) => values.indexOf(value) === index).join(' and ')} is now included through ${label}, so the separate selection was removed.`
+    : '';
+  return {
+    plan: next,
+    removedCapabilityIds: removed.map(selection => selection.capabilityId),
+    announcement: `Changed foundation to ${label}.${removedDescription}`
+  };
+}
+
+export function foundationIncludesCapability(plan: IntegrationPlanV1, sourceBranch: string) {
+  return canonicalizeCatalogueIntegrationPlan(plan).foundation.branchRef === sourceBranch;
 }
 
 export function historicalCandidateKeyForPlan(plan: IntegrationPlanV1) {
@@ -371,22 +546,30 @@ export function historicalCandidateKeyForPlan(plan: IntegrationPlanV1) {
   });
 }
 
-export function sidebarPlanDecision(configuration: CategorySidebarConfiguration = completeCategorySidebarConfiguration): CatalogueSidebarPlanSelection {
+export function sidebarPlanDecision(
+  configuration: CategorySidebarConfiguration = completeCategorySidebarConfiguration,
+  sourceCommitSha = catalogueRecordedCommits['branch-a']
+): CatalogueSidebarPlanSelection {
   return catalogueIntegrationPlanAdapter.normalizeSelection({
     capabilityId: 'category-sidebar',
     capabilityKind: 'whole-feature',
     sourceBranch: 'branch-a',
+    sourceCommitSha,
     route: catalogueRoute,
     pageId: cataloguePageId,
     configuration
   }) as CatalogueSidebarPlanSelection;
 }
 
-export function quickViewPlanDecision(productId: CatalogueProductId): CatalogueQuickViewPlanSelection {
+export function quickViewPlanDecision(
+  productId: CatalogueProductId,
+  sourceCommitSha = catalogueRecordedCommits['branch-b']
+): CatalogueQuickViewPlanSelection {
   return catalogueIntegrationPlanAdapter.normalizeSelection({
     capabilityId: `product-quick-view:${productId}`,
     capabilityKind: 'feature-instance',
     sourceBranch: 'branch-b',
+    sourceCommitSha,
     route: catalogueRoute,
     pageId: cataloguePageId,
     parentCapabilityId: quickViewAllCapabilityId,
@@ -394,11 +577,14 @@ export function quickViewPlanDecision(productId: CatalogueProductId): CatalogueQ
   }) as CatalogueQuickViewPlanSelection;
 }
 
-export function incompatibleProductIdDecision(): CatalogueIncompatiblePlanSelection {
+export function incompatibleProductIdDecision(
+  sourceCommitSha = catalogueRecordedCommits['branch-incompatible']
+): CatalogueIncompatiblePlanSelection {
   return catalogueIntegrationPlanAdapter.normalizeSelection({
     capabilityId: productIdCapabilityId,
     capabilityKind: 'whole-feature',
     sourceBranch: 'branch-incompatible',
+    sourceCommitSha,
     route: catalogueRoute,
     pageId: cataloguePageId
   }) as CatalogueIncompatiblePlanSelection;

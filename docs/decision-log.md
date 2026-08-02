@@ -26,3 +26,6 @@
 - Store all integration intent in a generic, versioned canonical Integration Plan. Product Catalogue concepts live only in its adapter; complete plan snapshots drive history, while browsing context remains outside the plan.
 - Expand bulk Quick View into canonical per-product decisions but record it as one atomic history transition. This retains exact target ownership without adding a second persistent bulk state.
 - Derive preview, generation, verification, evidence, dock grouping, and conflict checks through explicit deterministic projections of the same validated plan.
+- Version the canonical plan at 2 to add an explicit repository-scoped foundation, pinned foundation commit, pinned source commits, and verified common ancestor; version 1 is not silently reinterpreted.
+- Treat a foundation as the complete starting branch, not a feature selection. Normalize redundant same-branch selections and preserve the prior safe plan when a foundation conflicts with existing decisions.
+- Start generation from the exact pinned foundation worktree and integrate selected slices relative to the verified Git merge base. Reject stale refs, unrelated histories, and shared-contract incompatibility before successful candidate presentation.

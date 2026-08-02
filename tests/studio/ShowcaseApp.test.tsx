@@ -49,7 +49,7 @@ describe('quiet comparison workspace', () => {
     expect(screen.getByTitle('Combined result application')).not.toBeVisible();
     expect(screen.queryByRole('button', { name: 'Play' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Select' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('FoundationMain');
   });
 
   it('keeps normal app clicks independent from the nearby source-backed Add control', () => {
@@ -63,7 +63,7 @@ describe('quiet comparison workspace', () => {
 
     fireEvent.click(host.querySelector('#quick')!);
     expect(appClick).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('0 selections');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Studio Speaker' }));
     expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick ViewStudio Speaker');
@@ -150,7 +150,7 @@ describe('quiet comparison workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'View combined' }));
 
     expect(screen.getByText('Configured preview')).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Built from 1 selection' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Main foundation · 1 explicit addition' })).toBeVisible();
     expect(screen.getByTitle('Combined result application')).toBeVisible();
     expect(screen.getByTitle('Version A live application')).not.toBeVisible();
 

@@ -19,6 +19,7 @@ const styles = `
   *{box-sizing:border-box}body{margin:0;padding:22px;background:#f7f5ef}button{font:inherit}
   .catalogue-header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:18px}
   .catalogue-header p,.catalogue-header h1{margin:0}.catalogue-header p{color:#6c675d;font-size:12px}.catalogue-header h1{font-size:26px;letter-spacing:-.04em}
+  .foundation-banner{display:flex;justify-content:space-between;gap:12px;margin:-8px 0 18px;padding:10px 12px;border-radius:10px;background:#fff0e9;color:#793b2c;font-size:12px}.foundation-banner strong{display:block}
   .catalogue-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:18px}.catalogue-layout.no-sidebar{grid-template-columns:1fr}
   .category-sidebar{min-height:430px;padding:20px 14px;border:1px solid #d8d4c8;border-radius:16px;background:#eeeadf}
   .category-sidebar>strong{display:block;margin-bottom:17px}.category-sidebar [role=group]{display:grid;gap:7px}
@@ -78,7 +79,13 @@ export function ConfiguredCatalogueFrame({
     const dialog = context.catalogue.quickViewOpen && selectedProduct && quickViews.has(selectedProduct.id)
       ? `<div class="quick-dialog"><section role="dialog" aria-modal="true" aria-label="${escapeHtml(selectedProduct.name)} quick view"><h2>${escapeHtml(selectedProduct.name)}</h2><p>${escapeHtml(selectedProduct.category)} · ${escapeHtml(selectedProduct.price)}</p><button data-close-quick-view aria-label="Close quick view">Close</button></section></div>`
       : '';
-    document.body.innerHTML = `<header class="catalogue-header"><div><p>Configured Product Catalogue</p><h1>Workspace essentials</h1></div><p>Foundation · main</p></header><main class="catalogue-layout ${model.sidebar ? '' : 'no-sidebar'}">${sidebar}<section><p class="result-count">${visibleProducts.length} products</p><div class="product-grid">${cards}</div></section></main>${dialog}`;
+    const foundationSummary = model.foundation.branchRef === 'branch-b'
+      ? `${catalogueProducts.length} products ready`
+      : `Foundation · ${model.foundation.label}`;
+    const promotion = model.foundation.branchRef === 'branch-a'
+      ? '<aside class="foundation-banner" data-foundation-change="promotion"><span>Seasonal edit</span><strong>Workspace essentials, 20% off</strong></aside>'
+      : '';
+    document.body.innerHTML = `<header class="catalogue-header"><div><p>Configured Product Catalogue</p><h1>Workspace essentials</h1></div><p>${escapeHtml(foundationSummary)}</p></header>${promotion}<main class="catalogue-layout ${model.sidebar ? '' : 'no-sidebar'}">${sidebar}<section><p class="result-count">${visibleProducts.length} products</p><div class="product-grid">${cards}</div></section></main>${dialog}`;
     document.documentElement.dataset.integrationPlanId = model.planIdentity;
     document.documentElement.dataset.historicalArtifactRequired = 'false';
     document.querySelectorAll<HTMLButtonElement>('[data-category-id]').forEach(button => {

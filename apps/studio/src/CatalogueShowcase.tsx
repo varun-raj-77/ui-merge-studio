@@ -3,13 +3,19 @@ import type { PublicArtifact, PublicCandidate } from '../../../packages/showcase
 import { catalogueManifest, evidenceForScope, recordedRefusal, resolveCatalogueCandidate } from './catalogueEvidence';
 import { ConfiguredCatalogueFrame } from './ConfiguredCatalogueFrame';
 import {
+  catalogueFoundation,
+  catalogueFoundationLabels,
+  catalogueFoundationOptions,
   cataloguePlanIdentity,
+  changeCatalogueFoundation,
+  foundationIncludesCapability,
   hasIncompatibleProductId,
   integrationPlanToEvidenceSummary,
   integrationPlanToGenerationRequest,
   integrationPlanToPreviewModel,
   integrationPlanToVerificationExpectations
 } from './catalogueIntegrationPlan';
+import { IntegrationPlanRefusal } from '../../../packages/integration-plan/src/integrationPlan';
 import { catalogueProduct } from './catalogueProducts';
 import {
   catalogueCapabilityForScope,
@@ -380,17 +386,11 @@ function ArtifactFrame({
   contextRef.current = context;
   selectedScopesRef.current = selectedScopes;
   categoryConfigurationRef.current = categoryConfiguration;
-  const postState = () => {
-    frame.current?.contentWindow?.postMessage({
-      type: 'ums-showcase-mode',
-      mode: 'play',
-      showChanges: false,
-      selectedScopes
-    }, location.origin);
+  const refreshSelectionOverlay = () => {
     installContextualControls(
       frame.current,
       selectionEnabled,
-      selectedScopes,
+      selectedScopesRef.current,
       (scope, label) => resolveCapabilityRef.current?.(scope, label)
         ?? catalogueCapabilityFromRuntime(scope, 'branch-a', label),
       capability => toggleRef.current?.(capability),
@@ -398,6 +398,15 @@ function ArtifactFrame({
       capability => detailsCapabilityRef.current?.(capability)
     );
     applyConfiguredCategoryOptions(frame.current?.contentDocument, categoryConfigurationRef.current);
+  };
+  const postState = () => {
+    frame.current?.contentWindow?.postMessage({
+      type: 'ums-showcase-mode',
+      mode: 'play',
+      showChanges: false,
+      selectedScopes: selectedScopesRef.current
+    }, location.origin);
+    refreshSelectionOverlay();
   };
   const postContext = () => {
     applySequence.current += 1;
@@ -442,8 +451,8 @@ function ArtifactFrame({
 
   useEffect(() => {
     postState();
-    const repositionFrame = requestAnimationFrame(postState);
-    const settledFrame = setTimeout(postState, 100);
+    const repositionFrame = requestAnimationFrame(refreshSelectionOverlay);
+    const settledFrame = setTimeout(refreshSelectionOverlay, 100);
     return () => {
       cancelAnimationFrame(repositionFrame);
       clearTimeout(settledFrame);
@@ -759,6 +768,75 @@ function CategoryConfigurationDialog({ initial, sidebarSelected, opener, close, 
   </div>;
 }
 
+function FoundationControl({ value, change }: {
+  value: string;
+  change: (branchRef: 'main' | 'branch-a' | 'branch-b' | 'branch-incompatible') => void;
+}) {
+  return <fieldset className="foundation-control">
+    <legend>Start combined result from</legend>
+    <div>
+      {catalogueFoundationOptions.map(option => <label key={option.branchRef}>
+        <input
+          type="radio"
+          name="integration-foundation"
+          value={option.branchRef}
+          checked={value === option.branchRef}
+          aria-describedby={`foundation-description-${option.branchRef}`}
+          onChange={() => change(option.branchRef)}
+        />
+        <span><strong>{option.label}</strong><small id={`foundation-description-${option.branchRef}`}>{option.description}</small></span>
+      </label>)}
+      <label className="foundation-experimental">
+        <input
+          type="radio"
+          name="integration-foundation"
+          value="branch-incompatible"
+          checked={value === 'branch-incompatible'}
+          aria-describedby="foundation-description-branch-incompatible"
+          onChange={() => change('branch-incompatible')}
+        />
+        <span><strong>Experimental Product-ID</strong><small id="foundation-description-branch-incompatible">Controlled incompatible-foundation proof.</small></span>
+      </label>
+    </div>
+  </fieldset>;
+}
+
+function FoundationEvidenceDialog({ summary, close }: {
+  summary: ReturnType<typeof integrationPlanToEvidenceSummary>;
+  close: () => void;
+}) {
+  const dialog = useDialogFocus(close);
+  return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
+    <section ref={dialog} className="capability-dialog foundation-evidence-dialog" role="dialog" aria-modal="true" aria-labelledby="foundation-evidence-title">
+      <header><div><span>Integration Plan</span><h2 id="foundation-evidence-title">Foundation · {summary.foundation.label}</h2></div><button onClick={close} aria-label="Close foundation evidence">×</button></header>
+      <p>{summary.foundation.description}</p>
+      <dl>
+        <div><dt>Branch</dt><dd>{summary.foundation.branchRef}</dd></div>
+        <div><dt>Pinned commit</dt><dd><code>{summary.foundation.commitSha.slice(0, 12)}</code></dd></div>
+        <div><dt>Common ancestor</dt><dd><code>{summary.foundation.commonAncestorCommit.slice(0, 12)}</code></dd></div>
+      </dl>
+      <section><strong>Explicit additions</strong><p>{summary.groups.flatMap(group => group.rows).length
+        ? summary.groups.flatMap(group => group.rows).map(row => `${row.sourceLabel}: ${row.label}${row.details.length ? ` · ${row.details.join(', ')}` : ''}`).join(' — ')
+        : 'No features are added from another branch.'}</p></section>
+    </section>
+  </div>;
+}
+
+function FoundationRefusalDialog({ refusal, close }: {
+  refusal: IntegrationPlanRefusal;
+  close: () => void;
+}) {
+  const dialog = useDialogFocus(close);
+  return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
+    <section ref={dialog} className="conflict-dialog" role="alertdialog" aria-modal="true" aria-labelledby="foundation-refusal-title">
+      <header><div><span>Foundation unchanged</span><h2 id="foundation-refusal-title">Cannot use this foundation</h2></div><button onClick={close} aria-label="Close foundation refusal">×</button></header>
+      <p>{refusal.productMessage}</p>
+      <div className="conflict-evidence"><strong>Why</strong><p>{refusal.technicalDetail}</p><small>The previous safe Integration Plan and configured result remain available.</small></div>
+      <footer><button onClick={close}>Keep previous foundation</button></footer>
+    </section>
+  </div>;
+}
+
 function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }: {
   quickCount: number;
   close: () => void;
@@ -788,7 +866,7 @@ function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }:
   </div>;
 }
 
-function PreviewPanel({ preview, title, subtitle, artifact, active, context, categoryConfiguration, selectedScopes, onToggle, onUnsupportedCapability, onDetailsCapability, onCustomizeCategories, onHistoryShortcut, onContextMessage }: {
+function PreviewPanel({ preview, title, subtitle, artifact, active, context, categoryConfiguration, selectedScopes, foundationBranch, onToggle, onUnsupportedCapability, onDetailsCapability, onCustomizeCategories, onHistoryShortcut, onContextMessage }: {
   preview: ComparisonPreview;
   title: string;
   subtitle: string;
@@ -797,6 +875,7 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, cat
   context: PreviewContext;
   categoryConfiguration?: CategorySidebarConfiguration | null;
   selectedScopes: string[];
+  foundationBranch: string;
   onToggle: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
   onUnsupportedCapability: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
   onDetailsCapability: (capability: SelectionCapability<CatalogueSourceBranch>) => void;
@@ -808,19 +887,23 @@ function PreviewPanel({ preview, title, subtitle, artifact, active, context, cat
     ? catalogueCapabilityFromRuntime(quickViewAllCapabilityId, 'branch-b')
     : null;
   const bulkSelected = selectedScopes.includes(quickViewAllCapabilityId);
+  const bulkIncludedByFoundation = foundationBranch === 'branch-b';
+  const sidebarIncludedByFoundation = foundationBranch === 'branch-a';
   return <article className={`workspace-preview ${active ? 'mobile-active' : ''}`} data-view={preview}>
     <header>
       <div><span className={`preview-dot ${preview}`} /><div><h2>{title}</h2><p>{subtitle}</p></div></div>
       {bulkCapability && <div className="preview-capability-actions">
         <button onClick={() => onToggle(bulkCapability)}>
-          {bulkSelected ? 'Remove Quick View from all products' : 'Add Quick View to all products'}
+          {bulkIncludedByFoundation ? 'Included with Version B' : bulkSelected ? 'Remove Quick View from all products' : 'Add Quick View to all products'}
         </button>
         <button onClick={() => onDetailsCapability(bulkCapability)}>Details</button>
       </div>}
       {preview === 'branch-a' && <div className="preview-capability-actions">
         <button
-          onClick={event => onCustomizeCategories(event.currentTarget)}
-        >{selectedScopes.includes('category-sidebar') ? 'Edit categories' : 'Customize & add'}</button>
+          onClick={event => sidebarIncludedByFoundation
+            ? onToggle(catalogueCapabilityFromRuntime('category-sidebar', 'branch-a'))
+            : onCustomizeCategories(event.currentTarget)}
+        >{sidebarIncludedByFoundation ? 'Included with Version A' : selectedScopes.includes('category-sidebar') ? 'Edit categories' : 'Customize & add'}</button>
       </div>}
     </header>
     <div className="artifact-stage">
@@ -871,15 +954,19 @@ function Comparison({ exit }: { exit: () => void }) {
     initialSelectionHistory
   );
   const selection = selectionHistory.present;
+  const latestSelection = useRef(selection);
+  latestSelection.current = selection;
   const [previewContext, setPreviewContext] = useState(defaultPreviewContext);
   const [previewCapabilities, setPreviewCapabilities] = useState<Record<string, PreviewCapabilities>>({});
   const [contextNotices, setContextNotices] = useState<Record<string, PreviewContextNotice[]>>({});
   const [mobilePreview, setMobilePreview] = useState<ComparisonPreview>('branch-a');
   const [workspaceState, setWorkspaceState] = useState<WorkspaceState>('comparison');
-  const [dockExpanded, setDockExpanded] = useState(true);
+  const [dockExpanded, setDockExpanded] = useState(() => window.innerWidth > 700);
   const [evidenceScope, setEvidenceScope] = useState<ShowcaseScope | null>(null);
   const [showConflict, setShowConflict] = useState(false);
   const [showConflictEvidence, setShowConflictEvidence] = useState(false);
+  const [foundationEvidenceOpen, setFoundationEvidenceOpen] = useState(false);
+  const [foundationRefusal, setFoundationRefusal] = useState<IntegrationPlanRefusal | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [capabilityNotice, setCapabilityNotice] = useState<SelectionCapability<CatalogueSourceBranch> | null>(null);
   const [detailsCapability, setDetailsCapability] = useState<SelectionCapability<CatalogueSourceBranch> | null>(null);
@@ -897,9 +984,15 @@ function Comparison({ exit }: { exit: () => void }) {
   const branchAArtifact = catalogueManifest.artifacts.find(item => item.kind === 'branch-a')!;
   const branchBArtifact = catalogueManifest.artifacts.find(item => item.kind === 'branch-b')!;
   const quickCount = scopes.filter(scope => scope.featureId === 'product-quick-view').length;
+  const foundationScopeKeys = previewModel.foundation.branchRef === 'branch-a'
+    ? ['category-sidebar']
+    : previewModel.foundation.branchRef === 'branch-b'
+      ? [...catalogueManifest.productIds.map(id => `product-quick-view:${id}`), quickViewAllCapabilityId]
+      : [];
   const selectedScopeKeys = [
     ...scopes.map(scopeKey),
-    ...(quickCount === catalogueManifest.productIds.length ? [quickViewAllCapabilityId] : [])
+    ...(quickCount === catalogueManifest.productIds.length ? [quickViewAllCapabilityId] : []),
+    ...foundationScopeKeys
   ];
   const selectionCount = selection.selections.length;
   const sidebarDecision = categorySidebarDecision(selection);
@@ -964,6 +1057,7 @@ function Comparison({ exit }: { exit: () => void }) {
     label: string,
     offerImmediateUndo = false
   ) => {
+    latestSelection.current = next;
     dispatchHistory({
       type: 'commit',
       selection: next,
@@ -971,9 +1065,25 @@ function Comparison({ exit }: { exit: () => void }) {
       offerImmediateUndo
     });
   };
+  const changeFoundation = (branchRef: 'main' | 'branch-a' | 'branch-b' | 'branch-incompatible') => {
+    try {
+      const result = changeCatalogueFoundation(latestSelection.current, catalogueFoundation(branchRef));
+      commitSelection(result.plan, result.announcement);
+      setFoundationRefusal(null);
+      setShowConflict(false);
+    } catch (error) {
+      if (error instanceof IntegrationPlanRefusal) {
+        setFoundationRefusal(error);
+        return;
+      }
+      throw error;
+    }
+  };
   const removeScope = (scope: ShowcaseScope) => {
-    let next = showcaseSelectionReducer(selection, { type: 'remove-scope', scope });
-    if (scope.featureId === 'product-quick-view' && quickCount === 1 && hasIncompatibleProductId(selection)) {
+    const current = latestSelection.current;
+    const currentQuickCount = selectionScopes(current).filter(item => item.featureId === 'product-quick-view').length;
+    let next = showcaseSelectionReducer(current, { type: 'remove-scope', scope });
+    if (scope.featureId === 'product-quick-view' && currentQuickCount === 1 && hasIncompatibleProductId(current)) {
       next = showcaseSelectionReducer(next, { type: 'toggle-incompatible' });
       setShowConflict(false);
     }
@@ -983,8 +1093,20 @@ function Comparison({ exit }: { exit: () => void }) {
     branch: CatalogueSourceBranch,
     capability: SelectionCapability<CatalogueSourceBranch>
   ) => {
+    const current = latestSelection.current;
+    const currentScopes = selectionScopes(current);
     if (!capability.supported || capability.sourceBranch !== branch) {
       setCapabilityNotice(capability);
+      return;
+    }
+    if (foundationIncludesCapability(current, capability.sourceBranch)) {
+      const foundationLabel = catalogueFoundationLabels[current.foundation.branchRef as keyof typeof catalogueFoundationLabels];
+      setCapabilityNotice({
+        ...capability,
+        kind: 'unsupported',
+        supported: false,
+        unsupportedReason: `${capability.label} is already included because ${foundationLabel} is the foundation. To select only part of ${foundationLabel}, start from Main or the other version.`
+      });
       return;
     }
     const capabilityScopes = catalogueScopesForCapability(capability);
@@ -998,11 +1120,11 @@ function Comparison({ exit }: { exit: () => void }) {
       return;
     }
     const alreadySelected = capabilityScopes.every(scope => (
-      scopes.some(item => scopeIdentityKey(item) === scopeIdentityKey(scope))
+      currentScopes.some(item => scopeIdentityKey(item) === scopeIdentityKey(scope))
     ));
     if (!alreadySelected) {
       const compatibility = selectionCapabilityCompatibility([
-        ...scopes.map(catalogueCapabilityForScope),
+        ...currentScopes.map(catalogueCapabilityForScope),
         capability
       ]);
       if (!compatibility.compatible) {
@@ -1015,7 +1137,7 @@ function Comparison({ exit }: { exit: () => void }) {
         return;
       }
     }
-    let next = selection;
+    let next = current;
     for (const scope of capabilityScopes) {
       const contains = selectionScopes(next).some(item => scopeIdentityKey(item) === scopeIdentityKey(scope));
       if (alreadySelected || !contains) {
@@ -1028,7 +1150,7 @@ function Comparison({ exit }: { exit: () => void }) {
     if (!alreadySelected && window.innerWidth <= 700) {
       setDockExpanded(false);
     }
-    if (alreadySelected && !hasQuickViewSelection(next) && hasIncompatibleProductId(selection)) {
+    if (alreadySelected && !hasQuickViewSelection(next) && hasIncompatibleProductId(current)) {
       next = showcaseSelectionReducer(next, { type: 'toggle-incompatible' });
       setShowConflict(false);
     }
@@ -1047,17 +1169,19 @@ function Comparison({ exit }: { exit: () => void }) {
     setEvidenceScope(scope);
   };
   const clearSelections = () => {
-    const count = selectionCount;
+    const current = latestSelection.current;
+    const count = current.selections.length;
     commitSelection(
-      showcaseSelectionReducer(selection, { type: 'clear' }),
+      showcaseSelectionReducer(current, { type: 'clear' }),
       `Cleared ${count} selection${count === 1 ? '' : 's'}`,
       true
     );
     setShowConflict(false);
   };
   const removeIncompatible = () => {
+    const current = latestSelection.current;
     commitSelection(
-      showcaseSelectionReducer(selection, { type: 'toggle-incompatible' }),
+      showcaseSelectionReducer(current, { type: 'toggle-incompatible' }),
       'Removed Product-ID change',
       true
     );
@@ -1069,9 +1193,10 @@ function Comparison({ exit }: { exit: () => void }) {
     setCategoryEditorOpen(true);
   };
   const applyCategoryConfiguration = (configuration: CategorySidebarConfiguration) => {
-    const addingSidebar = !sidebarDecision;
+    const current = latestSelection.current;
+    const addingSidebar = !categorySidebarDecision(current);
     const configured = createCategorySidebarConfigurationSelection(configuration);
-    const next = showcaseSelectionReducer(selection, {
+    const next = showcaseSelectionReducer(current, {
       type: 'configure-category-sidebar',
       configuration: configured
     });
@@ -1117,7 +1242,9 @@ function Comparison({ exit }: { exit: () => void }) {
   const selectionRouteGroups = useMemo(() => {
     return evidenceSummary.groups.map(group => ({
       ...group,
-      scopes: scopes.filter(scope => scope.route === group.route && scope.pageId === group.pageId)
+      scopes: scopes.filter(scope => scope.route === group.route
+        && scope.pageId === group.pageId
+        && scope.branch === group.rows[0]?.sourceBranch)
     }));
   }, [evidenceSummary, scopes]);
   const historyLabels = selectionHistory.past.slice(-6).reverse();
@@ -1137,7 +1264,7 @@ function Comparison({ exit }: { exit: () => void }) {
     : (contextNotices[mobilePreview] ?? []).filter(notice => notice.code !== 'unsupported-quick-view');
 
   return <main
-    className={`comparison-shell ${selectionCount ? 'has-selection' : ''}`}
+    className="comparison-shell has-selection"
     data-context-ready-count={Object.keys(previewCapabilities).length}
     data-context-category={previewContext.catalogue.categoryId}
     data-context-product={previewContext.catalogue.selectedProductId ?? ''}
@@ -1171,20 +1298,21 @@ function Comparison({ exit }: { exit: () => void }) {
         <h1>Compare versions</h1>
         <p>Preview context stays synchronized across versions and the configured result. The local tool creates the verified Git branch.</p>
       </header>
+      <FoundationControl value={selection.foundation.branchRef} change={changeFoundation} />
       <nav className="mobile-preview-tabs" aria-label="Preview versions">
         <button aria-pressed={mobilePreview === 'branch-a'} onClick={() => setMobilePreview('branch-a')}>Version A</button>
         <button aria-pressed={mobilePreview === 'branch-b'} onClick={() => setMobilePreview('branch-b')}>Version B</button>
       </nav>
       <section className="preview-workspace">
-        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={configuredPreview.context} categoryConfiguration={categoryConfigurationSelection?.configuration} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
-        <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} onToggle={capability => toggleCapability('branch-b', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={configuredPreview.context} categoryConfiguration={categoryConfigurationSelection?.configuration} selectedScopes={selectedScopeKeys} foundationBranch={selection.foundation.branchRef} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
+        <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} foundationBranch={selection.foundation.branchRef} onToggle={capability => toggleCapability('branch-b', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
       </section>
     </section>
     <section className="result-workspace" hidden={workspaceState !== 'combined'}>
       <header className="result-header">
         <button onClick={() => setWorkspaceState('comparison')}>← Back to comparison</button>
-        <div><span>Configured preview</span><h1>Built from {scopes.length} selection{scopes.length === 1 ? '' : 's'}</h1></div>
-        <div className="result-chips" aria-label="Selections used">{scopeSummary.map(label => <span key={label}>✓ {label}</span>)}</div>
+        <div><span>Configured preview</span><h1>{previewModel.foundation.label} foundation · {scopes.length} explicit addition{scopes.length === 1 ? '' : 's'}</h1></div>
+        <div className="result-chips" aria-label="Integration Plan used"><span>Foundation · {previewModel.foundation.label}</span>{scopeSummary.map(label => <span key={label}>✓ {label}</span>)}</div>
       </header>
       <div className="combined-stage">
         <ConfiguredCatalogueFrame
@@ -1215,13 +1343,17 @@ function Comparison({ exit }: { exit: () => void }) {
       <button onClick={() => setCapabilityNotice(null)} aria-label="Dismiss selection explanation">×</button>
     </aside>}
 
-    {(selectionCount > 0 || selectionHistory.past.length > 0 || selectionHistory.future.length > 0) && <aside className={`selection-dock ${dockExpanded ? 'expanded' : 'collapsed'} ${refused ? 'has-conflict' : ''}`} aria-label="Current selections">
+    <aside className={`selection-dock ${dockExpanded ? 'expanded' : 'collapsed'} ${refused ? 'has-conflict' : ''}`} aria-label="Current selections">
       <button className="dock-toggle" onClick={() => setDockExpanded(value => !value)} aria-expanded={dockExpanded}>
         <strong>{selectionCount} selection{selectionCount === 1 ? '' : 's'}</strong><span>{dockExpanded ? 'Minimize' : 'Review'}</span>
       </button>
       <div className="selection-chips">
-        {selectionRouteGroups.map(group => <section className="selection-route-group" key={`${group.pageId}:${group.route}`}>
-          <strong>{pageLabel(group.pageId)} · {group.route}</strong>
+        <section className="selection-route-group foundation-group">
+          <strong>Foundation</strong>
+          <div><span className="selection-chip foundation-chip"><span className="selection-chip-copy"><span>{evidenceSummary.foundation.label}</span><small>{evidenceSummary.foundation.branchRef === 'main' ? 'Only selected additions' : `All ${evidenceSummary.foundation.label} changes included`}</small></span><button onClick={() => setFoundationEvidenceOpen(true)} aria-label="Inspect foundation evidence">i</button></span></div>
+        </section>
+        {selectionRouteGroups.map(group => <section className="selection-route-group" key={`${group.pageId}:${group.route}:${group.rows[0]?.sourceBranch}`}>
+          <strong>Added from {group.rows[0]?.sourceLabel} · {pageLabel(group.pageId)} · {group.route}</strong>
           <div>
             {group.rows.map(row => row.capabilityId === 'category-sidebar'
               ? group.scopes.filter(scope => scope.featureId === 'category-sidebar').map(scope => <SelectionChip key={scopeIdentityKey(scope)} scope={scope} configuration={scope.configuration?.configuration ?? null} openEvidence={openEvidence} remove={removeScope} />)
@@ -1276,7 +1408,7 @@ function Comparison({ exit }: { exit: () => void }) {
         </ol>
         {selectionHistory.future.length > 0 && <p>{selectionHistory.future.length} action{selectionHistory.future.length === 1 ? '' : 's'} available to redo.</p>}
       </section>}
-    </aside>}
+    </aside>
 
     <p className="selection-live" role="status" aria-live="polite">
       {selectionHistory.announcement || (refused ? 'Cannot combine the selected Product-ID change with Quick View. Safe selections are preserved.' : `${selectionCount} selections. Result ready.`)}
@@ -1291,6 +1423,8 @@ function Comparison({ exit }: { exit: () => void }) {
       apply={applyCategoryConfiguration}
     />}
     {showConflict && <ConflictDialog quickCount={quickCount} close={() => setShowConflict(false)} remove={removeIncompatible} inspect={() => setShowConflictEvidence(value => !value)} showingEvidence={showConflictEvidence} />}
+    {foundationEvidenceOpen && <FoundationEvidenceDialog summary={evidenceSummary} close={() => setFoundationEvidenceOpen(false)} />}
+    {foundationRefusal && <FoundationRefusalDialog refusal={foundationRefusal} close={() => setFoundationRefusal(null)} />}
   </main>;
 }
 

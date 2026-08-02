@@ -56,7 +56,7 @@ test('complete canonical plan drives grouped dock, configured result, history, a
 
   const shell = page.locator('main.comparison-shell');
   const planIdentity = await shell.getAttribute('data-integration-plan-id');
-  expect(planIdentity).toMatch(/^plan-v1-[a-f0-9]{8}$/);
+  expect(planIdentity).toMatch(/^plan-v2-[a-f0-9]{8}$/);
   await expect(shell).toHaveAttribute('data-preview-plan-id', planIdentity!);
   await expect(shell).toHaveAttribute('data-generation-plan-id', planIdentity!);
   await expect(shell).toHaveAttribute('data-verification-plan-id', planIdentity!);
