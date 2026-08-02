@@ -3,7 +3,9 @@ import {
   CategorySidebarConfigurationRefusal,
   categorySidebarConfigurationIdentity,
   categorySidebarCandidateSourceConfiguration,
+  categoryProductCounts,
   categorySidebarRepositoryMetadata,
+  completeCategorySidebarConfiguration,
   configuredCategoryPreviewContext,
   createCategorySidebarConfigurationSelection,
   normalizeCategorySidebarConfiguration
@@ -13,7 +15,7 @@ import { candidateKey, categorySidebarDecision, emptyShowcaseSelection, showcase
 import { catalogueCapabilityFromRuntime, catalogueScopesForCapability } from '../../apps/studio/src/catalogueSelectionCapabilities';
 import { initialSelectionHistory, selectionHistoryReducer } from '../../apps/studio/src/selectionHistory';
 
-const proof = { enabledCategoryIds: ['travel', 'audio', 'desk'], defaultCategoryId: 'desk' };
+const proof = { enabledCategoryIds: ['travel', 'audio', 'desk'], defaultCategoryId: 'desk', showHeading: false, showProductCounts: true };
 
 function sidebarSelection() {
   const scope = catalogueScopesForCapability(catalogueCapabilityFromRuntime('category-sidebar', 'branch-a'))[0];
@@ -21,19 +23,30 @@ function sidebarSelection() {
 }
 
 describe('category sidebar permanent configuration', () => {
+  it('preserves the existing sidebar as the canonical default appearance', () => {
+    expect(completeCategorySidebarConfiguration).toEqual({
+      enabledCategoryIds: ['all', 'audio', 'desk', 'travel'],
+      defaultCategoryId: 'all',
+      showHeading: true,
+      showProductCounts: false
+    });
+  });
+
   it('normalizes duplicates and click order to repository order and one canonical identity', () => {
     const first = normalizeCategorySidebarConfiguration(proof);
-    const second = normalizeCategorySidebarConfiguration({ enabledCategoryIds: ['desk', 'audio', 'travel', 'audio'], defaultCategoryId: 'desk' });
-    expect(first).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk' });
+    const second = normalizeCategorySidebarConfiguration({ ...proof, enabledCategoryIds: ['desk', 'audio', 'travel', 'audio'] });
+    expect(first).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk', showHeading: false, showProductCounts: true });
     expect(second).toEqual(first);
-    expect(categorySidebarConfigurationIdentity(first)).toBe('categories-audio_desk_travel--default-desk');
+    expect(categorySidebarConfigurationIdentity(first)).toBe('categories-audio_desk_travel--default-desk--heading-hidden--counts-shown');
     expect(categorySidebarConfigurationIdentity(second)).toBe(categorySidebarConfigurationIdentity(first));
   });
 
   it.each([
-    [{ enabledCategoryIds: [], defaultCategoryId: 'desk' }, 'Keep at least one category in the sidebar.'],
-    [{ enabledCategoryIds: ['audio'], defaultCategoryId: 'desk' }, 'Choose a default category from the categories you kept.'],
-    [{ enabledCategoryIds: ['audio', 'unknown'], defaultCategoryId: 'audio' }, 'One or more categories are not available for this sidebar.']
+    [{ ...proof, enabledCategoryIds: [] }, 'Keep at least one category in the sidebar.'],
+    [{ ...proof, enabledCategoryIds: ['audio'] }, 'Choose a default category from the categories you kept.'],
+    [{ ...proof, enabledCategoryIds: ['audio', 'unknown'], defaultCategoryId: 'audio' }, 'One or more categories are not available for this sidebar.'],
+    [{ enabledCategoryIds: ['audio'], defaultCategoryId: 'audio', showProductCounts: true } as never, 'Choose valid sidebar appearance options.'],
+    [{ ...proof, showHeading: 'no' } as never, 'Choose valid sidebar appearance options.']
   ])('refuses invalid configuration %#', (value, message) => {
     expect(() => normalizeCategorySidebarConfiguration(value)).toThrow(CategorySidebarConfigurationRefusal);
     try { normalizeCategorySidebarConfiguration(value); } catch (error) {
@@ -52,7 +65,7 @@ describe('category sidebar permanent configuration', () => {
       configuration: {
         capabilityId: 'category-sidebar:options',
         sourceBranch: 'branch-a',
-        identity: 'categories-audio_desk_travel--default-desk'
+        identity: 'categories-audio_desk_travel--default-desk--heading-hidden--counts-shown'
       }
     });
     expect(configured).not.toHaveProperty('categorySidebarConfiguration');
@@ -62,7 +75,8 @@ describe('category sidebar permanent configuration', () => {
       sliceId: 'category-slice',
       sidebarSelected: true,
       selection: categorySidebarDecision(configured)?.configuration
-    }).value).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk' });
+    }).value).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk', showHeading: false, showProductCounts: true });
+    expect(categoryProductCounts()).toEqual({ all: 5, audio: 2, desk: 2, travel: 1 });
   });
 
   it('keeps supported temporary context and explains fallback without mutating it', () => {
@@ -82,14 +96,14 @@ describe('category sidebar permanent configuration', () => {
     expect(applied.past).toHaveLength(2);
     const undone = selectionHistoryReducer(applied, { type: 'undo' });
     expect(categorySidebarDecision(undone.present)?.configuration).toBeFalsy();
-    expect(categorySidebarDecision(selectionHistoryReducer(undone, { type: 'redo' }).present)?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk');
+    expect(categorySidebarDecision(selectionHistoryReducer(undone, { type: 'redo' }).present)?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk--heading-hidden--counts-shown');
   });
 
   it('atomically creates a configured sidebar and cannot be duplicated or downgraded by a stale Add', () => {
     const configured = showcaseSelectionReducer(emptyShowcaseSelection, { type: 'configure-category-sidebar', configuration: createCategorySidebarConfigurationSelection(proof) });
     const decision = categorySidebarDecision(configured);
     expect(configured.scopes).toHaveLength(1);
-    expect(decision?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk');
+    expect(decision?.configuration?.identity).toBe('categories-audio_desk_travel--default-desk--heading-hidden--counts-shown');
     const stalePlainAdd = showcaseSelectionReducer(configured, {
       type: 'toggle-scope',
       scope: catalogueScopesForCapability(catalogueCapabilityFromRuntime('category-sidebar', 'branch-a'))[0]
@@ -101,6 +115,14 @@ describe('category sidebar permanent configuration', () => {
       sliceId: 'slice',
       sidebarSelected: Boolean(decision),
       selection: decision?.configuration
-    }).value).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk' });
+    }).value).toEqual({ enabledCategoryIds: ['audio', 'desk', 'travel'], defaultCategoryId: 'desk', showHeading: false, showProductCounts: true });
+    expect(() => categorySidebarCandidateSourceConfiguration({
+      sliceId: 'slice',
+      sidebarSelected: true,
+      selection: {
+        ...decision!.configuration!,
+        configuration: { enabledCategoryIds: ['audio'], defaultCategoryId: 'audio', showHeading: false } as never
+      }
+    })).toThrow('showHeading and showProductCounts must both be boolean values');
   });
 });

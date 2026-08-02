@@ -41,6 +41,7 @@ import {
 } from './previewContext';
 import {
   categoryLabels,
+  categoryProductCounts,
   categorySidebarRepositoryMetadata,
   completeCategorySidebarConfiguration,
   configuredCategoryPreviewContext,
@@ -112,10 +113,36 @@ function applyConfiguredCategoryOptions(
 ) {
   if (!document) return;
   const enabledLabels = new Set(configuration ? categoryLabels(configuration.enabledCategoryIds) : []);
+  const counts = categoryProductCounts();
+  const categoryIdsByLabel = new Map(categorySidebarRepositoryMetadata.categories.map(category => [category.label, category.id]));
+  const sidebar = document.querySelector<HTMLElement>('[data-ums-scope="category-sidebar"]');
+  const heading = sidebar?.querySelector<HTMLElement>(':scope > strong');
+  if (heading) {
+    const headingHidden = Boolean(configuration && !configuration.showHeading);
+    heading.hidden = headingHidden;
+    heading.toggleAttribute('data-ums-configuration-hidden', headingHidden);
+    const nextDisplay = headingHidden ? 'none' : '';
+    if (heading.style.display !== nextDisplay) heading.style.display = nextDisplay;
+  }
   document.querySelectorAll<HTMLButtonElement>('[aria-label="Product categories"] button').forEach(button => {
-    const retained = !configuration || enabledLabels.has(button.textContent?.trim() ?? '');
+    const existingCount = button.querySelector<HTMLElement>('[data-ums-product-count]');
+    const label = button.dataset.umsCategoryLabel ?? button.textContent?.trim() ?? '';
+    button.dataset.umsCategoryLabel = label;
+    const retained = !configuration || enabledLabels.has(label);
     button.hidden = !retained;
     button.toggleAttribute('data-ums-configuration-excluded', !retained);
+    const categoryId = categoryIdsByLabel.get(label);
+    if (configuration?.showProductCounts && categoryId) {
+      const count = existingCount ?? document.createElement('span');
+      if (!existingCount) {
+        count.className = 'category-product-count';
+        count.dataset.umsProductCount = categoryId;
+        count.setAttribute('aria-hidden', 'true');
+      }
+      const nextCount = String(counts[categoryId]);
+      if (count.textContent !== nextCount) count.textContent = nextCount;
+      if (!existingCount) button.append(count);
+    } else existingCount?.remove();
   });
   document.documentElement?.toggleAttribute('data-ums-configured-preview', Boolean(configuration));
 }
@@ -411,7 +438,15 @@ function ArtifactFrame({
       cancelAnimationFrame(repositionFrame);
       clearTimeout(settledFrame);
     };
-  }, [selectionEnabled, selectedScopes.join(','), visibilitySignal, categoryConfiguration?.enabledCategoryIds.join(','), categoryConfiguration?.defaultCategoryId]);
+  }, [
+    selectionEnabled,
+    selectedScopes.join(','),
+    visibilitySignal,
+    categoryConfiguration?.enabledCategoryIds.join(','),
+    categoryConfiguration?.defaultCategoryId,
+    categoryConfiguration?.showHeading,
+    categoryConfiguration?.showProductCounts
+  ]);
   useEffect(postContext, [
     context.route,
     context.viewport.width,
@@ -639,10 +674,12 @@ function CategoryConfigurationDialog({ initial, sidebarSelected, opener, close, 
   const dialog = useDialogFocus(close, opener);
   const [enabledCategoryIds, setEnabledCategoryIds] = useState<string[]>(initial.enabledCategoryIds);
   const [defaultCategoryId, setDefaultCategoryId] = useState(initial.defaultCategoryId);
+  const [showHeading, setShowHeading] = useState(initial.showHeading);
+  const [showProductCounts, setShowProductCounts] = useState(initial.showProductCounts);
   let configuration: CategorySidebarConfiguration | null = null;
   let validationMessage = '';
   try {
-    configuration = normalizeCategorySidebarConfiguration({ enabledCategoryIds, defaultCategoryId });
+    configuration = normalizeCategorySidebarConfiguration({ enabledCategoryIds, defaultCategoryId, showHeading, showProductCounts });
   } catch (error) {
     validationMessage = error instanceof CategorySidebarConfigurationRefusal
       ? error.productMessage
@@ -669,6 +706,17 @@ function CategoryConfigurationDialog({ initial, sidebarSelected, opener, close, 
           />
           <span>{category.label}</span>
         </label>)}
+      </fieldset>
+      <fieldset>
+        <legend>Appearance</legend>
+        <label>
+          <input type="checkbox" checked={showHeading} onChange={event => setShowHeading(event.target.checked)} />
+          <span>Show “Categories” heading</span>
+        </label>
+        <label>
+          <input type="checkbox" checked={showProductCounts} onChange={event => setShowProductCounts(event.target.checked)} />
+          <span>Show product counts</span>
+        </label>
       </fieldset>
       <fieldset>
         <legend>Default category</legend>
@@ -795,7 +843,10 @@ function SelectionChip({ scope, openEvidence, remove, configuration }: {
     <span className="selection-chip-copy">
       <span>{scopeLabel(scope)}</span>
       {scope.featureId === 'category-sidebar' && configuration && <small>
-        {categoryLabels(configuration.enabledCategoryIds).join(', ')}<br />Default: {categoryLabels([configuration.defaultCategoryId])[0]}
+        {categoryLabels(configuration.enabledCategoryIds).join(', ')}<br />
+        Default: {categoryLabels([configuration.defaultCategoryId])[0]}<br />
+        Heading: {configuration.showHeading ? 'Shown' : 'Hidden'}<br />
+        Counts: {configuration.showProductCounts ? 'Shown' : 'Hidden'}
       </small>}
     </span>
     <button onClick={event => openEvidence(scope, event.currentTarget)} aria-label={`Evidence for ${scopeLabel(scope)}`}>i</button>

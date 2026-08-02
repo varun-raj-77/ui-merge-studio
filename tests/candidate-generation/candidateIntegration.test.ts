@@ -9,7 +9,7 @@ import { categorySidebarCandidateSourceConfiguration, createCategorySidebarConfi
 const fixture=resolve(import.meta.dirname,'../../fixtures/generated/product-catalogue');const repository=new GitSourceRepository(fixture);
 function selection(branch:string,path:string,line:number,componentName:string,previewId:string):SourceIdentity{return{boundaryId:`${componentName}-boundary`,instanceId:`${componentName}-instance`,repositoryRelativePath:path,line,column:8,componentName,exportName:componentName,branch,previewId,sessionId:`${previewId}-session`,generation:1,confidence:'exact'};}
 async function artifacts(){const analyzer=new FeatureSliceAnalyzer(fixture);return Promise.all([
-  analyzer.analyze({baseRef:'main',branchRef:'branch-a',expectedBranchCommit:await repository.resolveRef('branch-a'),selection:selection('branch-a','src/features/catalogue/CategorySidebar.tsx',15,'CategorySidebar','left')}),
+  analyzer.analyze({baseRef:'main',branchRef:'branch-a',expectedBranchCommit:await repository.resolveRef('branch-a'),selection:selection('branch-a','src/features/catalogue/CategorySidebar.tsx',17,'CategorySidebar','left')}),
   analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:selection('branch-b','src/features/catalogue/ProductCardWithQuickView.tsx',6,'ProductCardWithQuickView','right')})
 ]);}
 
@@ -17,7 +17,7 @@ test('generates and verifies the Product Catalogue candidate, then repeats idemp
   const base=await repository.resolveRef('main');const sourceRefs=['branch-a','branch-b','branch-incompatible'];const sourceBefore=await Promise.all(sourceRefs.map(ref=>repository.resolveRef(ref)));
   const generator=new CandidateGenerator(fixture,{artifactRoot:resolve(fixture,'..','..','..')});
   const selectedArtifacts=await artifacts();
-  const categoryConfigurationInput=createCategorySidebarConfigurationSelection({enabledCategoryIds:['travel','audio','desk'],defaultCategoryId:'desk'});
+  const categoryConfigurationInput=createCategorySidebarConfigurationSelection({enabledCategoryIds:['travel','audio','desk'],defaultCategoryId:'desk',showHeading:false,showProductCounts:true});
   const request={repositoryRoot:fixture,baseRef:'main',expectedBaseCommit:base,candidateBranch:'combined-result',artifacts:selectedArtifacts,analyzerSchemaVersion:2 as const,sourceConfigurations:[
     categorySidebarCandidateSourceConfiguration({sliceId:selectedArtifacts[0].analysisId,sidebarSelected:true,selection:categoryConfigurationInput}),
     {sliceId:selectedArtifacts[1].analysisId,path:'src/config/quickViewTargets.ts',declaration:'quickViewTargetIds',value:['p-105']}
@@ -42,6 +42,8 @@ test('generates and verifies the Product Catalogue candidate, then repeats idemp
   expect(quickViewTest).not.toContain('inventory summary');
   expect(categoryConfiguration).toContain('"enabledCategoryIds": ["audio", "desk", "travel"]');
   expect(categoryConfiguration).toContain('"defaultCategoryId": "desk"');
+  expect(categoryConfiguration).toContain('"showHeading": false');
+  expect(categoryConfiguration).toContain('"showProductCounts": true');
   expect(categoryConfiguration).not.toContain('"all"');
   expect(quickViewConfiguration).toContain('["p-105"]');
   expect(quickViewConfiguration).not.toContain('p-101');

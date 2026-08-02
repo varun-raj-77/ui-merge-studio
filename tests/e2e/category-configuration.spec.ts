@@ -112,6 +112,24 @@ for (const viewport of [
   });
 }
 
+test('ordinary sidebar is updated in place by appearance-only customization', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(compareUrl);
+  await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
+  await page.getByRole('button', { name: 'Edit categories' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Category sidebar' });
+  await dialog.getByRole('checkbox', { name: 'Show “Categories” heading' }).uncheck();
+  await dialog.getByRole('checkbox', { name: 'Show product counts' }).check();
+  await dialog.getByRole('button', { name: 'Save customization' }).click();
+  const dock = page.getByRole('complementary', { name: 'Current selections' });
+  await expect(dock).toContainText('1 selection');
+  await expect(dock.locator('.selection-chip')).toHaveCount(1);
+  await expect(dock).toContainText('Heading: Hidden');
+  await expect(dock).toContainText('Counts: Shown');
+  await expect(versionA(page).getByText('Categories', { exact: true })).toBeHidden();
+  await expect(versionA(page).getByRole('button', { name: 'Audio', exact: true }).locator('[data-ums-product-count="audio"]')).toHaveText('2');
+});
+
 async function runRecordedAudioConfigurationJourney(page: Page) {
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
   await page.getByRole('button', { name: 'Edit categories' }).click();
@@ -269,3 +287,74 @@ test('mobile editor, Review, and configured result remain reachable without over
   await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });
+
+async function runAppearanceConfigurationJourney(page: Page, mobile: boolean) {
+  await page.goto(compareUrl);
+  await page.getByRole('button', { name: 'Customize & add' }).click();
+  let dialog = page.getByRole('dialog', { name: 'Category sidebar' });
+  await dialog.getByRole('checkbox', { name: 'All' }).uncheck();
+  await dialog.getByRole('radio', { name: 'Desk' }).check();
+  await dialog.getByRole('checkbox', { name: 'Show “Categories” heading' }).uncheck();
+  await dialog.getByRole('checkbox', { name: 'Show product counts' }).check();
+  await dialog.getByRole('button', { name: 'Add customized sidebar' }).click();
+
+  if (mobile) await openMobileReviewIfCollapsed(page);
+  const dock = page.getByRole('complementary', { name: 'Current selections' });
+  await expect(dock).toContainText('Audio, Desk, Travel');
+  await expect(dock).toContainText('Default: Desk');
+  await expect(dock).toContainText('Heading: Hidden');
+  await expect(dock).toContainText('Counts: Shown');
+  await expect(versionA(page).getByText('Categories', { exact: true })).toBeHidden();
+  await expect(versionA(page).getByRole('button', { name: 'Audio', exact: true }).locator('[data-ums-product-count="audio"]')).toHaveText('2');
+  await expect(versionA(page).getByRole('button', { name: 'Desk', exact: true }).locator('[data-ums-product-count="desk"]')).toHaveText('2');
+  await expect(versionA(page).getByRole('button', { name: 'Travel', exact: true }).locator('[data-ums-product-count="travel"]')).toHaveText('1');
+
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(dock).not.toContainText('Heading: Hidden');
+  await expect(dock).toContainText('0 selections');
+  await expect(versionA(page).getByText('Categories', { exact: true })).toBeVisible();
+  await expect(versionA(page).locator('[data-ums-product-count]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await expect(dock).toContainText('Heading: Hidden');
+  await expect(versionA(page).getByText('Categories', { exact: true })).toBeHidden();
+
+  if (mobile) {
+    const minimize = page.getByRole('button', { name: /1 selection Minimize/ });
+    if (await minimize.isVisible()) await minimize.click();
+    await page.getByRole('button', { name: 'Version B', exact: true }).click();
+  }
+  await versionB(page).getByRole('heading', { name: 'Desk Stand' }).scrollIntoViewIfNeeded();
+  await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
+  if (mobile) {
+    const review = page.getByRole('button', { name: /2 selections Review/ });
+    if (await review.isVisible()) await review.click();
+  }
+  await page.getByRole('button', { name: 'View combined' }).click();
+  await expect(combined(page).getByText('Categories', { exact: true })).toBeHidden();
+  await expect(combined(page).getByRole('button', { name: 'All', exact: true })).toHaveCount(0);
+  await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(combined(page).getByRole('button', { name: 'Audio', exact: true }).locator('[data-ums-product-count="audio"]')).toHaveText('2');
+  await expect(combined(page).getByRole('button', { name: 'Desk', exact: true }).locator('[data-ums-product-count="desk"]')).toHaveText('2');
+  await expect(combined(page).getByRole('button', { name: 'Travel', exact: true }).locator('[data-ums-product-count="travel"]')).toHaveText('1');
+  await expect(combined(page).getByRole('heading', { name: 'Desk Stand' }).locator('xpath=ancestor::article').getByRole('button', { name: 'Quick view', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Back to comparison', exact: true }).first().click();
+  if (mobile) await page.getByRole('button', { name: 'Version A', exact: true }).click();
+  await page.getByRole('button', { name: 'Edit categories' }).click();
+  dialog = page.getByRole('dialog', { name: 'Category sidebar' });
+  await expect(dialog.getByRole('checkbox', { name: 'Show “Categories” heading' })).not.toBeChecked();
+  await expect(dialog.getByRole('checkbox', { name: 'Show product counts' })).toBeChecked();
+  await expect(dialog.getByRole('radio', { name: 'Desk' })).toBeChecked();
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+}
+
+for (const viewport of [
+  { name: 'desktop', width: 1440, height: 900 },
+  { name: 'mobile', width: 390, height: 844 }
+]) {
+  test(`${viewport.name} applies one atomic category and appearance decision in both previews`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await runAppearanceConfigurationJourney(page, viewport.name === 'mobile');
+  });
+}

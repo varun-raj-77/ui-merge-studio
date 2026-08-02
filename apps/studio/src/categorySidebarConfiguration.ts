@@ -1,5 +1,6 @@
 import type { CatalogueCategoryId, PreviewContext, PreviewContextNotice } from './previewContext';
 import type { CandidateSourceConfiguration } from '../../../packages/candidate-generation/src/types';
+import { catalogueProducts } from './catalogueProducts';
 import {
   cataloguePageId,
   catalogueRoute,
@@ -10,7 +11,16 @@ import {
 export interface CategorySidebarConfiguration {
   enabledCategoryIds: CatalogueCategoryId[];
   defaultCategoryId: CatalogueCategoryId;
+  showHeading: boolean;
+  showProductCounts: boolean;
 }
+
+export type CategorySidebarConfigurationInput = {
+  enabledCategoryIds: readonly string[];
+  defaultCategoryId: string;
+  showHeading: unknown;
+  showProductCounts: unknown;
+};
 
 export interface CategorySidebarConfigurationSelection {
   capabilityId: typeof categorySubsetCapabilityId;
@@ -57,9 +67,15 @@ function refuse(productMessage: string, technicalDetail: string): never {
 }
 
 export function normalizeCategorySidebarConfiguration(
-  input: { enabledCategoryIds: readonly string[]; defaultCategoryId: string },
+  input: CategorySidebarConfigurationInput,
   metadata = categorySidebarRepositoryMetadata
 ): CategorySidebarConfiguration {
+  if (typeof input.showHeading !== 'boolean' || typeof input.showProductCounts !== 'boolean') {
+    refuse(
+      'Choose valid sidebar appearance options.',
+      'showHeading and showProductCounts must both be boolean values.'
+    );
+  }
   const order = new Map(metadata.categories.map((category, index) => [category.id, index]));
   const uniqueIds = [...new Set(input.enabledCategoryIds)];
   const unknownIds = uniqueIds.filter(id => !order.has(id as CatalogueCategoryId));
@@ -84,19 +100,21 @@ export function normalizeCategorySidebarConfiguration(
   }
   return {
     enabledCategoryIds,
-    defaultCategoryId: input.defaultCategoryId as CatalogueCategoryId
+    defaultCategoryId: input.defaultCategoryId as CatalogueCategoryId,
+    showHeading: input.showHeading,
+    showProductCounts: input.showProductCounts
   };
 }
 
 export function categorySidebarConfigurationIdentity(
-  input: { enabledCategoryIds: readonly string[]; defaultCategoryId: string }
+  input: CategorySidebarConfigurationInput
 ) {
   const configuration = normalizeCategorySidebarConfiguration(input);
-  return `categories-${configuration.enabledCategoryIds.join('_')}--default-${configuration.defaultCategoryId}`;
+  return `categories-${configuration.enabledCategoryIds.join('_')}--default-${configuration.defaultCategoryId}--heading-${configuration.showHeading ? 'shown' : 'hidden'}--counts-${configuration.showProductCounts ? 'shown' : 'hidden'}`;
 }
 
 export function createCategorySidebarConfigurationSelection(
-  input: { enabledCategoryIds: readonly string[]; defaultCategoryId: string }
+  input: CategorySidebarConfigurationInput
 ): CategorySidebarConfigurationSelection {
   const configuration = normalizeCategorySidebarConfiguration(input);
   return {
@@ -111,7 +129,9 @@ export function createCategorySidebarConfigurationSelection(
 
 export const completeCategorySidebarConfiguration = normalizeCategorySidebarConfiguration({
   enabledCategoryIds: categorySidebarRepositoryMetadata.categories.map(category => category.id),
-  defaultCategoryId: 'all'
+  defaultCategoryId: 'all',
+  showHeading: true,
+  showProductCounts: false
 });
 
 export function configuredCategoryPreviewContext(
@@ -150,11 +170,22 @@ export function categoryLabels(ids: readonly CatalogueCategoryId[]) {
   return ids.map(id => labels.get(id) ?? id);
 }
 
+export function categoryProductCounts() {
+  return Object.fromEntries(categorySidebarRepositoryMetadata.categories.map(category => [
+    category.id,
+    category.id === 'all'
+      ? catalogueProducts.length
+      : catalogueProducts.filter(product => product.category.toLowerCase() === category.id).length
+  ])) as Record<CatalogueCategoryId, number>;
+}
+
 export function categorySidebarSourceValue(configurationInput: CategorySidebarConfiguration) {
   const configuration = normalizeCategorySidebarConfiguration(configurationInput);
   return {
     enabledCategoryIds: [...configuration.enabledCategoryIds],
-    defaultCategoryId: configuration.defaultCategoryId
+    defaultCategoryId: configuration.defaultCategoryId,
+    showHeading: configuration.showHeading,
+    showProductCounts: configuration.showProductCounts
   };
 }
 
