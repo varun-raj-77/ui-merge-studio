@@ -2,7 +2,7 @@
 
 - The hosted sample cannot access a visitor’s repository or perform Git, package-manager, source-mutation, branch-creation, or verification operations.
 - Hosted outcomes are bounded to committed controlled evidence. Arbitrary selected combinations must be evaluated locally.
-- Local repository support currently targets React + TypeScript + Vite with npm, pnpm, or yarn.
+- Local repository support currently targets React + TypeScript + Vite with npm. Preview preparation and default candidate verification invoke npm; pnpm/yarn execution is not implemented or verified in this milestone despite older broader documentation.
 - Next.js, arbitrary monorepos, server-component ownership, cloud execution, collaboration, and billing are unsupported.
 - Source analysis is conservative for dynamic imports, path aliases, factories, render props, class components, portals, CSS-in-JS, and inseparable mixed-file changes.
 - Test slicing supports conventional static test structure; unsupported dynamic factories or mixed setup are refused or marked partial.
@@ -23,5 +23,8 @@
 - The controlled fixture has one primary route. Route ownership and missing-route refusal are modeled, but real multi-route foundation integration remains external validation work.
 - Hosted foundation previews are adapter-driven configured runtimes. They truthfully show the canonical plan but do not check out Git; only local generation proves real foundation worktrees and full branch diffs.
 - Foundation overrides, excluding individual changes from a chosen foundation, combining two complete foundations, and permanent branch delivery remain out of scope.
+- The local canonical-plan proof uses the server-configured Main foundation and two controlled selections. It does not add a repository picker, a foundation picker, more-than-two selection generation, arbitrary package-manager support, or general React/Vite compatibility.
+- A newly added rendered component may conservatively expand to the nearest existing integration declaration, such as `CategorySidebar` to `CatalogueWorkspace` or `ProductCardWithQuickView` to `ProductGrid`. This is necessary to connect the selected feature, but co-located edits inside that declaration can be absorbed into the slice; external-repository validation must challenge this boundary.
+- UI Merge Studio assumes the local developer and local browser/processes are trusted. Selection receipts establish normal-flow and current-session provenance and prevent browser-authored source paths or component identities from becoming analysis or generation authority, but they are not tamper-proof proof of a physical UI click. Because transformed Vite modules are available to the local browser, a developer can deliberately recover a registered receipt and call the localhost analysis API without clicking its rendered boundary; that bypass is outside the Phase-0 threat model.
 
 Correct refusal is a product capability, not a failure to be hidden.

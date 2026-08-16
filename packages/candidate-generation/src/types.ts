@@ -45,6 +45,8 @@ export interface CandidateGenerationRequest {
   artifacts: FeatureSliceArtifact[];
   analyzerSchemaVersion: number;
   sourceConfigurations?: CandidateSourceConfiguration[];
+  /** Trace evidence for requests projected from a validated canonical Integration Plan V2. */
+  integrationPlan?: { version: 2; identity: string };
 }
 export interface CandidateOperation {
   id: string;
@@ -98,6 +100,7 @@ export interface CleanupResult { worktreeRemoved: boolean; processesStopped: boo
 export interface CandidateGenerationReport {
   version: typeof candidateGenerationVersion;
   generationId: string;
+  integrationPlan?: { version: 2; identity: string };
   status: CandidateStatus;
   stage: 'validate' | 'plan' | 'transform' | 'verify' | 'commit' | 'complete';
   message: string;
@@ -111,4 +114,4 @@ export interface CandidateGenerationReport {
   cleanup: CleanupResult;
   relativePath: string;
 }
-export interface CandidatePreflight { generationId: string; plan: CandidatePlan }
+export interface CandidatePreflight { generationId: string; plan: CandidatePlan; integrationPlan?: { version: 2; identity: string } }

@@ -8,8 +8,9 @@ const branch = process.env.UI_MERGE_PREVIEW_BRANCH;
 const studioOrigin = process.env.UI_MERGE_STUDIO_ORIGIN;
 const previewId = process.env.UI_MERGE_PREVIEW_ID;
 const sessionId = process.env.UI_MERGE_PREVIEW_SESSION_ID;
+const instrumentationToken = process.env.UI_MERGE_INSTRUMENTATION_TOKEN;
 const generation = Number(process.env.UI_MERGE_PREVIEW_GENERATION);
-if (!repositoryRoot || !branch || !studioOrigin || !previewId || !sessionId || !Number.isInteger(generation) || generation < 1) throw new Error('Preview root, branch, Studio origin, and valid session identity are required.');
+if (!repositoryRoot || !branch || !studioOrigin || !previewId || !sessionId || !instrumentationToken || !Number.isInteger(generation) || generation < 1) throw new Error('Preview root, branch, Studio origin, private instrumentation channel, and valid session identity are required.');
 const capabilities = await detectFixtureCapabilities(repositoryRoot);
 export default defineConfig({
   root: repositoryRoot,

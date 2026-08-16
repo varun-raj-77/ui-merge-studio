@@ -16,9 +16,7 @@ const capabilities = ${JSON.stringify(options.capabilities)};
 let enabled = false;
 let hovered = null;
 let selected = null;
-let instanceCounter = 0;
 let lastContextFingerprint = '';
-const instances = new WeakMap();
 const overlay = document.createElement('div');
 Object.assign(overlay.style,{position:'fixed',pointerEvents:'none',zIndex:'2147483647',border:'3px solid #FF6B3D',background:'rgba(255,107,61,.12)',boxShadow:'0 0 0 3px rgba(255,107,61,.2)',display:'none'});
 document.documentElement.appendChild(overlay);
@@ -43,13 +41,10 @@ const nativePush=history.pushState.bind(history);const nativeReplace=history.rep
 history.pushState=(...args)=>{nativePush(...args);emitNavigation()};history.replaceState=(...args)=>{nativeReplace(...args);emitNavigation()};
 addEventListener('popstate',emitNavigation);
 function decode(element){
-  const raw=element.getAttribute(ATTR);if(!raw)return null;
-  try {const meta=JSON.parse(raw);if(!meta||meta.branch!==identity.branch||typeof meta.boundaryId!=='string'||typeof meta.repositoryRelativePath!=='string'||!Number.isInteger(meta.line)||!Number.isInteger(meta.column))return null;
-    let instanceId=instances.get(element);if(!instanceId){instanceId=meta.boundaryId+'-'+identity.sessionId.slice(0,8)+'-'+(++instanceCounter);instances.set(element,instanceId)}
-    return {...meta,instanceId,previewId:identity.previewId,sessionId:identity.sessionId,generation:identity.generation};
-  } catch {return null}
+  const selectionReceipt=element.getAttribute(ATTR);if(!selectionReceipt||!/^rendered-[A-Za-z0-9_-]{32}$/.test(selectionReceipt))return null;
+  return {selectionReceipt};
 }
-function boundariesFrom(target){const result=[];let node=target instanceof Element?target:null;while(node){const source=decode(node);if(source)result.push({element:node,identity:source});node=node.parentElement}return result}
+function boundariesFrom(target){const result=[];let node=target instanceof Element?target:null;while(node){const boundary=decode(node);if(boundary)result.push({element:node,boundary});node=node.parentElement}return result}
 function paint(entry){if(!entry){overlay.style.display='none';return}const r=entry.element.getBoundingClientRect();Object.assign(overlay.style,{display:'block',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'})}
 function applyContext(payload){
   const requested=payload.context;const entity=requested.entity;
@@ -62,13 +57,13 @@ function applyContext(payload){
   nativeReplace({},'',url);lastContextFingerprint=JSON.stringify(context());dispatchEvent(new PopStateEvent('popstate'));
   send('preview-state',{operationId:payload.operationId,context:context()});
 }
-document.addEventListener('pointermove',event=>{if(!enabled)return;const entries=boundariesFrom(event.target);hovered=entries[0]||null;paint(hovered);send('boundary-hovered',hovered?.identity??null)},true);
-document.addEventListener('click',event=>{if(!enabled)return;event.preventDefault();event.stopPropagation();const entries=boundariesFrom(event.target);if(!entries.length){refusal('No eligible project-owned React boundary','The target and its DOM ancestors contain no valid instrumentation metadata.',false);return}selected={entries,index:0};paint(entries[0]);send('boundary-selected',{identity:entries[0].identity,ancestors:entries.slice(1).map(x=>x.identity)})},true);
+document.addEventListener('pointermove',event=>{if(!enabled)return;const entries=boundariesFrom(event.target);hovered=entries[0]||null;paint(hovered);send('boundary-hovered',hovered?.boundary??null)},true);
+document.addEventListener('click',event=>{if(!enabled)return;event.preventDefault();event.stopPropagation();const entries=boundariesFrom(event.target);if(!entries.length){refusal('No eligible project-owned React boundary','The target and its DOM ancestors contain no valid instrumentation receipt.',false);return}selected={entries,index:0};paint(entries[0]);send('boundary-selected',{selectionReceipt:entries[0].boundary.selectionReceipt,ancestorSelectionReceipts:entries.slice(1).map(x=>x.boundary.selectionReceipt)})},true);
 addEventListener('message',event=>{if(event.source!==parent||event.origin!==studioOrigin||!event.data||event.data.version!==VERSION||!sameIdentity(event.data.preview))return;const type=event.data.type;
  if(type==='enable-selection'&&event.data.payload===undefined){enabled=true;send('selection-mode-enabled')}
  else if(type==='disable-selection'&&event.data.payload===undefined){enabled=false;hovered=null;paint(null);send('selection-mode-disabled')}
  else if(type==='clear-selection'&&event.data.payload===undefined){selected=null;hovered=null;paint(null);send('selection-cleared',{reason:'Selection cleared by the user.'})}
- else if(type==='select-ancestor'){if(!selected){refusal('No selected boundary','Select a supported boundary before navigating ancestors.',false);return}const index=event.data.payload?.index;if(!Number.isInteger(index)||index<0||index>=selected.entries.length){refusal('Ancestor is unavailable','The requested ancestor index is outside the current boundary chain.',selected.entries.length>1);return}selected.index=index;const entry=selected.entries[index];paint(entry);send('boundary-selected',{identity:entry.identity,ancestors:selected.entries.slice(index+1).map(x=>x.identity)})}
+ else if(type==='select-ancestor'){if(!selected){refusal('No selected boundary','Select a supported boundary before navigating ancestors.',false);return}const index=event.data.payload?.index;if(!Number.isInteger(index)||index<0||index>=selected.entries.length){refusal('Ancestor is unavailable','The requested ancestor index is outside the current boundary chain.',selected.entries.length>1);return}selected.index=index;const entry=selected.entries[index];paint(entry);send('boundary-selected',{selectionReceipt:entry.boundary.selectionReceipt,ancestorSelectionReceipts:selected.entries.slice(index+1).map(x=>x.boundary.selectionReceipt)})}
  else if(type==='sync-context'&&event.data.payload&&typeof event.data.payload.operationId==='string'&&typeof event.data.payload.sourcePreviewId==='string'&&validContext(event.data.payload.context))applyContext(event.data.payload)
  else if(type==='sync-viewport'&&event.data.payload&&typeof event.data.payload.operationId==='string'&&validViewport(event.data.payload.viewport))send('viewport-changed',{operationId:event.data.payload.operationId,viewport:event.data.payload.viewport})
 });

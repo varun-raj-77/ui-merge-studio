@@ -1,6 +1,6 @@
 import type { PreviewSession } from '../../../packages/preview-runtime/src/previewController';
 import type { ComparisonContext, PreviewCapabilities, PreviewMessage, ViewportContext } from '../../../packages/shared/src/bridge';
-import type { BoundarySelection, SelectionRefusal, SourceIdentity } from '../../../packages/shared/src/sourceIdentity';
+import type { RenderedBoundaryReference, RenderedBoundarySelection, SelectionRefusal } from '../../../packages/shared/src/sourceIdentity';
 import type { FeatureSliceArtifact } from '../../../packages/source-analysis/src/types';
 
 export type PreviewSlotId = 'left' | 'right';
@@ -13,8 +13,8 @@ export interface PreviewSlot {
   session: PreviewSession | null;
   capabilities: PreviewCapabilities | null;
   context: ComparisonContext | null;
-  selected: BoundarySelection | null;
-  hovered: SourceIdentity | null;
+  selected: RenderedBoundarySelection | null;
+  hovered: RenderedBoundaryReference | null;
   selecting: boolean;
   analysis: { status: 'idle' | 'loading' | 'resolved' | 'partial' | 'refused' | 'stale'; artifact: FeatureSliceArtifact | null; error: string | null };
   invalidation: string | null;
@@ -121,8 +121,8 @@ export function comparisonReducer(state: ComparisonState, action: ComparisonActi
     if (message.type === 'preview-state' || message.type === 'navigation-changed') return { ...current, context: (message.payload as { context: ComparisonContext }).context };
     if (message.type === 'selection-mode-enabled') return { ...current, selecting: true };
     if (message.type === 'selection-mode-disabled') return { ...current, selecting: false, hovered: null };
-    if (message.type === 'boundary-hovered') return { ...current, hovered: (message.payload as SourceIdentity | null) ?? null };
-    if (message.type === 'boundary-selected') return { ...current, selected: message.payload as BoundarySelection, analysis: { status: 'idle', artifact: null, error: null }, invalidation: null, errors: { ...current.errors, selection: null } };
+    if (message.type === 'boundary-hovered') return { ...current, hovered: (message.payload as RenderedBoundaryReference | null) ?? null };
+    if (message.type === 'boundary-selected') return { ...current, selected: message.payload as RenderedBoundarySelection, analysis: { status: 'idle', artifact: null, error: null }, invalidation: null, errors: { ...current.errors, selection: null } };
     if (message.type === 'selection-cleared') return { ...current, selected: null, hovered: null, analysis: current.analysis.artifact ? { ...current.analysis, status: 'stale', error: 'Analysis is stale because its runtime selection is no longer active.' } : current.analysis, invalidation: (message.payload as { reason: string }).reason };
     if (message.type === 'selection-error') return { ...current, errors: { ...current.errors, selection: message.payload as SelectionRefusal } };
     if (message.type === 'sync-refused') { const reason = (message.payload as { reason: string }).reason; return { ...current, errors: { ...current.errors, synchronization: reason } }; }

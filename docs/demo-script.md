@@ -10,3 +10,14 @@
 8. Confirm that the promotional banner and inventory summary remain excluded.
 9. Replay the generated Product-ID contract refusal and inspect its source contract and manual-resolution guidance.
 10. Select an unrecorded pair and confirm the sample directs the user to local mode without fabricating success.
+
+## Real local canonical-plan proof
+
+1. Run `npm run dev` and open `http://127.0.0.1:4310/?mode=local`.
+2. Start the sample demo and wait for both real branch previews to report Live and synchronized.
+3. In Branch A, choose the rendered Category Sidebar and confirm the selection.
+4. In Branch B, choose the rendered Desk Stand Quick View region and confirm the selection.
+5. Confirm the safety check, then create the verified branch. The browser request is the canonical Integration Plan V2, not raw source evidence.
+6. Open the combined app. This frame is served by the actual generated candidate worktree.
+7. Choose Desk in the Category Sidebar and confirm the product grid filters; open Desk Stand Quick View and close it.
+8. Confirm the promotional banner and inventory summary are absent, then stop the demo so preview worktrees and processes are removed.

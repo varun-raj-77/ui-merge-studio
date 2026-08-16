@@ -6,12 +6,11 @@ import { RepositoryController } from '../../packages/repository-controller/src/r
 import { PreviewController } from '../../packages/preview-runtime/src/previewController';
 import { PreviewOperationManager } from '../../packages/preview-runtime/src/previewOperations';
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
-import { isSourceIdentity } from '../../packages/shared/src/sourceIdentity';
-import { samePreviewIdentity } from '../../packages/shared/src/bridge';
+import type { InstrumentedBoundaryMapping } from '../../packages/source-instrumentation/src/instrumentReactSource';
+import { isPreviewIdentity } from '../../packages/shared/src/bridge';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
-import type { CandidateGenerationRequest, CandidateGenerationReport } from '../../packages/candidate-generation/src/types';
-import type { FeatureSliceArtifact } from '../../packages/source-analysis/src/types';
 import { loadRepositoryConfiguration } from './repositoryConfig';
+import { LocalPlanAuthority, localPlanErrorStatus, localRepositoryId } from './localPlanAuthority';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
 const configuration = loadRepositoryConfiguration(workspaceRoot);
@@ -22,8 +21,9 @@ const repository = new RepositoryController(fixturePath);
 const previews = new PreviewController(repository, resolve(import.meta.dirname, 'preview.vite.config.ts'), previewPath);
 const previewOperations = new PreviewOperationManager(previews);
 const analyzer = new FeatureSliceAnalyzer(fixturePath, workspaceRoot);
-let candidateProgress: { status: 'idle' | 'running' | 'succeeded' | 'refused' | 'failed'; stage: string | null; message: string; sliceId?: string; path?: string; verification?: string } = { status:'idle',stage:null,message:'No candidate generation is running.' };
-const candidateGenerator = new CandidateGenerator(fixturePath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',...event};}});
+const planAuthority = new LocalPlanAuthority(fixturePath, localRepositoryId(fixturePath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions());
+let candidateProgress: { status: 'idle' | 'running' | 'succeeded' | 'refused' | 'failed'; stage: string | null; message: string; planIdentity?: string; sliceId?: string; path?: string; verification?: string } = { status:'idle',stage:null,message:'No candidate generation is running.' };
+const candidateGenerator = new CandidateGenerator(fixturePath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',planIdentity:candidateProgress.planIdentity,...event};}});
 const vite = await createViteServer({ configFile: resolve(import.meta.dirname, 'vite.config.ts'), server: { middlewareMode: true }, appType: 'spa' });
 
 async function body(request: import('node:http').IncomingMessage) { const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown; }
@@ -31,24 +31,37 @@ function json(response: import('node:http').ServerResponse, status: number, valu
 function previewRoute(url: string | undefined) { const match = url?.match(/^\/api\/previews\/([a-z][a-z0-9-]*)$/); return match?.[1] ?? null; }
 function previewOperationRoute(url: string | undefined) { const match = url?.match(/^\/api\/preview-operations\/([a-f0-9-]+)$/); return match?.[1] ?? null; }
 function analysisPreviewRoute(url: string | undefined) { const match = url?.match(/^\/api\/previews\/([a-z][a-z0-9-]*)\/analysis$/); return match?.[1] ?? null; }
+function instrumentationPreviewRoute(url: string | undefined) { const match = url?.match(/^\/api\/internal\/previews\/([a-z][a-z0-9-]*)\/instrumentation$/); return match?.[1] ?? null; }
 function artifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/analysis\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
 function generationArtifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/reports\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
-function candidateRequest(value:unknown):CandidateGenerationRequest { if(!value||typeof value!=='object')throw new Error('A candidate generation request object is required.');const item=value as {expectedBaseCommit?:unknown;candidateBranch?:unknown;artifacts?:unknown;analyzerSchemaVersion?:unknown};if(typeof item.expectedBaseCommit!=='string'||typeof item.candidateBranch!=='string'||!Array.isArray(item.artifacts)||typeof item.analyzerSchemaVersion!=='number')throw new Error('Candidate generation requires expected base, branch, schema version, and slice artifacts.');return{repositoryRoot:fixturePath,baseRef,expectedBaseCommit:item.expectedBaseCommit,candidateBranch:item.candidateBranch,artifacts:item.artifacts as FeatureSliceArtifact[],analyzerSchemaVersion:item.analyzerSchemaVersion};}
 const server = createServer(async (request, response) => {
   try {
-    if (request.url === '/api/repository' && request.method === 'GET') { const inspected = await repository.inspect(); return json(response, 200, { branches: inspected.branches, preferredBranches, candidateBranch, clean: inspected.clean, sessions: previews.sessions() }); }
+    const instrumentationPreviewId = instrumentationPreviewRoute(request.url);
+    if (instrumentationPreviewId && request.method === 'POST') {
+      const token = request.headers.authorization?.match(/^Bearer ([A-Za-z0-9-]+)$/)?.[1] ?? '';
+      const value = await body(request);
+      const preview = value && typeof value === 'object' ? (value as { preview?: unknown }).preview : null;
+      const boundaries = value && typeof value === 'object' ? (value as { boundaries?: unknown }).boundaries : null;
+      if (!isPreviewIdentity(preview) || !Array.isArray(boundaries)) return json(response, 400, { error: 'Valid preview instrumentation metadata is required.' });
+      const authenticated = previews.authenticateInstrumentation(instrumentationPreviewId, token, preview);
+      if (!authenticated) return json(response, 403, { error: 'Preview instrumentation authentication failed.' });
+      planAuthority.registerInstrumentedBoundaries(authenticated, boundaries as InstrumentedBoundaryMapping[]);
+      return json(response, 200, { registered: boundaries.length });
+    }
+    if (request.url === '/api/repository' && request.method === 'GET') { const inspected = await repository.inspect(); return json(response, 200, { repositoryId: planAuthority.repositoryId, foundation: await planAuthority.foundation(), branches: inspected.branches, preferredBranches, candidateBranch, clean: inspected.clean, sessions: previews.sessions() }); }
     const analysisPreviewId = analysisPreviewRoute(request.url);
     if (analysisPreviewId && request.method === 'POST') {
       const session = previews.session(analysisPreviewId); if (!session) return json(response, 409, { error: 'The preview session is not running.' });
-      const value = await body(request); const selection = value && typeof value === 'object' ? (value as { selection?: unknown }).selection : null;
-      if (!isSourceIdentity(selection)) return json(response, 400, { error: 'A valid source-mapped selection is required.' });
-      if (!samePreviewIdentity(selection, session)) return json(response, 409, { error: 'The selection belongs to a stale or mismatched preview session.' });
-      return json(response, 200, await analyzer.analyze({ baseRef, branchRef: session.branch, expectedBranchCommit: session.branchCommit, selection }));
+      const value = await body(request); const selectionReceipt = value && typeof value === 'object' ? (value as { selectionReceipt?: unknown }).selectionReceipt : null;
+      if (typeof selectionReceipt !== 'string') return json(response, 400, { error: 'A rendered-selection receipt is required; browser-authored source metadata is not accepted.' });
+      const selection = planAuthority.resolveRenderedSelection(session, selectionReceipt);
+      const artifact = await analyzer.analyze({ baseRef, branchRef: session.branch, expectedBranchCommit: session.branchCommit, selection });
+      return json(response, 200, await planAuthority.register(session, artifact, previewPath));
     }
     const analysisId = artifactRoute(request.url);
     if (analysisId && request.method === 'GET') { const artifact = await readFile(resolve(workspaceRoot, '.ums', 'analysis', analysisId, 'feature-slice.json')); response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="feature-slice-${analysisId}.json"` }); return response.end(artifact); }
-    if(request.url==='/api/candidate/preflight'&&request.method==='POST'){const value=candidateRequest(await body(request));const result=await candidateGenerator.preflight(value);candidateProgress={status:result.plan.status==='ready'?'idle':'refused',stage:'plan',message:result.plan.status==='ready'?'Candidate plan is ready.':'Candidate plan was refused.'};return json(response,200,result);}
-    if(request.url==='/api/candidate/generate'&&request.method==='POST'){const value=candidateRequest(await body(request));candidateProgress={status:'running',stage:'validate',message:'Candidate generation is running: validate.'};const report=await candidateGenerator.generate(value);candidateProgress={status:report.status,stage:report.stage,message:report.message};return json(response,200,report);}
+    if(request.url==='/api/candidate/preflight'&&request.method==='POST'){const projected=await planAuthority.project(await body(request));const result=await candidateGenerator.preflight(projected.request);candidateProgress={status:result.plan.status==='ready'?'idle':'refused',stage:'plan',message:result.plan.status==='ready'?'Candidate plan is ready.':'Candidate plan was refused.',planIdentity:projected.planIdentity};return json(response,200,result);}
+    if(request.url==='/api/candidate/generate'&&request.method==='POST'){const projected=await planAuthority.project(await body(request));candidateProgress={status:'running',stage:'validate',message:'Candidate generation is running: validate.',planIdentity:projected.planIdentity};const report=await candidateGenerator.generate(projected.request);candidateProgress={status:report.status,stage:report.stage,message:report.message,planIdentity:projected.planIdentity};return json(response,200,report);}
     if(request.url==='/api/candidate/status'&&request.method==='GET')return json(response,200,candidateProgress);
     const generationId=generationArtifactRoute(request.url);if(generationId&&request.method==='GET'){const artifact=await readFile(resolve(workspaceRoot,'.ums','generation',generationId,'candidate-report.json'));response.writeHead(200,{'Content-Type':'application/json','Content-Disposition':`attachment; filename="candidate-report-${generationId}.json"`});return response.end(artifact);}
     const previewOperationId = previewOperationRoute(request.url);
@@ -69,7 +82,7 @@ const server = createServer(async (request, response) => {
     if (previewId && request.method === 'DELETE') { await previewOperations.stop(previewId); return json(response, 200, { stopped: true, previewId }); }
     if (request.url === '/api/preview' && request.method === 'DELETE') { await previewOperations.stopAll(); return json(response, 200, { stopped: true }); }
     vite.middlewares(request, response, (error?: Error) => { if (error) json(response, 500, { error: error.message }); else { response.statusCode = 404; response.end(); } });
-  } catch (error) { json(response, 500, { error: error instanceof Error ? error.message : String(error) }); }
+  } catch (error) { json(response, localPlanErrorStatus(error), { error: error instanceof Error ? error.message : String(error) }); }
 });
 server.listen(port, host, () => console.log(`UI Merge Studio: http://${host}:${port}`));
 async function shutdown() { await previewOperations.stopAll().catch(error => console.error(error)); await vite.close(); server.close(); }

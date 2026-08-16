@@ -5,6 +5,10 @@ import { CandidateGenerator } from '../../packages/candidate-generation/src/cand
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
 import { GitSourceRepository } from '../../packages/source-analysis/src/gitModel';
 import type { SourceIdentity } from '../../packages/shared/src/sourceIdentity';
+import type { PreviewSession } from '../../packages/preview-runtime/src/previewController';
+import { LocalPlanAuthority, localRepositoryId } from '../../apps/studio/localPlanAuthority';
+import { localIntegrationPlanAdapter, localIntegrationPlanIdentity } from '../../packages/integration-plan/src/localPlan';
+import { parseIntegrationPlan, serializeIntegrationPlan } from '../../packages/integration-plan/src/integrationPlan';
 import {
   emptyCatalogueIntegrationPlan,
   catalogueFoundation,
@@ -23,7 +27,7 @@ async function artifacts(){const analyzer=new FeatureSliceAnalyzer(fixture);retu
   analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:selection('branch-b','src/features/catalogue/ProductCardWithQuickView.tsx',6,'ProductCardWithQuickView','right')})
 ]);}
 
-const phase5CandidateBranches = ['phase5-main-result', 'phase5-version-a-result', 'phase5-version-b-result'];
+const phase5CandidateBranches = ['phase5-main-result', 'phase5-version-a-result', 'phase5-version-b-result', 'phase0-canonical-replay'];
 afterEach(async () => {
   for (const branch of phase5CandidateBranches) {
     if (await repository.resolveRef(branch).catch(() => null)) await repository.git(['branch', '-D', branch]);
@@ -137,6 +141,38 @@ test('generates and verifies the Product Catalogue candidate, then repeats idemp
   expect(await Promise.all(sourceRefs.map(ref=>repository.resolveRef(ref)))).toEqual(sourceBefore);
   expect((await repository.git(['worktree','list','--porcelain']))).not.toContain('ui-merge-studio-candidate-');
 },240_000);
+
+test('replays the exact serialized local canonical plan to the same Git tree', async () => {
+  const selectedArtifacts = await artifacts();
+  const sessions = new Map<string, PreviewSession>(selectedArtifacts.map((artifact, index) => {
+    const selection = artifact.slice.selection;
+    return [selection.previewId, { previewId: selection.previewId, branch: selection.branch, generation: selection.generation, sessionId: selection.sessionId, protocolVersion: 2, branchCommit: artifact.slice.repository.branchCommit, url: `http://127.0.0.1:${5200 + index}/catalogue`, origin: `http://127.0.0.1:${5200 + index}`, port: 5200 + index, worktreePath: `C:/temp/replay-${index}`, status: 'running', failure: null } as PreviewSession];
+  }));
+  const authority = new LocalPlanAuthority(fixture, localRepositoryId(fixture), 'main', 'phase0-canonical-replay', id => sessions.get(id) ?? null, () => [...sessions.values()]);
+  const evidence = await Promise.all(selectedArtifacts.map(artifact => authority.register(sessions.get(artifact.slice.selection.previewId)!, artifact, '/catalogue')));
+  const canonicalPlan = { version: 2 as const, foundation: evidence[0].foundation, selections: evidence.map(item => item.selection) };
+  const serialized = serializeIntegrationPlan(canonicalPlan, localIntegrationPlanAdapter);
+  const replayed = parseIntegrationPlan(serialized, localIntegrationPlanAdapter);
+  const planIdentity = localIntegrationPlanIdentity(replayed);
+  const firstProjection = await authority.project({ plan: replayed, planIdentity });
+  const secondProjection = await authority.project({ plan: JSON.parse(serialized), planIdentity });
+  expect(secondProjection.request).toEqual(firstProjection.request);
+
+  const generator = new CandidateGenerator(fixture, {
+    artifactRoot: resolve(fixture, '..', '..', '..'),
+    verificationCommands: [{ name: 'canonical-plan-contract', executable: process.execPath, args: ['-e', 'process.exit(0)'] }]
+  });
+  const first = await generator.generate(firstProjection.request);
+  const second = await generator.generate(secondProjection.request);
+  expect(first.status, first.message).toBe('succeeded');
+  expect(second.status, second.message).toBe('succeeded');
+  expect(second.repository.idempotent).toBe(true);
+  expect(second.repository.candidateTree).toBe(first.repository.candidateTree);
+  expect(first.integrationPlan?.identity).toBe(planIdentity);
+  expect(second.integrationPlan?.identity).toBe(planIdentity);
+  expect(await repository.git(['rev-parse', 'phase0-canonical-replay^'])).toBe(canonicalPlan.foundation.commitSha);
+  expect(await repository.git(['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+}, 120_000);
 
 test('generates deterministically from Main, Version A, and Version B foundation commits', async () => {
   const sourceRefs = ['main', 'branch-a', 'branch-b', 'branch-incompatible'];

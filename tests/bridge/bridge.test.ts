@@ -3,11 +3,11 @@ import { acceptsPreviewEvent, bridgeVersion, createStudioCommand, parsePreviewMe
 
 const preview: PreviewIdentity = { previewId: 'left', sessionId: 'session-new', generation: 2, branch: 'main' };
 const registration = { origin: 'http://preview', identity: preview };
-const identity = { boundaryId: 'abc', instanceId: 'abc-1', repositoryRelativePath: 'src/View.tsx', line: 4, column: 2, componentName: 'View', exportName: 'View', branch: 'main', previewId: 'left', sessionId: 'session-new', generation: 2, confidence: 'exact' as const };
+const selectionReceipt = `rendered-${'a'.repeat(32)}`;
 
 describe('versioned preview bridge', () => {
-  test('accepts a schema-valid selection from the registered origin and session', () => {
-    const message = { version: bridgeVersion, preview, type: 'boundary-selected', payload: { identity, ancestors: [] } };
+  test('accepts an opaque rendered-selection receipt from the registered origin and session', () => {
+    const message = { version: bridgeVersion, preview, type: 'boundary-selected', payload: { selectionReceipt, ancestorSelectionReceipts: [] } };
     expect(acceptsPreviewEvent({ origin: 'http://preview', data: message }, registration)?.type).toBe('boundary-selected');
   });
   test('rejects invalid origins, preview IDs, session IDs, and stale generations', () => {
@@ -22,8 +22,9 @@ describe('versioned preview bridge', () => {
     expect(parsePreviewMessage({ version: bridgeVersion, preview, type: 'everything' })).toBeNull();
     expect(parsePreviewMessage({ version: 1, preview, type: 'preview-ready' })).toBeNull();
   });
-  test('rejects a source identity borrowed from another preview session', () => {
-    expect(parsePreviewMessage({ version: bridgeVersion, preview, type: 'boundary-selected', payload: { identity: { ...identity, previewId: 'right' }, ancestors: [] } })).toBeNull();
+  test('rejects browser-authored source identities even when their session fields look current', () => {
+    const identity = { boundaryId: 'abc', instanceId: 'abc-1', repositoryRelativePath: 'src/View.tsx', line: 4, column: 2, componentName: 'View', exportName: 'View', branch: 'main', previewId: 'left', sessionId: 'session-new', generation: 2, confidence: 'exact' as const };
+    expect(parsePreviewMessage({ version: bridgeVersion, preview, type: 'boundary-selected', payload: { identity, ancestors: [] } })).toBeNull();
   });
   test('validates identity-bound commands, synchronization payloads, and ancestor indexes', () => {
     expect(createStudioCommand(preview, 'enable-selection').type).toBe('enable-selection');

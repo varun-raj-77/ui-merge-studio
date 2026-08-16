@@ -18,7 +18,8 @@ fixtures/generated/
 .ums/
 
 apps/studio/dist/
-docs/codex-prompts/
+docs/codex-prompts/*
+!docs/codex-prompts/013-local-canonical-plan-causality.md
 
 .env
 .env.*

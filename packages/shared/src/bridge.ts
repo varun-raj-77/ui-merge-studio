@@ -1,4 +1,4 @@
-import { isSourceIdentity, type BoundarySelection, type SelectionRefusal } from './sourceIdentity';
+import type { RenderedBoundaryReference, RenderedBoundarySelection, SelectionRefusal } from './sourceIdentity';
 
 export const bridgeVersion = 2 as const;
 
@@ -43,16 +43,17 @@ function isSyncContract(value: unknown): value is SyncContract { return isRecord
 export function isPreviewCapabilities(value: unknown): value is PreviewCapabilities { return isRecord(value) && (value.routeSync === null || isSyncContract(value.routeSync)) && (value.fixtureContext === null || (isRecord(value.fixtureContext) && isSyncContract(value.fixtureContext) && typeof value.fixtureContext.entityType === 'string')) && isRecord(value.sourceSelection) && isPositiveInteger(value.sourceSelection.version); }
 export function isComparisonContext(value: unknown): value is ComparisonContext { return isRecord(value) && typeof value.route === 'string' && (value.entity === null || (isRecord(value.entity) && typeof value.entity.type === 'string' && typeof value.entity.id === 'string')); }
 function isViewport(value: unknown): value is ViewportContext { return isRecord(value) && (value.preset === 'desktop' || value.preset === 'tablet' || value.preset === 'mobile') && isPositiveInteger(value.width) && isPositiveInteger(value.height); }
-function isSelection(value: unknown, preview: PreviewIdentity): value is BoundarySelection { return isRecord(value) && isSourceIdentity(value.identity) && sameSourceSession(value.identity, preview) && Array.isArray(value.ancestors) && value.ancestors.every(item => isSourceIdentity(item) && sameSourceSession(item, preview)); }
-function sameSourceSession(value: { previewId: string; sessionId: string; generation: number; branch: string }, preview: PreviewIdentity) { return value.previewId === preview.previewId && value.sessionId === preview.sessionId && value.generation === preview.generation && value.branch === preview.branch; }
+function isSelectionReceipt(value: unknown): value is string { return typeof value === 'string' && /^rendered-[A-Za-z0-9_-]{32}$/.test(value); }
+function isRenderedBoundary(value: unknown): value is RenderedBoundaryReference { return isRecord(value) && isSelectionReceipt(value.selectionReceipt) && Object.keys(value).length === 1; }
+function isSelection(value: unknown): value is RenderedBoundarySelection { return isRecord(value) && isSelectionReceipt(value.selectionReceipt) && Array.isArray(value.ancestorSelectionReceipts) && value.ancestorSelectionReceipts.every(isSelectionReceipt); }
 function isRefusal(value: unknown): value is SelectionRefusal { return isRecord(value) && value.confidence === 'refused' && typeof value.reason === 'string' && typeof value.evidence === 'string' && typeof value.supportedAncestorAvailable === 'boolean'; }
 function hasOperationContext(value: unknown) { return isRecord(value) && (value.operationId === null || typeof value.operationId === 'string') && isComparisonContext(value.context); }
 function validPreviewPayload(type: PreviewMessageType, payload: unknown, preview: PreviewIdentity) {
   if (type === 'preview-ready') return isRecord(payload) && isPreviewCapabilities(payload.capabilities) && isComparisonContext(payload.context);
   if (type === 'preview-state' || type === 'navigation-changed') return hasOperationContext(payload);
   if (type === 'viewport-changed') return isRecord(payload) && typeof payload.operationId === 'string' && isViewport(payload.viewport);
-  if (type === 'boundary-hovered') return payload === null || (isSourceIdentity(payload) && sameSourceSession(payload, preview));
-  if (type === 'boundary-selected') return isSelection(payload, preview);
+  if (type === 'boundary-hovered') return payload === null || isRenderedBoundary(payload);
+  if (type === 'boundary-selected') return isSelection(payload);
   if (type === 'selection-cleared') return isRecord(payload) && typeof payload.reason === 'string';
   if (type === 'selection-error') return isRefusal(payload);
   if (type === 'sync-refused') return isRecord(payload) && (payload.dimension === 'route' || payload.dimension === 'fixture-context' || payload.dimension === 'viewport') && typeof payload.reason === 'string';

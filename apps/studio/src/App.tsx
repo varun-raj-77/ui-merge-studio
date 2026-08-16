@@ -2,14 +2,16 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { PreviewSession } from '../../../packages/preview-runtime/src/previewController';
 import type { PreviewOperation, PreviewOperationAcknowledgement } from '../../../packages/preview-runtime/src/previewOperations';
 import { createStudioCommand, validatePreviewEvent, type ComparisonContext, type PreviewCapabilities, type PreviewMessage, type StudioCommandType } from '../../../packages/shared/src/bridge';
-import type { SourceIdentity } from '../../../packages/shared/src/sourceIdentity';
+import type { RenderedBoundaryReference, RenderedBoundarySelection, SourceIdentity } from '../../../packages/shared/src/sourceIdentity';
 import type { FeatureSliceArtifact } from '../../../packages/source-analysis/src/types';
 import type { CandidateGenerationReport, CandidatePreflight } from '../../../packages/candidate-generation/src/types';
+import type { IntegrationFoundation } from '../../../packages/integration-plan/src/integrationPlan';
+import { canonicalizeLocalIntegrationPlan, localIntegrationPlanIdentity, type LocalIntegrationSelection } from '../../../packages/integration-plan/src/localPlan';
 import { compareCapabilities, comparisonReducer, initialComparisonState, planContextSynchronization, viewportPresets, type ComparisonState, type PreviewSlotId } from './comparisonState';
 import { demoScenario, featureLabel, guidedSelectionDecision } from './demoScenario';
 import { pollPreviewOperation } from './operationPolling';
 
-interface RepositoryResponse { branches: string[]; preferredBranches?: string[]; candidateBranch?: string; clean: boolean; sessions: PreviewSession[] }
+interface RepositoryResponse { repositoryId: string; foundation: IntegrationFoundation; branches: string[]; preferredBranches?: string[]; candidateBranch?: string; clean: boolean; sessions: PreviewSession[] }
 const slots: PreviewSlotId[] = ['left', 'right'];
 const terminalPreviewStates = new Set(['ready', 'failed', 'cancelled', 'superseded']);
 function synchronizationId() { return globalThis.crypto?.randomUUID?.() ?? `sync-${Date.now()}-${Math.random()}`; }
@@ -39,6 +41,10 @@ function IdentityPanel({ identity, title }: { identity: SourceIdentity | null; t
   return <section className="evidence-card"><h3>{title}</h3>{identity ? <dl><dt>Component</dt><dd>{identity.componentName ?? 'Anonymous'}</dd><dt>Source</dt><dd><code>{identity.repositoryRelativePath}:{identity.line}:{identity.column}</code></dd><dt>Definition boundary</dt><dd><code>{identity.boundaryId}</code></dd><dt>Runtime instance</dt><dd><code>{identity.instanceId}</code></dd><dt>Preview session</dt><dd><code>{identity.previewId} / {identity.sessionId.slice(0, 8)} / g{identity.generation}</code></dd><dt>Branch</dt><dd>{identity.branch}</dd><dt>Mapping</dt><dd>{identity.confidence}</dd></dl> : <p className="muted">None</p>}</section>;
 }
 
+function RenderedBoundaryPanel({ boundary, title }: { boundary: RenderedBoundaryReference | null; title: string }) {
+  return <section className="evidence-card"><h3>{title}</h3>{boundary ? <dl><dt>Opaque receipt</dt><dd><code>{boundary.selectionReceipt.slice(0, 20)}…</code></dd><dt>Source authority</dt><dd>Resolved privately by the active preview session</dd></dl> : <p className="muted">None</p>}</section>;
+}
+
 function TestSlices({ artifact }: { artifact: FeatureSliceArtifact }) {
   if (!artifact.slice.testFileSlices.length) return null;
   return <section className="test-slices"><h3>Test-file slices</h3>{artifact.slice.testFileSlices.map(file => <article className={`test-slice test-slice-${file.mode}`} key={file.path}><h4><code>{file.path}</code></h4><p><strong>Mode:</strong> {file.mode}</p><h5>Included test units</h5>{file.includedUnits.length ? <ul>{file.includedUnits.map(unit => <li key={unit.id}><strong>{unit.title ?? unit.kind}</strong><code>{unit.kind} · lines {unit.region.startLine}-{unit.region.endLine}</code><span>{unit.reason}</span></li>)}</ul> : <p className="muted">None</p>}<h5>Excluded test units</h5>{file.excludedUnits.length ? <ul>{file.excludedUnits.map(unit => <li key={unit.id}><strong>{unit.title ?? unit.kind}</strong><code>{unit.kind} · lines {unit.region.startLine}-{unit.region.endLine}</code><span>{unit.reason}</span><small>{unit.proof}</small></li>)}</ul> : <p className="muted">None</p>}<h5>Required import specifiers</h5>{file.requiredImports.length ? <ul>{file.requiredImports.map(item => <li key={`${item.source}:${item.local}`}><code>{item.local} ← {item.source}#{item.imported}</code></li>)}</ul> : <p className="muted">None</p>}<h5>Excluded import specifiers</h5>{file.excludedImports.length ? <ul>{file.excludedImports.map(item => <li key={`${item.source}:${item.local}`}><code>{item.local} ← {item.source}#{item.imported}</code></li>)}</ul> : <p className="muted">None</p>}{file.requiredSupportDeclarations.length > 0 && <><h5>Required support declarations</h5><ul>{file.requiredSupportDeclarations.map(item => <li key={`${item.name}:${item.region.startLine}`}><strong>{item.name}</strong><span>{item.kind} · lines {item.region.startLine}-{item.region.endLine}</span></li>)}</ul></>}{file.unresolvedDependencies.length > 0 && <div className="warning"><strong>Partial test slicing:</strong><ul>{file.unresolvedDependencies.map(item => <li key={`${item.path}:${item.reason}`}>{item.reason}</li>)}</ul></div>}</article>)}</section>;
@@ -52,7 +58,7 @@ export function SlicePanel({ artifact, status, error }: { artifact: FeatureSlice
   return <section className={`slice-panel evidence-card slice-${status}`}><h3>Feature slice · {slice.status}</h3>{status === 'stale' && <div className="notice"><strong>Stale analysis:</strong> {error}</div>}<dl className="slice-meta"><dt>Original boundary</dt><dd>{slice.boundary.original}</dd><dt>Analyzed boundary</dt><dd>{slice.boundary.analyzed}</dd><dt>Expansion</dt><dd>{slice.boundary.reason}</dd><dt>Merge base</dt><dd><code>{slice.repository.mergeBaseCommit.slice(0, 12)}</code></dd><dt>Branch commit</dt><dd><code>{slice.repository.branchCommit.slice(0, 12)}</code></dd></dl><h4>Included changes</h4>{slice.includedChanges.length ? <ul className="change-list included-list">{slice.includedChanges.map(item => <li key={item.branchChangeId}><strong>{item.symbol?.name ?? item.path}</strong><code>{item.path}{item.symbol ? `:${item.symbol.region.startLine}` : ''}</code><span>{item.reason}</span><small>{item.category} · {item.confidence} · {item.wholeFile ? 'whole file' : 'symbol/region'}</small></li>)}</ul> : <p className="muted">None</p>}<TestSlices artifact={artifact} /><h4>Excluded branch changes</h4>{slice.excludedChanges.length ? <ul className="change-list excluded-list">{slice.excludedChanges.map(item => <li key={item.branchChangeId}><strong>{item.symbol?.name ?? item.path}</strong><code>{item.path}</code><span>{item.reason}</span><small>{item.classification} · {item.proof}</small></li>)}</ul> : <p className="muted">None</p>}<h4>Unresolved dependencies</h4>{slice.unresolvedDependencies.length ? <ul className="change-list unresolved-list">{slice.unresolvedDependencies.map(item => <li key={`${item.path}:${item.reason}`}><code>{item.path}</code><span>{item.reason}</span><small>{item.manualNextStep}</small></li>)}</ul> : <p className="muted">None</p>}<a className="artifact-link" href={`/api/analysis/${artifact.analysisId}`} download>Download deterministic JSON</a></section>;
 }
 
-type GenerationInput = { artifact: FeatureSliceArtifact | null; status: string; sessionId: string | null };
+export type GenerationInput = { artifact: FeatureSliceArtifact | null; selection: LocalIntegrationSelection | null; status: string; sessionId: string | null };
 const verificationLabels: Record<string, string> = {
   install: 'Dependency installation',
   typecheck: 'Code checks',
@@ -65,27 +71,29 @@ function failedCandidateMessage(report: CandidateGenerationReport) {
   const gate = failed ? verificationLabels[failed.name] ?? 'A verification check' : 'A verification check';
   return `${gate} did not pass, so UI Merge Studio discarded the proposed result. No combined branch was created, both source branches are unchanged, and the temporary workspace was cleaned.`;
 }
-export function CandidatePanel({ inputs, candidateBranch = 'combined-result', onLaunch, onRevise, onEvidence }: { inputs: GenerationInput[]; candidateBranch?: string; onLaunch: (branch: string) => void; onRevise?: () => void; onEvidence?: () => void }) {
+export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvidence }: { inputs: GenerationInput[]; foundation: IntegrationFoundation | null; candidateBranch?: string; onLaunch: (report: CandidateGenerationReport) => void; onRevise?: () => void; onEvidence?: () => void }) {
   const [preflight, setPreflight] = useState<CandidatePreflight | null>(null);
   const [report, setReport] = useState<CandidateGenerationReport | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('Waiting for two selected features.');
   const [error, setError] = useState<string | null>(null);
-  const inputKey = inputs.map(item => `${item.artifact?.analysisId ?? 'none'}:${item.status}:${item.sessionId ?? 'none'}`).join('|');
+  const inputKey = inputs.map(item => `${item.artifact?.analysisId ?? 'none'}:${item.selection?.capabilityId ?? 'none'}:${item.status}:${item.sessionId ?? 'none'}`).join('|');
   const artifacts = inputs.map(item => item.artifact).filter((item): item is FeatureSliceArtifact => Boolean(item));
-  const ready = inputs.length === 2 && artifacts.length === 2 && inputs.every(item => item.status === 'resolved') && artifacts.every(item => item.slice.status === 'resolved');
-  const base = ready && new Set(artifacts.map(item => item.slice.repository.mergeBaseCommit)).size === 1 ? artifacts[0].slice.repository.mergeBaseCommit : null;
-  const request = () => ({ expectedBaseCommit: base, candidateBranch, artifacts, analyzerSchemaVersion: artifacts[0]?.slice.version ?? 0 });
+  const selections = inputs.map(item => item.selection).filter((item): item is LocalIntegrationSelection => Boolean(item));
+  const ready = inputs.length === 2 && artifacts.length === 2 && selections.length === 2 && Boolean(foundation) && inputs.every(item => item.status === 'resolved') && artifacts.every(item => item.slice.status === 'resolved');
+  const plan = ready && foundation ? canonicalizeLocalIntegrationPlan({ version: 2, foundation, selections }) : null;
+  const planIdentity = plan ? localIntegrationPlanIdentity(plan) : null;
+  const request = () => ({ plan, planIdentity });
 
   useEffect(() => { setPreflight(null); setReport(null); setError(null); setProgress(ready ? 'Checking source code and required dependencies.' : 'Select one branch-specific change from each live app.'); }, [inputKey, ready]);
   useEffect(() => {
-    if (!ready || !base) return;
+    if (!ready || !plan || !planIdentity) return;
     const controller = new AbortController();
     void fetch('/api/candidate/preflight', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request()), signal: controller.signal })
-      .then(async response => { const value = await response.json(); if (!response.ok) throw new Error(value.error ?? response.statusText); setPreflight(value as CandidatePreflight); setProgress((value as CandidatePreflight).plan.status === 'ready' ? 'Both selections passed the compatibility check.' : 'This selection cannot be combined safely.'); })
+      .then(async response => { const value = await response.json(); if (!response.ok) throw new Error(value.error ?? response.statusText); const result = value as CandidatePreflight; if (result.integrationPlan?.identity !== planIdentity) throw new Error('The server returned evidence for a different integration plan.'); setPreflight(result); setProgress(result.plan.status === 'ready' ? 'Both selections passed the compatibility check.' : 'This selection cannot be combined safely.'); })
       .catch(value => { if ((value as Error).name !== 'AbortError') { setError(value instanceof Error ? value.message : String(value)); setProgress('The safety check could not finish.'); } });
     return () => controller.abort();
-  }, [inputKey, ready, base]);
+  }, [inputKey, ready, planIdentity]);
 
   async function generateCandidate() {
     setBusy(true); setError(null); setReport(null); setProgress('Preparing an isolated workspace…');
@@ -114,6 +122,7 @@ export function CandidatePanel({ inputs, candidateBranch = 'combined-result', on
       const value = await response.json();
       if (!response.ok) throw new Error(value.error ?? response.statusText);
       const result = value as CandidateGenerationReport;
+      if (result.integrationPlan?.identity !== planIdentity) throw new Error('The generated candidate does not refer to the submitted integration plan.');
       setReport(result);
       setProgress(result.status === 'succeeded' ? 'Combined branch created and verified.' : failedCandidateMessage(result));
     } catch (value) {
@@ -127,9 +136,9 @@ export function CandidatePanel({ inputs, candidateBranch = 'combined-result', on
   }
 
   const failed = Boolean(report && report.status !== 'succeeded');
-  const blocked = !ready ? 'Select one branch-specific change from each live app.' : !base ? 'The selected changes do not share the same starting point.' : preflight?.plan.status === 'refused' ? 'This selection cannot be combined safely.' : null;
+  const blocked = !ready ? 'Select one branch-specific change from each live app.' : !plan ? 'The selected changes do not form a canonical integration plan.' : preflight?.plan.status === 'refused' ? 'This selection cannot be combined safely.' : null;
   const safetyState = failed ? 'Review failure' : report?.status === 'succeeded' ? 'Verified branch created' : busy ? 'Creating and testing' : preflight?.plan.status === 'ready' ? 'Ready to combine' : 'Waiting for selections';
-  return <section className="combine-tray" aria-label="Selected features and combine action">
+  return <section className="combine-tray" aria-label="Selected features and combine action" data-plan-identity={planIdentity ?? undefined}>
     <div className="tray-features">
       {slots.map((slot, index) => <div key={slot}><span>{index === 0 ? 'Category sidebar branch' : 'Quick-view branch'}</span><strong>{featureLabel(inputs[index]?.artifact)}</strong></div>)}
       <div className={`tray-safety ${failed ? 'is-failed' : preflight?.plan.status === 'ready' ? 'is-ready' : ''}`}><span>Safety check</span><strong><i className="status-dot" aria-hidden="true" />{safetyState}</strong></div>
@@ -137,7 +146,7 @@ export function CandidatePanel({ inputs, candidateBranch = 'combined-result', on
     <div className={`tray-status ${failed ? 'is-failed' : ''}`} role="status" aria-live="polite"><span>{error ?? progress}</span></div>
     {!failed && report?.status !== 'succeeded' && <button className="primary-action" onClick={generateCandidate} disabled={Boolean(blocked) || !preflight || preflight.plan.status !== 'ready' || busy}>{busy ? 'Creating and verifying…' : 'Create verified branch'}</button>}
     {failed && <button className="primary-action revise-action" onClick={onRevise}>Change selected features</button>}
-    {report?.status === 'succeeded' && <button className="primary-action" onClick={() => onLaunch(report.repository.candidateBranch)}>View combined app</button>}
+    {report?.status === 'succeeded' && <button className="primary-action" onClick={() => onLaunch(report)}>View combined app</button>}
     {report?.status === 'succeeded' && <div className="tray-result-summary"><strong>Combined result</strong><code>combined-result</code></div>}
     {report && <button className="evidence-link" onClick={onEvidence}>{report.status === 'succeeded' ? 'View verification evidence' : 'View error details'}</button>}
     {report && <details className="generation-summary"><summary>Verification summary</summary><p>{report.message}</p><ul>{report.verification.map(item => <li key={item.name}>{verificationLabels[item.name] ?? item.name}: <strong>{item.status}</strong></li>)}</ul><p>Cleanup: {report.cleanup.detail}</p></details>}
@@ -241,7 +250,7 @@ function TechnicalDrawer({ open, onClose, state, operations, onSelectAncestor, o
     return () => removeEventListener('keydown', escape);
   }, [open, onClose]);
   if (!open) return null;
-  return <div className="drawer-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><aside className="technical-drawer" role="dialog" aria-modal="true" aria-labelledby="technical-title"><header><div><p className="eyebrow">Evidence and diagnostics</p><h2 id="technical-title">Technical details</h2></div><button ref={closeRef} className="icon-button" onClick={onClose} aria-label="Close technical details">×</button></header>{slots.map(slot => { const preview = state.previews[slot]; const operation = operations[slot]; return <section className="drawer-version" key={slot}><h2>{slot === 'left' ? 'Navigation experiment' : preview.branch === 'combined-result' ? 'Combined result' : 'Activity-filter experiment'} · {preview.branch}</h2>{operation && <details open><summary>Preview operation · {operation.state}</summary><ol className="phase-list">{operation.phases.map(item => <li key={item.phase}><strong>{item.phase}</strong><span>{item.detail}</span><code>{item.durationMs === null ? 'running' : `${item.durationMs} ms`}</code></li>)}</ol>{operation.error && <div className="error">{operation.error}</div>}</details>}<IdentityPanel title="Hovered boundary" identity={preview.hovered} /><IdentityPanel title="Selected boundary" identity={preview.selected?.identity ?? null} />{preview.selected && <section className="evidence-card"><h3>Eligible ancestors</h3>{preview.selected.ancestors.length ? preview.selected.ancestors.map((identity, index) => <button className="ancestor" key={identity.instanceId} onClick={() => onSelectAncestor(slot, index + 1)}>{identity.componentName ?? identity.repositoryRelativePath}</button>) : <p className="muted">No instrumented ancestor.</p>}<button className="text-action" onClick={() => onClear(slot)}>Clear selection</button></section>}<SlicePanel artifact={preview.analysis.artifact} status={preview.analysis.status} error={preview.analysis.error} /></section>; })}</aside></div>;
+  return <div className="drawer-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><aside className="technical-drawer" role="dialog" aria-modal="true" aria-labelledby="technical-title"><header><div><p className="eyebrow">Evidence and diagnostics</p><h2 id="technical-title">Technical details</h2></div><button ref={closeRef} className="icon-button" onClick={onClose} aria-label="Close technical details">×</button></header>{slots.map(slot => { const preview = state.previews[slot]; const operation = operations[slot]; const resolvedIdentity = preview.analysis.artifact?.slice.selection ?? null; return <section className="drawer-version" key={slot}><h2>{slot === 'left' ? 'Navigation experiment' : preview.branch === 'combined-result' ? 'Combined result' : 'Activity-filter experiment'} · {preview.branch}</h2>{operation && <details open><summary>Preview operation · {operation.state}</summary><ol className="phase-list">{operation.phases.map(item => <li key={item.phase}><strong>{item.phase}</strong><span>{item.detail}</span><code>{item.durationMs === null ? 'running' : `${item.durationMs} ms`}</code></li>)}</ol>{operation.error && <div className="error">{operation.error}</div>}</details>}<RenderedBoundaryPanel title="Hovered rendered boundary" boundary={preview.hovered} /><IdentityPanel title="Selected boundary" identity={resolvedIdentity} />{preview.selected && <section className="evidence-card"><h3>Eligible ancestors</h3>{preview.selected.ancestorSelectionReceipts.length ? preview.selected.ancestorSelectionReceipts.map((receipt, index) => <button className="ancestor" key={receipt} onClick={() => onSelectAncestor(slot, index + 1)}>Instrumented parent boundary {index + 1}</button>) : <p className="muted">No instrumented ancestor.</p>}<button className="text-action" onClick={() => onClear(slot)}>Clear selection</button></section>}<SlicePanel artifact={preview.analysis.artifact} status={preview.analysis.status} error={preview.analysis.error} /></section>; })}</aside></div>;
 }
 
 export function App() {
@@ -255,6 +264,9 @@ export function App() {
   const [confirmedSelections, setConfirmedSelections] = useState<Record<PreviewSlotId, boolean>>({ left: false, right: false });
   const [resultBranch, setResultBranch] = useState<string | null>(null);
   const [candidateBranch, setCandidateBranch] = useState<string>(demoScenario.branchRelationship.result.ref);
+  const [foundation, setFoundation] = useState<IntegrationFoundation | null>(null);
+  const [planSelections, setPlanSelections] = useState<Record<PreviewSlotId, LocalIntegrationSelection | null>>({ left: null, right: null });
+  const [resultPlanIdentity, setResultPlanIdentity] = useState<string | null>(null);
   const [resultView, setResultView] = useState<'left' | 'right' | 'result'>('result');
   const frames = useRef<Record<PreviewSlotId, HTMLIFrameElement | null>>({ left: null, right: null });
   const operationControllers = useRef<Partial<Record<PreviewSlotId, AbortController>>>({});
@@ -266,6 +278,7 @@ export function App() {
       const preferred = value.preferredBranches?.length ? value.preferredBranches : [demoScenario.versions.left.branch, demoScenario.versions.right.branch];
       const ordered = [...preferred, ...value.branches.filter(branch => !preferred.includes(branch))];
       setCandidateBranch(value.candidateBranch ?? demoScenario.branchRelationship.result.ref);
+      setFoundation(value.foundation);
       dispatch({ type: 'repository-loaded', branches: ordered, clean: value.clean });
     }).catch(error => { if ((error as Error).name !== 'AbortError') dispatch({ type: 'repository-failed', error: String(error) }); });
     return () => controller.abort();
@@ -321,9 +334,9 @@ export function App() {
     }
     if (message.type === 'preview-state') dispatch({ type: 'sync-status', status: 'The product context and route match in both versions.', error: null });
     if (message.type === 'boundary-selected') {
-      const identity = (message.payload as { identity: SourceIdentity }).identity;
+      const selection = message.payload as RenderedBoundarySelection;
       send(previewId, 'disable-selection');
-      void analyzeIdentity(previewId, identity);
+      void analyzeRenderedSelection(previewId, selection.selectionReceipt);
     }
   }
 
@@ -359,16 +372,19 @@ export function App() {
 
   async function startBoth() { await Promise.all(slots.map(previewId => startPreview(previewId))); }
   function toggleSelection(previewId: PreviewSlotId) { const preview = state.previews[previewId]; send(previewId, preview.selecting ? 'disable-selection' : 'enable-selection'); }
-  async function analyzeIdentity(previewId: PreviewSlotId, selection: SourceIdentity) {
+  async function analyzeRenderedSelection(previewId: PreviewSlotId, selectionReceipt: string) {
     dispatch({ type: 'analysis-started', previewId });
     try {
-      const response = await fetch(`/api/previews/${previewId}/analysis`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selection }) });
-      const value = await response.json();
+      const response = await fetch(`/api/previews/${previewId}/analysis`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selectionReceipt }) });
+      const value = await response.json() as { artifact?: FeatureSliceArtifact; selection?: LocalIntegrationSelection; foundation?: IntegrationFoundation; error?: string };
       if (!response.ok) throw new Error(value.error ?? response.statusText);
-      const artifact = value as FeatureSliceArtifact;
+      if (!value.artifact || !value.selection || !value.foundation) throw new Error('The server did not return canonical selection evidence.');
+      const artifact = value.artifact;
       const decision = guidedSelectionDecision(previewId, artifact);
       if (decision.allowed) {
         dispatch({ type: 'analysis-finished', previewId, artifact });
+        setPlanSelections(current => ({ ...current, [previewId]: value.selection! }));
+        setFoundation(value.foundation);
         setConfirmedSelections(current => ({ ...current, [previewId]: false }));
       }
       else dispatch({ type: 'analysis-guidance-refused', previewId, artifact, error: decision.message });
@@ -381,8 +397,8 @@ export function App() {
   }
 
   const readyCount = slots.filter(id => state.previews[id].status === 'ready').length;
-  const generationInputs = useMemo(() => slots.map(id => ({ artifact: state.previews[id].analysis.artifact, status: confirmedSelections[id] ? state.previews[id].analysis.status : 'awaiting-confirmation', sessionId: state.previews[id].session?.sessionId ?? null })), [state.previews.left.analysis, state.previews.right.analysis, state.previews.left.session, state.previews.right.session, confirmedSelections]);
-  const selectedFeatureSummary = slots.map(slot => featureLabel(state.previews[slot].analysis.artifact ?? state.previews[slot].selected?.identity)).join(' · ');
+  const generationInputs = useMemo(() => slots.map(id => ({ artifact: state.previews[id].analysis.artifact, selection: planSelections[id], status: confirmedSelections[id] ? state.previews[id].analysis.status : 'awaiting-confirmation', sessionId: state.previews[id].session?.sessionId ?? null })), [state.previews.left.analysis, state.previews.right.analysis, state.previews.left.session, state.previews.right.session, confirmedSelections, planSelections]);
+  const selectedFeatureSummary = slots.map(slot => featureLabel(state.previews[slot].analysis.artifact)).join(' · ');
   const excludedChangeSummary = [...new Set(slots.flatMap(slot => state.previews[slot].analysis.artifact?.slice.excludedChanges.map(change => change.path) ?? []))].join(' · ') || 'No unrelated branch changes were identified.';
   const workspaceStatus = readyCount === 2 ? 'Both live apps are ready to compare' : readyCount === 1 ? 'One live app is ready' : state.repositoryStatus;
   function reviseSelections() {
@@ -391,6 +407,7 @@ export function App() {
       dispatch({ type: 'clear-selection', previewId: slot });
     }
     setConfirmedSelections({ left: false, right: false });
+    setPlanSelections({ left: null, right: null });
   }
   function startGuidedComparison() {
     setGuidedStarted(true);
@@ -402,8 +419,10 @@ export function App() {
     await fetch('/api/preview', { method: 'DELETE' }).catch(() => undefined);
     setOperations({ left: null, right: null });
     setResultBranch(null);
+    setResultPlanIdentity(null);
     setComparisonLayout('both');
     setConfirmedSelections({ left: false, right: false });
+    setPlanSelections({ left: null, right: null });
     dispatch({ type: 'reset-previews' });
   }
   function switchResultView(view: 'left' | 'right' | 'result') {
@@ -458,8 +477,8 @@ export function App() {
         const panelTitle = combinedPreview ? 'Combined result' : presentation.title;
         const panelDescription = combinedPreview ? 'The verified output containing both selected UI changes.' : presentation.description;
         const guidedPolicyRefusal = preview.analysis.status === 'refused' && Boolean(preview.analysis.artifact);
-        const selectedLabel = guidedPolicyRefusal ? 'Choose a narrower feature' : featureLabel(preview.analysis.artifact ?? preview.selected?.identity);
-        return <article className="version-card" data-preview-id={previewId} key={previewId}>
+        const selectedLabel = guidedPolicyRefusal ? 'Choose a narrower feature' : featureLabel(preview.analysis.artifact);
+        return <article className="version-card" data-preview-id={previewId} data-plan-identity={combinedPreview ? resultPlanIdentity ?? undefined : undefined} data-candidate-preview={combinedPreview ? 'generated-worktree' : undefined} key={previewId}>
           <header className="version-header"><div><h2>{panelTitle}</h2><code>{preview.branch}</code><p>{panelDescription}</p></div><div className="preview-health"><span className={`version-status status-${preview.status}`}>{preview.status === 'ready' ? 'Live and synchronized' : readablePhase(operation)}</span><button className="text-action" onClick={() => startPreview(previewId)} disabled={!preview.branch || !state.repositoryClean}>Restart live app</button></div></header>
           {preview.errors.runtime && <div className="error" role="alert"><strong>This live app could not load.</strong> {preview.errors.runtime}<button onClick={() => startPreview(previewId)}>Try again</button></div>}
           {!combinedPreview && preview.invalidation && <div className="warning-message"><strong>The previous choice was cleared.</strong><span>{preview.invalidation}</span></div>}
@@ -480,7 +499,7 @@ export function App() {
       })}
     </main>
     <section className="sync-summary" aria-label="Synchronization status"><span className={readyCount === 2 ? 'sync-ok' : ''}>↔</span><div><strong>{readyCount === 2 ? 'Live apps linked' : 'Linking live apps'}</strong><span>{state.synchronizationStatus}</span></div></section>
-    {!resultBranch && <CandidatePanel inputs={generationInputs} candidateBranch={candidateBranch} onRevise={reviseSelections} onEvidence={() => setTechnicalOpen(true)} onLaunch={branch => { setResultBranch(branch); setResultView('result'); setComparisonLayout('right'); dispatch({ type: 'set-branch', previewId: 'right', branch }); void startPreview('right', branch); }} />}
+    {!resultBranch && <CandidatePanel inputs={generationInputs} foundation={foundation} candidateBranch={candidateBranch} onRevise={reviseSelections} onEvidence={() => setTechnicalOpen(true)} onLaunch={report => { const branch = report.repository.candidateBranch; setResultBranch(branch); setResultPlanIdentity(report.integrationPlan?.identity ?? null); setResultView('result'); setComparisonLayout('right'); dispatch({ type: 'set-branch', previewId: 'right', branch }); void startPreview('right', branch); }} />}
     {resultBranch && <div className="result-actions"><button className="evidence-link" onClick={() => switchResultView('left')}>Compare sources</button><button className="evidence-link" onClick={() => setTechnicalOpen(true)}>View changed files and verification evidence</button><button className="evidence-link" onClick={() => void navigator.clipboard?.writeText(resultBranch)}>Copy branch name</button></div>}
     <TechnicalDrawer open={technicalOpen} onClose={() => setTechnicalOpen(false)} state={state} operations={operations} onSelectAncestor={(slot, index) => send(slot, 'select-ancestor', { index })} onClear={slot => { send(slot, 'clear-selection'); dispatch({ type: 'clear-selection', previewId: slot }); }} />
   </div>;

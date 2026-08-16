@@ -125,6 +125,7 @@ export class PreviewController {
   private active = new Map<string, { session: PreviewSession; child: ChildProcess }>();
   private prepared = new Map<string, PreparedPreview>();
   private generations = new Map<string, number>();
+  private instrumentationChannels = new Map<string, { identity: PreviewIdentity; branchCommit: string; token: string }>();
 
   constructor(private repository: RepositoryController, private previewViteConfig: string, private previewRoute = '/catalogue') {}
 
@@ -140,6 +141,7 @@ export class PreviewController {
   }
 
   private async stopRuntime(previewId: string) {
+    this.instrumentationChannels.delete(previewId);
     const current = this.active.get(previewId);
     if (!current) return;
     this.active.delete(previewId);
@@ -201,6 +203,8 @@ export class PreviewController {
       const generation = (this.generations.get(previewId) ?? 0) + 1;
       this.generations.set(previewId, generation);
       const identity = createPreviewIdentity(previewId, branch, generation);
+      const instrumentationToken = randomUUID();
+      this.instrumentationChannels.set(previewId, { identity, branchCommit, token: instrumentationToken });
       const origin = `http://127.0.0.1:${port}`;
       const viteCli = resolve(prepared.worktreePath, 'node_modules/vite/bin/vite.js');
 
@@ -214,6 +218,7 @@ export class PreviewController {
           UI_MERGE_PREVIEW_ID: previewId,
           UI_MERGE_PREVIEW_SESSION_ID: identity.sessionId,
           UI_MERGE_PREVIEW_GENERATION: String(generation),
+          UI_MERGE_INSTRUMENTATION_TOKEN: instrumentationToken,
           UI_MERGE_STUDIO_ORIGIN: process.env.UI_MERGE_STUDIO_ORIGIN ?? 'http://127.0.0.1:4310'
         },
         stdio: ['ignore', 'pipe', 'pipe']
@@ -255,6 +260,7 @@ export class PreviewController {
       done();
       return session;
     } catch (error) {
+      this.instrumentationChannels.delete(previewId);
       if (child) await stopTree(child);
       if (createdThisAttempt || options.signal?.aborted) await this.discardPrepared(previewId).catch(() => undefined);
       if (options.signal?.aborted) throw new PreviewCancelledError();
@@ -274,4 +280,9 @@ export class PreviewController {
 
   session(previewId = 'primary') { return this.active.get(previewId)?.session ?? null; }
   sessions() { return [...this.active.values()].map(value => value.session); }
+  authenticateInstrumentation(previewId: string, token: string, identity: PreviewIdentity) {
+    const channel = this.instrumentationChannels.get(previewId);
+    if (!channel || channel.token !== token || channel.identity.previewId !== identity.previewId || channel.identity.sessionId !== identity.sessionId || channel.identity.generation !== identity.generation || channel.identity.branch !== identity.branch) return null;
+    return { ...channel.identity, branchCommit: channel.branchCommit };
+  }
 }

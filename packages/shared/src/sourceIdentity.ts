@@ -20,6 +20,14 @@ export interface BoundarySelection {
   ancestors: SourceIdentity[];
 }
 
+export interface RenderedBoundaryReference {
+  selectionReceipt: string;
+}
+
+export interface RenderedBoundarySelection extends RenderedBoundaryReference {
+  ancestorSelectionReceipts: string[];
+}
+
 export interface SelectionRefusal {
   confidence: 'refused';
   reason: string;

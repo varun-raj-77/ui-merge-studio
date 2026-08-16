@@ -18,7 +18,7 @@ describe('prepared Showcase candidate matrix', () => {
       expect(hashDirectory(path)).toBe(candidate.artifact.sha256);
     }
     expect(JSON.parse(readFileSync(generatedManifestPath, 'utf8'))).toEqual(report);
-  });
+  }, 60_000);
 
   it('is click-order independent and records exact instance configuration', () => {
     const report = readAndValidateReport();

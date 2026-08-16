@@ -13,10 +13,13 @@ export default defineConfig({
     trace: 'retain-on-failure'
   },
   webServer: {
-    command: 'npm run build && npm run preview:showcase',
+    command: 'npm run dev',
     cwd: '../..',
     url: 'http://127.0.0.1:4310',
     timeout: 120_000,
-    reuseExistingServer: false
+    reuseExistingServer: false,
+    env: {
+      UI_MERGE_CANDIDATE_BRANCH: 'phase0-canonical-e2e-result'
+    }
   }
 });
