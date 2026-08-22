@@ -20,6 +20,7 @@
     "test:e2e": "playwright test -c apps/studio/playwright.config.ts",
     "external:prepare": "tsx scripts/prepare-external-vite-falsification.ts",
     "test:e2e:external": "playwright test -c apps/studio/playwright.external.config.ts",
+    "test:e2e:external-selection": "playwright test -c apps/studio/playwright.external-selection.config.ts",
     "showcase:prepare": "tsx scripts/prepare-showcase.ts",
     "showcase:validate": "tsx scripts/validate-showcase.ts",
     "build": "npm run showcase:validate && vite build -c apps/studio/vite.config.ts",

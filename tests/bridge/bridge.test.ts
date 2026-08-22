@@ -25,6 +25,7 @@ describe('versioned preview bridge', () => {
   test('rejects browser-authored source identities even when their session fields look current', () => {
     const identity = { boundaryId: 'abc', instanceId: 'abc-1', repositoryRelativePath: 'src/View.tsx', line: 4, column: 2, componentName: 'View', exportName: 'View', branch: 'main', previewId: 'left', sessionId: 'session-new', generation: 2, confidence: 'exact' as const };
     expect(parsePreviewMessage({ version: bridgeVersion, preview, type: 'boundary-selected', payload: { identity, ancestors: [] } })).toBeNull();
+    expect(parsePreviewMessage({ version: bridgeVersion, preview, type: 'boundary-selected', payload: { selectionReceipt, ancestorSelectionReceipts: [], identity } })).toBeNull();
   });
   test('validates identity-bound commands, synchronization payloads, and ancestor indexes', () => {
     expect(createStudioCommand(preview, 'enable-selection').type).toBe('enable-selection');

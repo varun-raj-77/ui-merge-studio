@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
@@ -49,7 +50,7 @@ export default {
     }
   }]
 };`);
-  write(root, 'src/main.tsx', "import React from 'react'; import { createRoot } from 'react-dom/client'; createRoot(document.getElementById('root')!).render(React.createElement('h1', null, 'External preview healthy'));\n");
+  write(root, 'src/main.tsx', "import React from 'react'; import { createRoot } from 'react-dom/client'; function Feature(){return <h1>External preview healthy</h1>} function Layout(){return <main><Feature/></main>} createRoot(document.getElementById('root')!).render(<Layout/>);\n");
   write(root, 'node_modules/.keep', 'The integration test supplies the workspace Vite executable.');
   execFileSync('git', ['init', '-b', 'main', root], { stdio: 'ignore' });
   execFileSync('git', ['-C', root, 'add', '-f', '.'], { stdio: 'ignore' });
@@ -80,6 +81,12 @@ async function portIsClosed(url: string) {
 
 class RetryRemovalRepositoryController extends RepositoryController {
   failNextRemovalPath: string | null = null;
+  override async createWorktree(ref: string) {
+    const path = await super.createWorktree(ref);
+    const workspaceVite = resolve(import.meta.dirname, '../../node_modules/vite');
+    symlinkSync(workspaceVite, resolve(path, 'node_modules/vite'), process.platform === 'win32' ? 'junction' : 'dir');
+    return path;
+  }
   override async removeWorktree(path: string) {
     if (this.failNextRemovalPath === path) {
       this.failNextRemovalPath = null;
@@ -100,6 +107,20 @@ describe('external React TypeScript Vite preview lifecycle', () => {
     const discovery = await discoverRepository(root);
     expect(discovery.framework.kind).toBe('react-typescript-vite');
     expect(discovery.packageManager.name).toBe('npm');
+
+    const registrations: unknown[] = [];
+    const instrumentationServer = createServer(async (request, response) => {
+      const chunks: Buffer[] = [];
+      for await (const chunk of request) chunks.push(Buffer.from(chunk));
+      if (request.method === 'POST') registrations.push(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end('{"registered":true}');
+    });
+    await new Promise<void>(accept => instrumentationServer.listen(0, '127.0.0.1', accept));
+    const address = instrumentationServer.address();
+    if (!address || typeof address === 'string') throw new Error('Instrumentation test server did not allocate a port.');
+    const previousOrigin = process.env.UI_MERGE_STUDIO_ORIGIN;
+    process.env.UI_MERGE_STUDIO_ORIGIN = `http://127.0.0.1:${address.port}`;
 
     const repository = new RetryRemovalRepositoryController(root);
     let failProcessCleanupFor = 0;
@@ -140,7 +161,12 @@ describe('external React TypeScript Vite preview lifecycle', () => {
       expect(existsSync(left.worktreePath)).toBe(true);
       expect(controller.isAlive('left')).toBe(true);
       expect(controller.isAlive('right')).toBe(true);
-      await expect(fetch(`${left.origin}/src/main.tsx`).then(response => response.text())).resolves.toContain('External preview healthy');
+      const html = await fetch(left.url).then(response => response.text());
+      const transformedSource = await fetch(`${left.origin}/src/main.tsx`).then(response => response.text());
+      expect(html).toContain('/@ui-merge-studio/selection-runtime');
+      expect(transformedSource).toContain('External preview healthy');
+      expect(transformedSource).toContain('data-ums-boundary');
+      expect(registrations.length).toBeGreaterThan(0);
 
       failProcessCleanupFor = left.processId;
       await expect(controller.stop('left')).rejects.toThrow('injected process-tree cleanup failure');
@@ -190,6 +216,9 @@ describe('external React TypeScript Vite preview lifecycle', () => {
       failProcessCleanupFor = 0;
       repository.failNextRemovalPath = null;
       await controller.stopAll();
+      if (previousOrigin === undefined) delete process.env.UI_MERGE_STUDIO_ORIGIN;
+      else process.env.UI_MERGE_STUDIO_ORIGIN = previousOrigin;
+      await new Promise<void>((accept, reject) => instrumentationServer.close(error => error ? reject(error) : accept()));
     }
 
     for (const pid of descendantPids) expect(isProcessAlive(pid)).toBe(false);

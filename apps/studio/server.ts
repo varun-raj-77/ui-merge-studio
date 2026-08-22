@@ -54,8 +54,8 @@ const server = createServer(async (request, response) => {
     const analysisPreviewId = analysisPreviewRoute(request.url);
     if (analysisPreviewId && request.method === 'POST') {
       const session = previews.session(analysisPreviewId); if (!session || session.status !== 'running' || !previews.isAlive(analysisPreviewId)) return json(response, 409, { error: 'The preview session is not running.' });
-      const value = await body(request); const selectionReceipt = value && typeof value === 'object' ? (value as { selectionReceipt?: unknown }).selectionReceipt : null;
-      if (typeof selectionReceipt !== 'string') return json(response, 400, { error: 'A rendered-selection receipt is required; browser-authored source metadata is not accepted.' });
+      const value = await body(request); const selectionReceipt = value && typeof value === 'object' && !Array.isArray(value) ? (value as { selectionReceipt?: unknown }).selectionReceipt : null;
+      if (typeof selectionReceipt !== 'string' || !value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 1) return json(response, 400, { error: 'Only one rendered-selection receipt is accepted; browser-authored source metadata is not accepted.' });
       const selection = planAuthority.resolveRenderedSelection(session, selectionReceipt);
       const artifact = await analyzer.analyze({ baseRef, branchRef: session.branch, expectedBranchCommit: session.branchCommit, selection });
       return json(response, 200, await planAuthority.register(session, artifact, previewPath));

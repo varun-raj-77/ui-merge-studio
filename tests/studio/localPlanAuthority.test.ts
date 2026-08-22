@@ -67,6 +67,17 @@ describe('local canonical-plan authority', () => {
     });
     await expect(Promise.resolve().then(() => authority.resolveRenderedSelection(left, `rendered-${'b'.repeat(32)}`)))
       .rejects.toThrow(/unknown or stale/i);
+
+    const staleGeneration = { ...left, generation: left.generation + 1, sessionId: 'left-restarted-session' };
+    await expect(Promise.resolve().then(() => authority.resolveRenderedSelection(staleGeneration, selectionReceipt)))
+      .rejects.toThrow(/unknown or stale/i);
+    await expect(Promise.resolve().then(() => authority.resolveRenderedSelection(sessions.get('right')!, selectionReceipt)))
+      .rejects.toThrow(/unknown or stale/i);
+
+    const otherRoot = resolve(fixture, '..');
+    const otherRepositoryAuthority = new LocalPlanAuthority(otherRoot, localRepositoryId(otherRoot), 'main', 'unused-result', () => null, () => []);
+    await expect(Promise.resolve().then(() => otherRepositoryAuthority.resolveRenderedSelection(left, selectionReceipt)))
+      .rejects.toThrow(/unknown or stale/i);
   });
 
   test('projects only current server-owned analyses from the canonical plan', async () => {

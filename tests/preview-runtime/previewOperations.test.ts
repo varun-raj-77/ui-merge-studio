@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import { PreviewCancelledError, type PreviewController, type PreviewSession } from '../../packages/preview-runtime/src/previewController';
 import { PreviewOperationManager } from '../../packages/preview-runtime/src/previewOperations';
+import { ExternalViteInstrumentationRefusal } from '../../packages/preview-runtime/src/viteInstrumentation';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -110,5 +111,19 @@ describe('preview operation manager', () => {
     await stopping;
     expect(stop).toHaveBeenCalledOnce();
     expect(stop).toHaveBeenCalledWith('left');
+  });
+
+  test('returns a structured refusal for unsupported external Vite composition', async () => {
+    const manager = new PreviewOperationManager({
+      start: vi.fn().mockRejectedValue(new ExternalViteInstrumentationRefusal('multiple native configs')),
+      stop: vi.fn(),
+      stopAll: vi.fn()
+    } as unknown as PreviewController, () => '00000000-0000-0000-0000-000000000006');
+    const launch = manager.launch('left', 'main');
+    await eventually(() => expect(manager.get(launch.operationId)?.state).toBe('failed'));
+    expect(manager.get(launch.operationId)?.refusal).toEqual({
+      code: 'unsupported-vite-instrumentation',
+      evidence: 'multiple native configs'
+    });
   });
 });

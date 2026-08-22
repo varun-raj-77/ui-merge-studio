@@ -21,6 +21,7 @@ import {
   type SupportedPackageManager,
   withViteArguments
 } from './runtimeCommands';
+import { writeExternalViteInstrumentationConfig } from './viteInstrumentation';
 
 export type PreviewStatus = 'starting' | 'running' | 'failed' | 'stopped';
 export type PreviewLaunchPhase =
@@ -310,8 +311,18 @@ export class PreviewController {
       const origin = `http://127.0.0.1:${port}`;
       const capabilities = await detectFixtureCapabilities(prepared.worktreePath);
       const controlledFixture = capabilities.fixtureContext?.contract === 'product-catalogue-v1';
+      const studioOrigin = process.env.UI_MERGE_STUDIO_ORIGIN ?? 'http://127.0.0.1:4310';
+      const instrumentationConfig = controlledFixture
+        ? this.previewViteConfig
+        : (await writeExternalViteInstrumentationConfig({
+            repositoryRoot: prepared.worktreePath,
+            metadata: runtimeMetadata,
+            identity,
+            studioOrigin,
+            capabilities
+          })).wrapperPath;
       const viteArgs = [
-        ...(controlledFixture ? ['--config', this.previewViteConfig] : []),
+        '--config', instrumentationConfig,
         '--host', '127.0.0.1',
         '--port', String(port),
         '--strictPort'
@@ -330,7 +341,7 @@ export class PreviewController {
           UI_MERGE_PREVIEW_SESSION_ID: identity.sessionId,
           UI_MERGE_PREVIEW_GENERATION: String(generation),
           UI_MERGE_INSTRUMENTATION_TOKEN: instrumentationToken,
-          UI_MERGE_STUDIO_ORIGIN: process.env.UI_MERGE_STUDIO_ORIGIN ?? 'http://127.0.0.1:4310'
+          UI_MERGE_STUDIO_ORIGIN: studioOrigin
         },
         stdio: ['ignore', 'pipe', 'pipe'],
         detached: process.platform !== 'win32',
@@ -366,7 +377,7 @@ export class PreviewController {
         failure: null
       };
       this.sessionStates.set(previewId, session);
-      if (controlledFixture) this.instrumentationChannels.set(previewId, { identity, branchCommit, token: instrumentationToken });
+      this.instrumentationChannels.set(previewId, { identity, branchCommit, token: instrumentationToken });
       done();
       if (handle.exited) {
         const output = handle.diagnostics.toString();

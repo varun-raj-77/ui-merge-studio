@@ -23,7 +23,7 @@ const foundation: IntegrationFoundation = { repositoryId: 'test-repository', bra
 function analysisEvidence(value: FeatureSliceArtifact) { return { artifact: value, foundation, selection: { capabilityId: `analyzed-selection:${value.analysisId}`, capabilityKind: 'whole-feature', sourceBranch: value.slice.repository.branchRef, sourceCommitSha: value.slice.repository.branchCommit, route: '/catalogue', pageId: '/catalogue', targetIds: [value.slice.selection.boundaryId] } }; }
 function readyOperation(previewId: 'left' | 'right', branch: string): PreviewOperation {
   const value = session(previewId, branch);
-  return { operationId: `${previewId}-operation`, previewId, branch, state: 'ready', requestedAt: '2026-01-01T00:00:00.000Z', startedAt: '2026-01-01T00:00:00.001Z', completedAt: '2026-01-01T00:00:00.002Z', updatedAt: '2026-01-01T00:00:00.002Z', phases: [], result: value, error: null, supersededBy: null };
+  return { operationId: `${previewId}-operation`, previewId, branch, state: 'ready', requestedAt: '2026-01-01T00:00:00.000Z', startedAt: '2026-01-01T00:00:00.001Z', completedAt: '2026-01-01T00:00:00.002Z', updatedAt: '2026-01-01T00:00:00.002Z', phases: [], result: value, error: null, refusal: null, supersededBy: null };
 }
 function appFetch(rightComponent = 'ProductQuickView') {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
