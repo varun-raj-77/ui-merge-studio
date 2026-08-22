@@ -48,6 +48,19 @@ export interface CandidateGenerationRequest {
   /** Trace evidence for requests projected from a validated canonical Integration Plan V2. */
   integrationPlan?: { version: 2; identity: string };
 }
+
+export interface JsxRegionProjectionEvidence {
+  mode: 'insert-child';
+  renderedBoundary: { path: string; symbol: string };
+  integrationBoundary: { path: string; symbol: string };
+  sourceNode: { kind: 'JSXElement'; name: string; region: SourceRegion; structuralHash: string };
+  baseParent: { kind: 'JSXElement' | 'JSXFragment'; name: string; region: SourceRegion; structuralHash: string };
+  baseTarget: { region: SourceRegion | null; structuralHash: string | null };
+  anchor: { side: 'before' | 'after' | 'only-child'; structuralHash: string | null };
+  requiredBindings: string[];
+  excludedSourceSiblingCount: number;
+}
+
 export interface CandidateOperation {
   id: string;
   kind: CandidateOperationKind;
@@ -63,6 +76,7 @@ export interface CandidateOperation {
   declarationNames?: string[];
   exportRequirement?: { exported: string; imported: string; source: string };
   sourceConfiguration?: CandidateSourceConfiguration;
+  jsxProjection?: JsxRegionProjectionEvidence;
 }
 export interface CandidateConflict {
   id: string;

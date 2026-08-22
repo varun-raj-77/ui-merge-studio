@@ -38,15 +38,18 @@ http://127.0.0.1:4310/?mode=showcase
 - Generic development-time React element-to-source instrumentation.
 - Synchronized compatible previews with fixed viewport presets.
 - Git/AST dependency slicing from a rendered React selection.
-- Exclusion of unrelated branch changes.
+- Exclusion of unrelated branch changes when source ownership is structurally separable.
 - One canonical Integration Plan V2 from rendered decisions to server validation, generation evidence, and the final candidate preview.
 - Server-owned current-session analysis: the preview transform privately registers source mappings, normal analysis requests carry opaque session receipts rather than browser-authored source identities, and the browser cannot supply dependency lists or feature-slice artifacts as generation authority.
 - Deterministic candidate generation from the common base.
+- Deterministic AST projection for a bounded JSX subset, with preflight refusal when parent/anchor identity or surrounding declaration ownership is ambiguous.
 - TypeScript, test, build, and runtime verification.
 - Refusal before mutation for unsupported or conflicting slices.
 - Bounded external Vite candidate generation on one unrelated repository.
 
-The external proof generated a six-file candidate from base `8223897`, preserved both source branches, passed install, TypeScript, lint, build, and runtime verification, and reproduced the same candidate tree. This is evidence for one conventional Vite repository—not universal React support.
+The historical external proof generated a six-file candidate from base `8223897`. Prompt 014 then falsified declaration-boundary selectivity: required integration and an unrelated sibling inside one parent were both copied. Prompt 015 preserved that failure and reran the same rendered selections with structural JSX projection. Candidate tree `ecc68ab021158f978aa184640605f9a7b21d5949` contains both selected features and required dependencies, excludes the co-located density control and separate footer edit, passes install/lint/TypeScript build/runtime checks, and replays identically. This proves one bounded operation shape on one unrelated repository—not arbitrary JSX merging.
+
+Prompt 015G aligns the controlled Product Catalogue with that same operation shape. Category Sidebar and Quick View are now integrated as source-derived direct children of structurally unchanged existing parents, retain meaningful dependency/test depth, exclude their unrelated branch changes, and preserve the old declaration-wide shapes as refusal regressions. Production transformation semantics were not widened.
 
 ## Product Catalogue sample
 
@@ -90,11 +93,13 @@ npm run test:e2e
 npm run build
 ```
 
+The pinned external falsification setup is reproducible with `npm run external:prepare` followed by `npm run test:e2e:external`. The setup clones exact upstream commit `8223897` and creates disposable validation branches under `.validation-worktrees`; it does not modify the original checkout.
+
 Engineering records: [Architecture decisions](docs/adr/) · [Evaluation](docs/evaluation.md) · [Limitations](docs/limitations.md) · [Risk register](docs/risk-register.md)
 
 ## Limitations
 
-Current execution is bounded to local React + TypeScript + Vite repositories using npm. Although some earlier documentation named pnpm and yarn, preview dependency preparation and default candidate verification currently invoke npm; pnpm/yarn execution is not proven. Next.js, arbitrary monorepos, cloud repository execution, GitHub authentication, collaboration, and guaranteed integration of arbitrary branch combinations are not supported.
+Current execution is bounded to local React + TypeScript + Vite repositories using npm. Region projection supports only a uniquely identified added JSX component that is already a direct child of one structurally compatible parent, with a unique unchanged sibling anchor or an empty parent. Expression-enclosing child replacement and any failed region projection are refused; a region operation never falls back to whole-declaration replacement. Independently declaration-owned changes may still use declaration replacement, but integration-boundary expansion alone is not ownership proof. Although some earlier documentation named pnpm and yarn, preview dependency preparation and default candidate verification currently invoke npm; pnpm/yarn execution is not proven. Next.js, arbitrary monorepos, cloud repository execution, GitHub authentication, collaboration, and guaranteed integration of arbitrary branch combinations are not supported.
 
 UI Merge Studio assumes the local developer and local browser/processes are trusted. Selection receipts establish normal-flow and current-session provenance and keep browser-authored source metadata from becoming generation authority; they are not tamper-proof proof of a physical UI click. Deliberate bypass through DevTools, transformed-module inspection, or direct localhost requests is outside the Phase-0 threat model.
 

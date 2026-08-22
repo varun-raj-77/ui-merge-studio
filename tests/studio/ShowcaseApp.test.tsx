@@ -167,7 +167,7 @@ describe('quiet comparison workspace', () => {
     fireEvent.click(evidenceButton);
 
     const dialog = screen.getByRole('dialog', { name: 'Quick View · Task Lamp' });
-    expect(dialog).toHaveTextContent('ProductCardWithQuickView');
+    expect(dialog).toHaveTextContent('ProductQuickViewShelf');
     expect(within(dialog).getByRole('tab', { name: 'source' })).toHaveAttribute('aria-selected', 'true');
     const closeButton = within(dialog).getByRole('button', { name: 'Close technical evidence' });
     const verificationTab = within(dialog).getByRole('tab', { name: 'verification' });

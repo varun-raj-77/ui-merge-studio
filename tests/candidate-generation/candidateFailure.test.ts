@@ -25,6 +25,15 @@ async function analyzedPair(leftBody:string,rightBody:string,rightSelection:'Lef
   ]);
   return{root,repository:new GitSourceRepository(root),base:git(root,['rev-parse','main']),artifacts};
 }
+async function analyzedSelectedIntegration(baseApp:string,sourceApp:string,candidateBranch:string){
+  const root=createRepository({'.gitignore':'.ums/\n','src/App.tsx':baseApp});git(root,['switch','-c','feature']);
+  writeFiles(root,{'src/App.tsx':sourceApp,'src/Selected.tsx':"export function Selected(){return <aside>Selected behavior</aside>}\n"});
+  const branchCommit=commit(root,'selected integration plus co-located changes');
+  const selected:SourceIdentity={boundaryId:'selected',instanceId:'selected-1',repositoryRelativePath:'src/Selected.tsx',line:1,column:8,componentName:'Selected',exportName:'Selected',branch:'feature',previewId:'left',sessionId:'session',generation:1,confidence:'exact'};
+  const artifact=await new FeatureSliceAnalyzer(root).analyze({baseRef:'main',branchRef:'feature',expectedBranchCommit:branchCommit,selection:selected});
+  const repository=new GitSourceRepository(root);const base=await repository.resolveRef('main');const generator=new CandidateGenerator(root,{verificationCommands:noOpVerification});
+  return{root,repository,generator,request:{repositoryRoot:root,baseRef:'main',expectedBaseCommit:base,candidateBranch,artifacts:[artifact],analyzerSchemaVersion:2 as const}};
+}
 
 test('combines compatible declarations in one shared file and repeats with an identical tree',async()=>{
   const setup=await analyzedPair("export function Left(){return <div>LEFT</div>}\nexport function Right(){return <div>base right</div>}\n","export function Left(){return <div>base left</div>}\nexport function Right(){return <div>RIGHT</div>}\n");
@@ -47,6 +56,82 @@ test('reconstructs exported arrow-function components from their complete variab
   const output=await repository.readFile('combined-result','src/Shared.tsx');expect(output).toContain('<div>LEFT</div>');expect(output).toContain('<div>RIGHT</div>');
 });
 
+test('projects an evidence-connected JSX child without copying an unrelated sibling from the same parent declaration',async()=>{
+  const base="export function App(){return <main><section>Foundation content</section></main>}\n";
+  const root=createRepository({'.gitignore':'.ums/\n','src/App.tsx':base});
+  git(root,['switch','-c','feature']);
+  writeFiles(root,{
+    'src/App.tsx':"import { SelectedBanner } from './SelectedBanner';\nexport function App(){return <main><SelectedBanner/><section>Foundation content</section><p>Unselected sibling behavior</p></main>}\n",
+    'src/SelectedBanner.tsx':"export function SelectedBanner(){return <aside>Selected behavior</aside>}\n"
+  });
+  const branchCommit=commit(root,'selected child plus unrelated sibling');
+  const selected:SourceIdentity={boundaryId:'selected-banner',instanceId:'selected-banner-1',repositoryRelativePath:'src/SelectedBanner.tsx',line:1,column:8,componentName:'SelectedBanner',exportName:'SelectedBanner',branch:'feature',previewId:'left',sessionId:'session',generation:1,confidence:'exact'};
+  const artifact=await new FeatureSliceAnalyzer(root).analyze({baseRef:'main',branchRef:'feature',expectedBranchCommit:branchCommit,selection:selected});
+  expect(artifact.slice.status,JSON.stringify(artifact.slice.unresolvedDependencies,null,2)).toBe('resolved');
+  expect(artifact.slice.boundary).toMatchObject({original:'SelectedBanner',analyzed:'App',status:'expanded-to-integration-boundary'});
+  const repository=new GitSourceRepository(root);const baseCommit=await repository.resolveRef('main');
+  const generator=new CandidateGenerator(root,{verificationCommands:noOpVerification});
+  const request={repositoryRoot:root,baseRef:'main',expectedBaseCommit:baseCommit,candidateBranch:'combined-result',artifacts:[artifact],analyzerSchemaVersion:2 as const};
+  const preflight=await generator.preflight(request);
+  expect(preflight.plan.status,JSON.stringify(preflight.plan.unresolved,null,2)).toBe('ready');
+  expect(preflight.plan.operations).toContainEqual(expect.objectContaining({
+    kind:'replace-jsx-region',target:expect.objectContaining({path:'src/App.tsx',symbol:'App'}),
+    jsxProjection:expect.objectContaining({mode:'insert-child',renderedBoundary:{path:'src/SelectedBanner.tsx',symbol:'SelectedBanner'},integrationBoundary:{path:'src/App.tsx',symbol:'App'},excludedSourceSiblingCount:1,anchor:expect.objectContaining({side:'before'})})
+  }));
+  const report=await generator.generate(request);
+  expect(report.status,report.message).toBe('succeeded');
+  const output=await repository.readFile('combined-result','src/App.tsx');
+  expect(output).toContain('SelectedBanner');
+  expect(output).toContain('Foundation content');
+  expect(output).not.toContain('Unselected sibling behavior');
+  expect(report.appliedOperations.find(item=>item.path==='src/App.tsx')?.detail).toContain('SelectedBanner');
+},90_000);
+
+test('refuses ambiguous JSX parent identity before creating a candidate worktree or branch',async()=>{
+  const base="export function App(){return <><main><section>First</section></main><main><section>Second</section></main></>}\n";
+  const root=createRepository({'.gitignore':'.ums/\n','src/App.tsx':base});git(root,['switch','-c','feature']);
+  writeFiles(root,{
+    'src/App.tsx':"import { SelectedBanner } from './SelectedBanner';\nexport function App(){return <><main><SelectedBanner/><section>First</section></main><main><section>Second</section></main></>}\n",
+    'src/SelectedBanner.tsx':"export function SelectedBanner(){return <aside>Selected</aside>}\n"
+  });
+  const branchCommit=commit(root,'ambiguous parent insertion');
+  const selected:SourceIdentity={boundaryId:'selected-banner',instanceId:'selected-banner-1',repositoryRelativePath:'src/SelectedBanner.tsx',line:1,column:8,componentName:'SelectedBanner',exportName:'SelectedBanner',branch:'feature',previewId:'left',sessionId:'session',generation:1,confidence:'exact'};
+  const artifact=await new FeatureSliceAnalyzer(root).analyze({baseRef:'main',branchRef:'feature',expectedBranchCommit:branchCommit,selection:selected});const repository=new GitSourceRepository(root);const baseCommit=await repository.resolveRef('main');
+  const generator=new CandidateGenerator(root,{verificationCommands:noOpVerification});const request={repositoryRoot:root,baseRef:'main',expectedBaseCommit:baseCommit,candidateBranch:'ambiguous-result',artifacts:[artifact],analyzerSchemaVersion:2 as const};
+  const preflight=await generator.preflight(request);expect(preflight.plan.status).toBe('refused');expect(preflight.plan.unresolved.map(item=>item.reason).join(' ')).toContain('found 2 base parents');expect(preflight.plan.unresolved.map(item=>item.reason).join(' ')).toContain('Full declaration replacement fallback is forbidden');expect(preflight.plan.operations.some(item=>item.target.path==='src/App.tsx'&&item.kind==='replace-declaration')).toBe(false);
+  const report=await generator.generate(request);expect(report.status).toBe('refused');expect(report.stage).toBe('plan');expect(report.cleanup.detail).toBe('No worktree created.');expect(await repository.resolveRef('ambiguous-result').catch(()=>null)).toBeNull();
+},90_000);
+
+test('refuses overlapping JSX expression replacement deterministically before candidate mutation',async()=>{
+  const setup=await analyzedSelectedIntegration(
+    "export function App({enabled}:{enabled:boolean}){return <main>{enabled ? <span>Foundation</span> : null}</main>}\n",
+    "import { Selected } from './Selected';\nexport function App({enabled}:{enabled:boolean}){return <main>{enabled ? <span>UNRELATED SOURCE CHANGE</span> : <Selected/>}</main>}\n",
+    'expression-refusal'
+  );
+  const first=await setup.generator.preflight(setup.request);const second=await setup.generator.preflight(setup.request);
+  expect(second).toEqual(first);expect(first.plan.status).toBe('refused');
+  const reason=first.plan.unresolved.map(item=>item.reason).join(' ');expect(reason).toContain('overlaps an expression or enclosing child replacement');expect(reason).toContain('Full declaration replacement fallback is forbidden');
+  expect(first.plan.operations.some(item=>item.target.path==='src/App.tsx'&&(item.kind==='replace-jsx-region'||item.kind==='replace-declaration'))).toBe(false);
+  const firstReport=await setup.generator.generate(setup.request);const secondReport=await setup.generator.generate(setup.request);
+  expect(firstReport).toMatchObject({status:'refused',stage:'plan',cleanup:{detail:'No worktree created.'}});expect(secondReport.message).toBe(firstReport.message);
+  expect(await setup.repository.resolveRef('expression-refusal').catch(()=>null)).toBeNull();expect((await setup.repository.git(['worktree','list','--porcelain']))).not.toContain('ui-merge-studio-candidate-');
+  await expect(setup.repository.readFile('expression-refusal','src/App.tsx')).rejects.toThrow();expect(firstReport.message).not.toContain('UNRELATED SOURCE CHANGE');
+},90_000);
+
+test('refuses the historical controlled-fixture declaration-wide integration shape instead of widening ownership',async()=>{
+  const setup=await analyzedSelectedIntegration(
+    "export function App(){return <main><section>Foundation text</section></main>}\n",
+    "import { useState } from 'react';\nimport { Selected } from './Selected';\nexport function App(){const [count,setCount]=useState(0);const track=()=>setCount(value=>value+1);return <div data-mode=\"source\" onClick={track}><Selected/><section>UNRELATED SOURCE TEXT {count}</section></div>}\n",
+    'declaration-fallback-refusal'
+  );
+  const preflight=await setup.generator.preflight(setup.request);expect(preflight.plan.status).toBe('refused');
+  expect(preflight.plan.unresolved).toContainEqual(expect.objectContaining({path:'src/App.tsx',reason:expect.stringContaining('Full declaration replacement fallback is forbidden')}));
+  expect(preflight.plan.operations.filter(item=>item.target.path==='src/App.tsx')).toEqual([]);
+  expect(JSON.stringify(preflight.plan.operations)).not.toContain('replace-declaration');
+  const report=await setup.generator.generate(setup.request);expect(report).toMatchObject({status:'refused',stage:'plan',cleanup:{detail:'No worktree created.'}});
+  expect(await setup.repository.resolveRef('declaration-fallback-refusal').catch(()=>null)).toBeNull();await expect(setup.repository.readFile('declaration-fallback-refusal','src/App.tsx')).rejects.toThrow();
+},90_000);
+
 test('deduplicates identical declaration requirements while retaining both slice identities',async()=>{
   const same="export function Left(){return <div>SAME</div>}\nexport function Right(){return <div>base right</div>}\n";const setup=await analyzedPair(same,same,'Left');
   const plan=(await new CandidateGenerator(setup.root,{verificationCommands:noOpVerification}).preflight({repositoryRoot:setup.root,baseRef:'main',expectedBaseCommit:setup.base,candidateBranch:'combined-result',artifacts:setup.artifacts,analyzerSchemaVersion:2})).plan;
@@ -67,7 +152,7 @@ test('refuses conflicting import aliases and exported names before mutation',asy
 
 describe('preflight input and unsupported-slice safeguards',()=>{
   const fixture=resolve(import.meta.dirname,'../../fixtures/generated/product-catalogue');const repository=new GitSourceRepository(fixture);
-  async function realArtifacts(){const analyzer=new FeatureSliceAnalyzer(fixture);const make=(branch:string,path:string,line:number,name:string):SourceIdentity=>({boundaryId:name,instanceId:`${name}-instance`,repositoryRelativePath:path,line,column:8,componentName:name,exportName:name,branch,previewId:branch,sessionId:`${branch}-session`,generation:1,confidence:'exact'});return Promise.all([analyzer.analyze({baseRef:'main',branchRef:'branch-a',expectedBranchCommit:await repository.resolveRef('branch-a'),selection:make('branch-a','src/features/catalogue/CategorySidebar.tsx',17,'CategorySidebar')}),analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:make('branch-b','src/features/catalogue/ProductCardWithQuickView.tsx',6,'ProductCardWithQuickView')})]);}
+  async function realArtifacts(){const analyzer=new FeatureSliceAnalyzer(fixture);const make=(branch:string,path:string,line:number,name:string):SourceIdentity=>({boundaryId:name,instanceId:`${name}-instance`,repositoryRelativePath:path,line,column:8,componentName:name,exportName:name,branch,previewId:branch,sessionId:`${branch}-session`,generation:1,confidence:'exact'});return Promise.all([analyzer.analyze({baseRef:'main',branchRef:'branch-a',expectedBranchCommit:await repository.resolveRef('branch-a'),selection:make('branch-a','src/features/catalogue/CategorySidebar.tsx',10,'CategorySidebar')}),analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:make('branch-b','src/features/catalogue/ProductQuickViewShelf.tsx',9,'ProductQuickViewShelf')})]);}
   test('rejects stale base, invalid branch, unsupported schema, partial slices, and missing evidence',async()=>{const artifacts=await realArtifacts();const base=await repository.resolveRef('main');const generator=new CandidateGenerator(fixture);const request={repositoryRoot:fixture,baseRef:'main',expectedBaseCommit:base,candidateBranch:'combined-result',artifacts,analyzerSchemaVersion:2};
     const cases:[string,typeof request][]=[
       ['Stale base commit',{...request,expectedBaseCommit:'0'.repeat(40)}],
@@ -95,7 +180,7 @@ test('refuses the real Product Catalogue product-ID contract conflict before mut
   const fixture=resolve(import.meta.dirname,'../../fixtures/generated/product-catalogue');const repository=new GitSourceRepository(fixture);const analyzer=new FeatureSliceAnalyzer(fixture);
   const make=(branch:string,path:string,line:number,name:string):SourceIdentity=>({boundaryId:name,instanceId:`${name}-instance`,repositoryRelativePath:path,line,column:8,componentName:name,exportName:name,branch,previewId:branch,sessionId:`${branch}-session`,generation:1,confidence:'exact'});
   const artifacts=await Promise.all([
-    analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:make('branch-b','src/features/catalogue/ProductCardWithQuickView.tsx',6,'ProductCardWithQuickView')}),
+    analyzer.analyze({baseRef:'main',branchRef:'branch-b',expectedBranchCommit:await repository.resolveRef('branch-b'),selection:make('branch-b','src/features/catalogue/ProductQuickViewShelf.tsx',9,'ProductQuickViewShelf')}),
     analyzer.analyze({baseRef:'main',branchRef:'branch-incompatible',expectedBranchCommit:await repository.resolveRef('branch-incompatible'),selection:make('branch-incompatible','src/features/catalogue/ProductIdentityBadge.tsx',2,'ProductIdentityBadge')})
   ]);
   expect(artifacts.map(item=>item.slice.status)).toEqual(['resolved','resolved']);

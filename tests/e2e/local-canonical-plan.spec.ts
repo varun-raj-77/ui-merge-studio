@@ -53,7 +53,7 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   await confirmCategory.click();
 
   await rightCard.getByRole('button', { name: 'Choose feature' }).click();
-  const renderedQuickView = branchB.getByRole('heading', { name: 'Desk Stand' }).locator('xpath=ancestor::article/parent::div');
+  const renderedQuickView = branchB.locator('[data-ums-scope="product-quick-view:p-105"]');
   const rightAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/right/analysis') && request.method() === 'POST');
   await renderedQuickView.click({ position: { x: 2, y: 2 } });
   const rightAnalysisBody = (await rightAnalysisRequestPromise).postDataJSON();
@@ -79,6 +79,12 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   expect(outgoing.plan.selections.every(selection => selection.route === '/catalogue' && selection.pageId === '/catalogue')).toBe(true);
   expect(JSON.stringify(outgoing)).not.toMatch(/repositoryRelativePath|componentName|includedChanges|FeatureSliceArtifact/);
   expect(preflight.integrationPlan.identity).toBe(outgoing.planIdentity);
+  expect(preflight.plan.status).toBe('ready');
+  expect(preflight.plan.unresolved).toEqual([]);
+  const regionOperations = preflight.plan.operations.filter((operation:{kind:string})=>operation.kind==='replace-jsx-region');
+  expect(regionOperations).toHaveLength(2);
+  expect(regionOperations.every((operation:{jsxProjection?:{mode:string}})=>operation.jsxProjection?.mode==='insert-child')).toBe(true);
+  expect(preflight.plan.operations.some((operation:{kind:string;target:{symbol:string|null}})=>operation.kind==='replace-declaration'&&(operation.target.symbol==='CatalogueWorkspace'||operation.target.symbol==='ProductGrid'))).toBe(false);
   await expect(page.locator('.combine-tray')).toHaveAttribute('data-plan-identity', outgoing.planIdentity);
   await expect(page.getByRole('button', { name: 'Create verified branch' })).toBeEnabled();
 
@@ -114,7 +120,7 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   await candidate.getByRole('button', { name: 'Desk', exact: true }).click();
   await expect(candidate.getByRole('heading', { name: 'Desk Stand' })).toBeVisible();
   await expect(candidate.getByRole('heading', { name: 'Arc Headphones' })).toHaveCount(0);
-  await candidate.getByRole('heading', { name: 'Desk Stand' }).locator('xpath=ancestor::article').getByRole('button', { name: 'Quick view' }).click();
+  await candidate.getByRole('button', { name: 'Quick view Desk Stand' }).click();
   await expect(candidate.getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await expect(candidate.getByText('Seasonal edit')).toHaveCount(0);
   await expect(candidate.getByText('5 products ready')).toHaveCount(0);

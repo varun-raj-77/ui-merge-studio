@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import generateModule from '@babel/generator';
 import { parse } from '@babel/parser';
 import traverseModule, { type NodePath } from '@babel/traverse';
@@ -5,6 +6,7 @@ import * as t from '@babel/types';
 import type { ImportRequirement, TestFileSlice } from '../../source-analysis/src/types';
 import type { ModuleRecord } from '../../source-analysis/src/sourceIndex';
 import type { CandidateLiteral } from './types';
+import type { JsxRegionProjectionEvidence } from './types';
 
 const generate = ((generateModule as unknown as { default?: typeof generateModule }).default ?? generateModule);
 const traverse = ((traverseModule as unknown as { default?: typeof traverseModule }).default ?? traverseModule);
@@ -31,6 +33,132 @@ export function replaceDeclaration(code: string, path: string, name: string, sou
   const next = `${code.slice(0, range.start)}${sourceDeclaration}${code.slice(range.end)}`; parseModule(next, path); return next;
 }
 export function insertDeclaration(code: string, path: string, sourceDeclaration: string) { const separator = code.endsWith('\n') ? '' : '\n'; const next = `${code}${separator}${sourceDeclaration}\n`; parseModule(next, path); return next; }
+
+type JsxParentNode = t.JSXElement | t.JSXFragment;
+type JsxChildNode = t.JSXElement['children'][number];
+
+function structuralCode(node: t.Node) { return generate(node, { comments: false, compact: true }).code; }
+function structuralHash(node: t.Node) { return createHash('sha256').update(structuralCode(node)).digest('hex').slice(0, 16); }
+function jsxName(node: t.JSXIdentifier | t.JSXMemberExpression | t.JSXNamespacedName): string {
+  if (t.isJSXIdentifier(node)) return node.name;
+  if (t.isJSXMemberExpression(node)) return `${jsxName(node.object)}.${jsxName(node.property)}`;
+  return `${node.namespace.name}:${node.name.name}`;
+}
+function parentName(node: JsxParentNode) { return t.isJSXFragment(node) ? '<fragment>' : jsxName(node.openingElement.name); }
+function parentShellHash(node: JsxParentNode) { return structuralHash(t.isJSXFragment(node) ? t.jsxFragment(t.jsxOpeningFragment(), t.jsxClosingFragment(), []) : node.openingElement); }
+function significantChildren(node: JsxParentNode) { return node.children.filter(child => !t.isJSXText(child) || child.value.trim().length > 0); }
+function sourceRegion(node: t.Node) { return { startLine: node.loc?.start.line ?? 1, endLine: node.loc?.end.line ?? node.loc?.start.line ?? 1 }; }
+function declarationNode(ast: ReturnType<typeof parseModule>, name: string) {
+  for (const statement of ast.program.body) {
+    const node = t.isExportNamedDeclaration(statement) || t.isExportDefaultDeclaration(statement) ? statement.declaration : statement;
+    if (declaredName(node) === name) return node;
+  }
+  return null;
+}
+function inside(node: t.Node, owner: t.Node) { return node.start != null && node.end != null && owner.start != null && owner.end != null && node.start >= owner.start && node.end <= owner.end; }
+function collectJsxElements(ast: ReturnType<typeof parseModule>, owner: t.Node) {
+  const result: NodePath<t.JSXElement>[] = [];
+  traverse(ast, { JSXElement(elementPath) { if (inside(elementPath.node, owner)) result.push(elementPath); } });
+  return result;
+}
+function collectJsxParents(ast: ReturnType<typeof parseModule>, owner: t.Node) {
+  const result: Array<NodePath<t.JSXElement> | NodePath<t.JSXFragment>> = [];
+  traverse(ast, {
+    JSXElement(elementPath) { if (inside(elementPath.node, owner)) result.push(elementPath); },
+    JSXFragment(fragmentPath) { if (inside(fragmentPath.node, owner)) result.push(fragmentPath); }
+  });
+  return result;
+}
+function directJsxChild(selectedPath: NodePath<t.JSXElement>) {
+  let current: NodePath = selectedPath;
+  while (current.parentPath) {
+    const parent = current.parentPath;
+    if ((parent.isJSXElement() || parent.isJSXFragment()) && parent.node.children.includes(current.node as JsxChildNode)) {
+      return { child: current, parent: parent as NodePath<t.JSXElement> | NodePath<t.JSXFragment> };
+    }
+    current = parent;
+  }
+  return null;
+}
+function requiredBindings(ast: ReturnType<typeof parseModule>, region: t.Node) {
+  const result = new Set<string>();
+  traverse(ast, {
+    Identifier(identifierPath) { if (inside(identifierPath.node, region) && identifierPath.isReferencedIdentifier()) result.add(identifierPath.node.name); },
+    JSXElement(elementPath) { if (!inside(elementPath.node, region)) return; const name = jsxName(elementPath.node.openingElement.name); if (/^[A-Z]/.test(name)) result.add(name.split('.', 1)[0]); }
+  });
+  return [...result].sort();
+}
+function whitespaceGap(code: string, start: number, end: number, description: string) {
+  const gap = code.slice(start, end);
+  if (!/^\s*$/.test(gap)) throw new Error(`${description} contains non-whitespace source between structurally matched JSX children.`);
+  return gap;
+}
+function declarationOutsideParentHash(node: t.Node, shellHash: string) {
+  const clone = t.cloneNode(node, true); let matches = 0;
+  t.traverseFast(clone, child => {
+    if ((t.isJSXElement(child) || t.isJSXFragment(child)) && parentShellHash(child) === shellHash) { child.children = []; matches++; }
+  });
+  if (matches !== 1) throw new Error(`JSX projection found ${matches} declaration parent shells while checking non-region integration structure; exactly one is required.`);
+  return structuralHash(clone);
+}
+
+export function projectJsxRegion(baseCode: string, sourceCode: string, path: string, integrationName: string, renderedBoundary: { path: string; symbol: string }) {
+  baseCode = contentHashInput(baseCode); sourceCode = contentHashInput(sourceCode);
+  const baseAst = parseModule(baseCode, path); const sourceAst = parseModule(sourceCode, path);
+  const baseDeclaration = declarationNode(baseAst, integrationName); const sourceDeclaration = declarationNode(sourceAst, integrationName);
+  if (!baseDeclaration || !sourceDeclaration) throw new Error(`JSX projection requires ${integrationName} to exist in both base and source ASTs.`);
+  const sourceMatches = collectJsxElements(sourceAst, sourceDeclaration).filter(item => jsxName(item.node.openingElement.name) === renderedBoundary.symbol);
+  const baseMatches = collectJsxElements(baseAst, baseDeclaration).filter(item => jsxName(item.node.openingElement.name) === renderedBoundary.symbol);
+  if (sourceMatches.length !== 1) throw new Error(`JSX projection found ${sourceMatches.length} source occurrences of rendered boundary ${renderedBoundary.symbol}; exactly one is required.`);
+  if (baseMatches.length) throw new Error(`JSX projection expected added rendered boundary ${renderedBoundary.symbol}, but the base declaration already contains ${baseMatches.length} occurrence(s).`);
+  const located = directJsxChild(sourceMatches[0]);
+  if (!located) throw new Error(`Rendered boundary ${renderedBoundary.symbol} is not contained in a supported JSX child region.`);
+  if (located.child !== sourceMatches[0]) throw new Error(`Selected JSX region ${renderedBoundary.symbol} overlaps an expression or enclosing child replacement; Phase 0 supports only direct-child insertion.`);
+  const sourceChild = sourceMatches[0].node; const sourceParent = located.parent.node;
+  const shellHash = parentShellHash(sourceParent);
+  const baseParents = collectJsxParents(baseAst, baseDeclaration).filter(item => parentShellHash(item.node) === shellHash);
+  if (baseParents.length !== 1) throw new Error(`JSX projection found ${baseParents.length} base parents matching the selected source parent; exactly one structural parent is required.`);
+  const baseParent = baseParents[0].node; const sourceChildren = significantChildren(sourceParent); const baseChildren = significantChildren(baseParent);
+  if (declarationOutsideParentHash(baseDeclaration, shellHash) !== declarationOutsideParentHash(sourceDeclaration, shellHash)) throw new Error(`JSX projection cannot preserve ${integrationName} because declaration structure outside the selected JSX parent also changed.`);
+  const sourceIndex = sourceChildren.indexOf(sourceChild as JsxChildNode);
+  if (sourceIndex < 0) throw new Error(`Selected JSX region is not a direct structural child of its source parent.`);
+  const sourceFingerprints = sourceChildren.map(structuralHash); const baseFingerprints = baseChildren.map(structuralHash); const selectedFingerprint = structuralHash(sourceChild);
+  const excludedSourceSiblingCount = sourceFingerprints.filter((fingerprint, index) => index !== sourceIndex && !baseFingerprints.includes(fingerprint)).length;
+  let anchor: JsxRegionProjectionEvidence['anchor']; let baseTarget: JsxChildNode | null = null; let next = '';
+  {
+    const previous = [...sourceFingerprints.slice(0, sourceIndex)].map((fingerprint, index) => ({ fingerprint, sourceIndex: index })).reverse().find(item => baseFingerprints.filter(value => value === item.fingerprint).length === 1);
+    const following = sourceFingerprints.slice(sourceIndex + 1).map((fingerprint, index) => ({ fingerprint, sourceIndex: sourceIndex + 1 + index })).find(item => baseFingerprints.filter(value => value === item.fingerprint).length === 1);
+    const previousBaseIndex = previous ? baseFingerprints.indexOf(previous.fingerprint) : -1; const followingBaseIndex = following ? baseFingerprints.indexOf(following.fingerprint) : -1;
+    if (previous && following && previousBaseIndex >= followingBaseIndex) throw new Error(`JSX insertion anchors appear in an incompatible order in the base parent.`);
+    const snippet = sourceCode.slice(sourceChild.start!, sourceChild.end!);
+    if (following) {
+      baseTarget = baseChildren[followingBaseIndex]; const priorEnd = followingBaseIndex ? baseChildren[followingBaseIndex - 1].end! : t.isJSXElement(baseParent) ? baseParent.openingElement.end! : baseParent.openingFragment.end!;
+      const gap = whitespaceGap(baseCode, priorEnd, baseTarget.start!, 'JSX insertion anchor'); next = `${baseCode.slice(0, baseTarget.start!)}${snippet}${gap}${baseCode.slice(baseTarget.start!)}`;
+      anchor = { side: 'before', structuralHash: structuralHash(baseTarget) };
+    } else if (previous) {
+      baseTarget = baseChildren[previousBaseIndex]; const nextStart = previousBaseIndex + 1 < baseChildren.length ? baseChildren[previousBaseIndex + 1].start! : t.isJSXElement(baseParent) ? baseParent.closingElement!.start! : baseParent.closingFragment.start!;
+      const gap = whitespaceGap(baseCode, baseTarget.end!, nextStart, 'JSX insertion anchor'); next = `${baseCode.slice(0, baseTarget.end!)}${gap}${snippet}${baseCode.slice(baseTarget.end!)}`;
+      anchor = { side: 'after', structuralHash: structuralHash(baseTarget) };
+    } else if (!baseChildren.length && sourceChildren.length === 1) {
+      const closeStart = t.isJSXElement(baseParent) ? baseParent.closingElement!.start! : baseParent.closingFragment.start!; const openEnd = t.isJSXElement(baseParent) ? baseParent.openingElement.end! : baseParent.openingFragment.end!;
+      const gap = whitespaceGap(baseCode, openEnd, closeStart, 'Empty JSX parent'); next = `${baseCode.slice(0, closeStart)}${snippet}${gap}${baseCode.slice(closeStart)}`;
+      anchor = { side: 'only-child', structuralHash: null };
+    } else throw new Error(`JSX insertion has no unique unchanged sibling anchor in the base parent.`);
+  }
+  parseModule(next, path);
+  const evidence: JsxRegionProjectionEvidence = {
+    mode: 'insert-child',
+    renderedBoundary,
+    integrationBoundary: { path, symbol: integrationName },
+    sourceNode: { kind: 'JSXElement', name: renderedBoundary.symbol, region: sourceRegion(sourceChild), structuralHash: selectedFingerprint },
+    baseParent: { kind: baseParent.type as 'JSXElement' | 'JSXFragment', name: parentName(baseParent), region: sourceRegion(baseParent), structuralHash: shellHash },
+    baseTarget: { region: baseTarget ? sourceRegion(baseTarget) : null, structuralHash: baseTarget ? structuralHash(baseTarget) : null },
+    anchor,
+    requiredBindings: requiredBindings(sourceAst, sourceChild),
+    excludedSourceSiblingCount
+  };
+  return { code: next, evidence, sourceSnippet: sourceCode.slice(sourceChild.start!, sourceChild.end!) };
+}
 
 function literalNode(value: CandidateLiteral): t.Expression {
   if (value === null) return t.nullLiteral();

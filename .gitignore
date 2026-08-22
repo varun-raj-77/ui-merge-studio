@@ -18,8 +18,11 @@ fixtures/generated/
 .ums/
 
 apps/studio/dist/
+apps/studio/public/showcase-runs/
 docs/codex-prompts/*
 !docs/codex-prompts/013-local-canonical-plan-causality.md
+!docs/codex-prompts/014-external-vite-integration-proof.md
+!docs/codex-prompts/015-safe-jsx-region-projection.md
 
 .env
 .env.*

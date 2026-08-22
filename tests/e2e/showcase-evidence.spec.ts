@@ -9,6 +9,13 @@ async function noOverflow(page: Page) {
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth)).toBe(true);
 }
 
+async function addQuickView(page: Page, product: string) {
+  await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const button = versionB(page).getByRole('button', { name: `Add Quick View on ${product}` });
+  await expect(button).toBeVisible();
+  await button.click();
+}
+
 async function cardHasQuickView(frame: FrameLocator, product: string, expected: boolean) {
   const card = frame.locator('article').filter({ hasText: product });
   await expect(card).toHaveCount(1);
@@ -40,9 +47,7 @@ test.describe('mode-free comparison workspace', () => {
 
     await versionA(page).getByRole('button', { name: 'Desk' }).click();
     await expect(versionA(page).getByText('2 products')).toBeVisible();
-    const deskStandCard = versionB(page).locator('article').filter({ hasText: 'Desk Stand' });
-    await expect(deskStandCard).toHaveCount(1);
-    await deskStandCard.getByRole('button', { name: 'Quick view' }).click();
+    await versionB(page).getByRole('button', { name: 'Quick view Desk Stand', exact: true }).click();
     await expect(versionB(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
     await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('Foundation');
     await versionB(page).getByRole('button', { name: 'Close quick view' }).click();
@@ -50,9 +55,9 @@ test.describe('mode-free comparison workspace', () => {
 
     const studioScope = versionB(page).locator('[data-ums-scope="product-quick-view:p-102"]');
     await studioScope.hover();
-    await versionB(page).getByRole('button', { name: 'Add Quick View on Studio Speaker' }).click();
+    await addQuickView(page, 'Studio Speaker');
     await versionB(page).locator('article').filter({ hasText: 'Carry Case' }).scrollIntoViewIfNeeded();
-    await versionB(page).getByRole('button', { name: 'Add Quick View on Carry Case' }).click();
+    await addQuickView(page, 'Carry Case');
     await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).scrollIntoViewIfNeeded();
     await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
     await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selections');
@@ -77,7 +82,7 @@ test.describe('mode-free comparison workspace', () => {
     const evidenceTrigger = page.getByRole('button', { name: 'Evidence for Quick View · Carry Case' });
     await evidenceTrigger.click();
     const evidence = page.getByRole('dialog', { name: 'Quick View · Carry Case' });
-    await expect(evidence).toContainText('ProductCardWithQuickView');
+    await expect(evidence).toContainText('ProductQuickViewShelf');
     await evidence.getByRole('tab', { name: 'dependencies' }).click();
     await expect(evidence).toContainText('Hooks');
     await evidence.getByRole('tab', { name: 'verification' }).click();
@@ -108,15 +113,15 @@ test.describe('mode-free comparison workspace', () => {
     await page.getByRole('button', { name: 'Version B', exact: true }).click();
     await expect(page.getByTitle('Version B live application')).toBeVisible();
 
-    const arcCard = versionB(page).locator('article').filter({ hasText: 'Arc Headphones' });
-    await expect(arcCard).toHaveCount(1);
-    await arcCard.getByRole('button', { name: 'Quick view' }).click();
+    const arcLauncher = versionB(page).getByRole('button', { name: 'Quick view Arc Headphones', exact: true });
+    await arcLauncher.focus();
+    await arcLauncher.press('Enter');
     await expect(versionB(page).getByRole('dialog', { name: 'Arc Headphones quick view' })).toBeVisible();
     await versionB(page).getByRole('button', { name: 'Close quick view' }).click();
 
-    await versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' }).click();
+    await addQuickView(page, 'Arc Headphones');
     await versionB(page).locator('article').filter({ hasText: 'Task Lamp' }).scrollIntoViewIfNeeded();
-    await versionB(page).getByRole('button', { name: 'Add Quick View on Task Lamp' }).click();
+    await addQuickView(page, 'Task Lamp');
     const dockToggle = page.locator('.dock-toggle');
     await expect(dockToggle).toHaveCount(1);
     await expect(dockToggle).toHaveAttribute('aria-expanded', 'false');

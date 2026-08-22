@@ -5,6 +5,13 @@ const versionA = (page: Page) => page.frameLocator('iframe[title="Version A live
 const versionB = (page: Page) => page.frameLocator('iframe[title="Version B live application"]');
 const combined = (page: Page) => page.frameLocator('iframe[title="Combined result application"]');
 
+async function addQuickView(page: Page, product: string) {
+  await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const button = versionB(page).getByRole('button', { name: `Add Quick View on ${product}` });
+  await expect(button).toBeVisible();
+  await button.click();
+}
+
 async function addAndConfigureSidebar(page: Page) {
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
   const customize = page.getByRole('button', { name: 'Edit categories' });
@@ -60,9 +67,7 @@ async function runCustomizeBeforeAddJourney(page: Page, mobile: boolean) {
     await page.getByRole('button', { name: 'Version B', exact: true }).click();
     await expect(page.locator('article[data-view="branch-b"]')).toHaveClass(/mobile-active/);
   }
-  const addArcQuickView = versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' });
-  await expect(addArcQuickView).toBeVisible();
-  await addArcQuickView.click();
+  await addQuickView(page, 'Arc Headphones');
   await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
   if (mobile) {
     const review = page.getByRole('button', { name: /2 selections Review/ });
@@ -251,7 +256,7 @@ test('desktop configures the sidebar atomically and composes it with Desk Stand 
   await expect(dock).toContainText('Default: Desk');
 
   await versionB(page).getByRole('heading', { name: 'Desk Stand' }).scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
+  await addQuickView(page, 'Desk Stand');
   await page.getByRole('button', { name: 'View combined' }).click();
   await expect(page.getByText('Configured preview', { exact: true })).toBeVisible();
   await expect(combined(page).getByRole('button', { name: 'All', exact: true })).toHaveCount(0);
@@ -325,7 +330,7 @@ async function runAppearanceConfigurationJourney(page: Page, mobile: boolean) {
     await page.getByRole('button', { name: 'Version B', exact: true }).click();
   }
   await versionB(page).getByRole('heading', { name: 'Desk Stand' }).scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
+  await addQuickView(page, 'Desk Stand');
   if (mobile) {
     const review = page.getByRole('button', { name: /2 selections Review/ });
     if (await review.isVisible()) await review.click();

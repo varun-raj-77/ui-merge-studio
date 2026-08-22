@@ -31,6 +31,7 @@ export function verifyFixture(repo = generated) {
 
   const branchBDiff = git(repo, ['show', '--format=', 'branch-b']);
   check(branchBDiff.includes('ProductQuickView'), 'branch-b lacks the selected quick-view panel');
+  check(branchBDiff.includes('ProductQuickViewShelf'), 'branch-b lacks the direct-child quick-view integration');
   check(branchBDiff.includes('useSelectedProduct'), 'branch-b lacks its selection state dependency');
   check(branchBDiff.includes('opens, focuses, and closes quick view'), 'branch-b lacks its focused behavior test');
   const branchBHeader = git(repo, ['show', 'branch-b:src/features/catalogue/CatalogueHeader.tsx']);
@@ -78,7 +79,7 @@ export function verifyFixture(repo = generated) {
     const quickViewTest = git(repo, ['show', 'combined-result:src/test/quick-view.test.tsx']);
     const categoryConfiguration = git(repo, ['show', 'combined-result:src/config/categorySidebarConfiguration.ts']);
     const quickViewConfiguration = git(repo, ['show', 'combined-result:src/config/quickViewTargets.ts']);
-    check(workspace.includes('CategorySidebar') && grid.includes('ProductCardWithQuickView'), 'candidate lacks both selected features');
+    check(workspace.includes('CategorySidebar') && grid.includes('ProductQuickViewShelf'), 'candidate lacks both selected features');
     check(names.includes('src/hooks/useCategoryFilter.ts'), 'candidate lacks category dependency');
     check(names.includes('src/hooks/useSelectedProduct.ts'), 'candidate lacks quick-view dependency');
     check(!header.includes('PromotionalBanner'), 'candidate contains branch-a unrelated promotion');

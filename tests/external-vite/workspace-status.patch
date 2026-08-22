@@ -1,0 +1,86 @@
+diff --git a/src/components/layout/contentbar.tsx b/src/components/layout/contentbar.tsx
+index f665308..c6fd55a 100644
+--- a/src/components/layout/contentbar.tsx
++++ b/src/components/layout/contentbar.tsx
+@@ -3,5 +3,6 @@ import React, { useEffect, useState } from 'react';
+ import { Outlet } from 'react-router-dom';
+ import { Card } from 'antd';
++import { WorkspaceStatusBanner } from './workspace-status/WorkspaceStatusBanner';
+ 
+ // Custom hook for responsive breakpoints
+ const useResponsive = () => {
+@@ -30,12 +31,16 @@ const PageContent: React.FC = () => {
+       padding: isMobile ? "12px" : isTablet ? "16px" : "20px", 
+       minHeight: "calc(100vh - 200px)",
+     }}>
++      <WorkspaceStatusBanner />
+       <Card style={{ 
+         minHeight: "100%",
+         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+       }}>
+         <Outlet />
+       </Card>
++      <p data-testid="experimental-density-note">
++        Experimental density controls enabled
++      </p>
+     </div>
+   );
+ };
+diff --git a/src/components/layout/workspace-status/WorkspaceStatusBanner.module.css b/src/components/layout/workspace-status/WorkspaceStatusBanner.module.css
+new file mode 100644
+index 0000000..2692ffc
+--- /dev/null
++++ b/src/components/layout/workspace-status/WorkspaceStatusBanner.module.css
+@@ -0,0 +1,6 @@
++.banner {
++  align-items: center;
++  background: #e6f4ff;
++  border: 1px solid #91caff;
++  border-radius: 8px;
++  display: flex;
++  margin-bottom: 12px;
++  padding: 10px 12px;
++}
+diff --git a/src/components/layout/workspace-status/WorkspaceStatusBanner.tsx b/src/components/layout/workspace-status/WorkspaceStatusBanner.tsx
+new file mode 100644
+index 0000000..582258a
+--- /dev/null
++++ b/src/components/layout/workspace-status/WorkspaceStatusBanner.tsx
+@@ -0,0 +1,11 @@
++import styles from './WorkspaceStatusBanner.module.css'
++import { useWorkspaceStatus } from './useWorkspaceStatus'
++
++export const WorkspaceStatusBanner = () => {
++  const status = useWorkspaceStatus()
++
++  return (
++    <section className={styles.banner} aria-label="Workspace status">
++      <strong>{status.label}</strong>
++    </section>
++  )
++}
+diff --git a/src/components/layout/workspace-status/useWorkspaceStatus.ts b/src/components/layout/workspace-status/useWorkspaceStatus.ts
+new file mode 100644
+index 0000000..27d92df
+--- /dev/null
++++ b/src/components/layout/workspace-status/useWorkspaceStatus.ts
+@@ -0,0 +1,8 @@
++import { useMemo } from 'react'
++import { workspaceStatuses, type WorkspaceStatus } from './workspaceStatusConfig'
++
++export const useWorkspaceStatus = (): WorkspaceStatus => (
++  useMemo(() => workspaceStatuses.ready, [])
++)
+diff --git a/src/components/layout/workspace-status/workspaceStatusConfig.ts b/src/components/layout/workspace-status/workspaceStatusConfig.ts
+new file mode 100644
+index 0000000..ea459cf
+--- /dev/null
++++ b/src/components/layout/workspace-status/workspaceStatusConfig.ts
+@@ -0,0 +1,7 @@
++export interface WorkspaceStatus {
++  label: string
++}
++
++export const workspaceStatuses: Record<'ready', WorkspaceStatus> = {
++  ready: { label: 'Release workspace ready' },
++}

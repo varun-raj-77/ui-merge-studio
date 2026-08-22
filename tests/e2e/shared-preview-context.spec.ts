@@ -18,6 +18,13 @@ function productCard(frame: FrameLocator, name: string) {
   return frame.locator('article').filter({ hasText: name });
 }
 
+async function addQuickView(page: Page, product: string) {
+  await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const button = versionB(page).getByRole('button', { name: `Add Quick View on ${product}` });
+  await expect(button).toBeVisible();
+  await button.click();
+}
+
 function collectConsoleErrors(page: Page) {
   const errors: string[] = [];
   page.on('console', message => {
@@ -47,10 +54,10 @@ test('desktop preserves Desk from Version A through the configured result and ba
 
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
   await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
+  await addQuickView(page, 'Desk Stand');
   await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
   await expect(page.getByRole('button', { name: 'Remove Quick View · Desk Stand' })).toBeVisible();
-  const deskQuickButton = productCard(versionB(page), 'Desk Stand').getByRole('button', { name: 'Quick view', exact: true });
+  const deskQuickButton = versionB(page).getByRole('button', { name: 'Quick view Desk Stand', exact: true });
   await deskQuickButton.press('Enter');
   await expect(versionB(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-product', 'p-105');
@@ -85,9 +92,9 @@ test('Version B becomes the latest context source and the combined result follow
   await expect(versionA(page).getByRole('article')).toHaveCount(2);
 
   await productCard(versionB(page), 'Arc Headphones').scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' }).click();
+  await addQuickView(page, 'Arc Headphones');
   await expect(page.getByRole('button', { name: 'Remove Quick View · Arc Headphones' })).toBeVisible();
-  await productCard(versionB(page), 'Arc Headphones').getByRole('button', { name: 'Quick view', exact: true }).press('Enter');
+  await versionB(page).getByRole('button', { name: 'Quick view Arc Headphones', exact: true }).press('Enter');
   await page.getByRole('button', { name: 'View combined' }).click();
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-category', 'audio');
   await expect(combined(page).getByRole('article')).toHaveCount(2);
@@ -101,10 +108,10 @@ test('configured-result incompatibility keeps compatible context and announces t
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
   await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
   await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
+  await addQuickView(page, 'Desk Stand');
   await expect(page.getByRole('button', { name: 'Remove Quick View · Desk Stand' })).toBeVisible();
   await productCard(versionB(page), 'Task Lamp').scrollIntoViewIfNeeded();
-  await productCard(versionB(page), 'Task Lamp').getByRole('button', { name: 'Quick view', exact: true }).press('Enter');
+  await versionB(page).getByRole('button', { name: 'Quick view Task Lamp', exact: true }).press('Enter');
   await page.getByRole('button', { name: 'View combined' }).click();
 
   await expect(combined(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
@@ -130,8 +137,10 @@ test('changing the plan in combined view reapplies context and mobile tabs retai
   await page.getByRole('button', { name: 'Version B', exact: true }).click();
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
   await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: 'Add Quick View on Desk Stand' }).click();
-  await productCard(versionB(page), 'Desk Stand').getByRole('button', { name: 'Quick view', exact: true }).click();
+  await addQuickView(page, 'Desk Stand');
+  const deskStandLauncher = versionB(page).getByRole('button', { name: 'Quick view Desk Stand', exact: true });
+  await deskStandLauncher.focus();
+  await deskStandLauncher.press('Enter');
   await expect(versionB(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-quick-view', 'true');
   await page.getByRole('button', { name: '1 selection Review' }).click();

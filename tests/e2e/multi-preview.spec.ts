@@ -8,8 +8,7 @@ test('keeps independent Product Catalogue versions interactive and synchronized'
   await versionA.getByRole('button', { name: 'Desk', exact: true }).click();
   await expect(versionA.getByText('2 products')).toBeVisible();
   await expect(versionB.getByLabel('Browse category')).toHaveValue('desk');
-  const deskStand = versionB.getByRole('heading', { name: 'Desk Stand' }).locator('xpath=ancestor::article');
-  await deskStand.getByRole('button', { name: 'Quick view', exact: true }).click();
+  await versionB.getByRole('button', { name: 'Quick view Desk Stand', exact: true }).click();
   await expect(versionB.getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(versionB.getByRole('dialog')).toHaveCount(0);

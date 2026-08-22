@@ -8,5 +8,5 @@ test('renders stable catalogue data for the active default category', () => {
   const category = categoryLabel(getPreviewContext().catalogue.categoryId);
   const expected = category === 'All' ? products : products.filter(product => product.category === category);
   expect(screen.getAllByRole('article')).toHaveLength(expected.length);
-  for (const product of expected) expect(screen.getByText(product.name)).toBeVisible();
+  for (const product of expected) expect(screen.getByRole('heading', { name: product.name })).toBeVisible();
 });

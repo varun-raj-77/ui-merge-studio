@@ -6,8 +6,10 @@ const versionB = (page: Page) => page.frameLocator('iframe[title="Version B live
 const combined = (page: Page) => page.frameLocator('iframe[title="Combined result application"]');
 
 async function addQuickView(page: Page, product: string) {
-  await versionB(page).getByRole('heading', { name: product }).scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: `Add Quick View on ${product}` }).click();
+  await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const button = versionB(page).getByRole('button', { name: `Add Quick View on ${product}` });
+  await expect(button).toBeVisible();
+  await button.click();
 }
 
 async function quickView(frame: FrameLocator, product: string, present: boolean) {

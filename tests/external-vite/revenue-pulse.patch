@@ -1,0 +1,75 @@
+diff --git a/src/components/layout/index.tsx b/src/components/layout/index.tsx
+index b83b4e3..78b9d5c 100644
+--- a/src/components/layout/index.tsx
++++ b/src/components/layout/index.tsx
+@@ -62,7 +62,7 @@ const PageLayout: React.FC = () => {
+           <PageBreadcrumb />
+           <PageContent></PageContent>
+           <Footer style={{ textAlign: 'center', padding: '16px' }}>
+-            React Admin Dashboard ©{new Date().getFullYear()} Created by Yujian Xue
++            React Admin Dashboard ©{new Date().getFullYear()} Created by Yujian Xue · revenue experiment footer
+           </Footer>
+         </Layout>
+       </Layout>
+diff --git a/src/views/dashboard/RevenuePulseBadge.tsx b/src/views/dashboard/RevenuePulseBadge.tsx
+new file mode 100644
+index 0000000..24dcf85
+--- /dev/null
++++ b/src/views/dashboard/RevenuePulseBadge.tsx
+@@ -0,0 +1,12 @@
++import { useRevenuePulse } from './useRevenuePulse'
++
++export const RevenuePulseBadge = ({ width }: { width: number }) => {
++  const pulse = useRevenuePulse()
++
++  return (
++    <g aria-label="Revenue pulse">
++      <rect x={width - 170} y="2" width="150" height="22" rx="11" fill="#f6ffed" />
++      <text x={width - 95} y="17" textAnchor="middle" fill="#389e0d" fontSize="12">{pulse.label}</text>
++    </g>
++  )
++}
+diff --git a/src/views/dashboard/index.tsx b/src/views/dashboard/index.tsx
+index 92de478..ce875ab 100644
+--- a/src/views/dashboard/index.tsx
++++ b/src/views/dashboard/index.tsx
+@@ -5,6 +5,7 @@ import type { DashboardStats } from '../../utils/mockData'
+ import { getDashboardStats } from '../../utils/mockData'
+ import { CustomerStatus } from '../customers/types'
++import { RevenuePulseBadge } from './RevenuePulseBadge'
+ 
+ const statusLabelMap: Record<CustomerStatus, string> = {
+   [CustomerStatus.Prospect]: 'Prospect',
+@@ -51,6 +52,7 @@ const RevenueTrendChart = ({
+ 
+   return (
+     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Revenue trend over the last six months" style={{ width: '100%', height }}>
++      <RevenuePulseBadge width={width} />
+       {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
+         const y = padding.top + ratio * plotHeight
+         const value = Math.round(maxRevenue * (1 - ratio))
+diff --git a/src/views/dashboard/revenuePulseConfig.ts b/src/views/dashboard/revenuePulseConfig.ts
+new file mode 100644
+index 0000000..92e30ba
+--- /dev/null
++++ b/src/views/dashboard/revenuePulseConfig.ts
+@@ -0,0 +1,7 @@
++export interface RevenuePulse {
++  label: string
++}
++
++export const revenuePulses: Record<'healthy', RevenuePulse> = {
++  healthy: { label: 'Revenue pulse: healthy' },
++}
+diff --git a/src/views/dashboard/useRevenuePulse.ts b/src/views/dashboard/useRevenuePulse.ts
+new file mode 100644
+index 0000000..77066b7
+--- /dev/null
++++ b/src/views/dashboard/useRevenuePulse.ts
+@@ -0,0 +1,6 @@
++import { useMemo } from 'react'
++import { revenuePulses, type RevenuePulse } from './revenuePulseConfig'
++
++export const useRevenuePulse = (): RevenuePulse => (
++  useMemo(() => revenuePulses.healthy, [])
++)

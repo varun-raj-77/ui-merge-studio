@@ -18,6 +18,7 @@
 3. In Branch A, choose the rendered Category Sidebar and confirm the selection.
 4. In Branch B, choose the rendered Desk Stand Quick View region and confirm the selection.
 5. Confirm the safety check, then create the verified branch. The browser request is the canonical Integration Plan V2, not raw source evidence.
-6. Open the combined app. This frame is served by the actual generated candidate worktree.
-7. Choose Desk in the Category Sidebar and confirm the product grid filters; open Desk Stand Quick View and close it.
-8. Confirm the promotional banner and inventory summary are absent, then stop the demo so preview worktrees and processes are removed.
+6. Inspect generation evidence: the two integration operations are direct-child `insert-child` projections, with no declaration replacement or expression replacement.
+7. Open the combined app. This frame is served by the actual generated candidate worktree, and its preview commit equals the generation report candidate commit.
+8. Choose Desk in the Category Sidebar and confirm the product grid filters; use the Desk Stand launcher in the Quick View shelf, then close the dialog.
+9. Confirm the promotional banner and inventory summary are absent, then stop the demo so preview worktrees and processes are removed.

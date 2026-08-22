@@ -1,14 +1,19 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type FrameLocator } from '@playwright/test';
 
 const url = '/?mode=showcase&view=compare';
+
+async function addQuickView(frame: FrameLocator, product: string) {
+  await frame.getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const button = frame.getByRole('button', { name: `Add Quick View on ${product}` });
+  await expect(button).toBeVisible();
+  await button.click();
+}
 
 test('resolves exact instance selections to a configuration-driven result without an artifact', async ({ page }) => {
   await page.goto(url);
   const versionB = page.frameLocator('iframe[title="Version B live application"]');
-  await versionB.getByRole('heading', { name: 'Studio Speaker' }).scrollIntoViewIfNeeded();
-  await versionB.getByRole('button', { name: 'Add Quick View on Studio Speaker' }).click();
-  await versionB.getByRole('heading', { name: 'Carry Case' }).scrollIntoViewIfNeeded();
-  await versionB.getByRole('button', { name: 'Add Quick View on Carry Case' }).click();
+  await addQuickView(versionB, 'Studio Speaker');
+  await addQuickView(versionB, 'Carry Case');
   await page.getByRole('button', { name: 'View combined' }).click();
 
   const combinedFrame = page.frameLocator('iframe[title="Combined result application"]');
@@ -23,10 +28,8 @@ test('resolves exact instance selections to a configuration-driven result withou
 test('deselection updates the mounted configured runtime while staying in result view', async ({ page }) => {
   await page.goto(url);
   const versionB = page.frameLocator('iframe[title="Version B live application"]');
-  await versionB.getByRole('heading', { name: 'Arc Headphones' }).scrollIntoViewIfNeeded();
-  await versionB.getByRole('button', { name: 'Add Quick View on Arc Headphones' }).click();
-  await versionB.getByRole('heading', { name: 'Task Lamp' }).scrollIntoViewIfNeeded();
-  await versionB.getByRole('button', { name: 'Add Quick View on Task Lamp' }).click();
+  await addQuickView(versionB, 'Arc Headphones');
+  await addQuickView(versionB, 'Task Lamp');
   await page.getByRole('button', { name: 'View combined' }).click();
   const combinedFrame = page.frameLocator('iframe[title="Combined result application"]');
   await expect(combinedFrame.getByRole('button', { name: 'Quick view' })).toHaveCount(2);

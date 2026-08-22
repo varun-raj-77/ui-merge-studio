@@ -16,7 +16,7 @@ const paths = (slice: Awaited<ReturnType<typeof analyze>>) => new Set(slice.incl
 
 describe('Product Catalogue fixture feature slices', () => {
   test('maps CategorySidebar and follows its dependencies while excluding the promotion', async () => {
-    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 17, 'CategorySidebar', 'left');
+    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 10, 'CategorySidebar', 'left');
     const first = await analyze('branch-a', source);
     const second = await analyze('branch-a', source);
     const included = paths(first);
@@ -38,8 +38,8 @@ describe('Product Catalogue fixture feature slices', () => {
     expect(second).toEqual(first);
   });
 
-  test('maps ProductCardWithQuickView, its target configuration, and excludes the inventory sibling', async () => {
-    const source = selection('branch-b', 'src/features/catalogue/ProductCardWithQuickView.tsx', 6, 'ProductCardWithQuickView', 'right');
+  test('maps ProductQuickViewShelf, its target configuration, and excludes the inventory sibling', async () => {
+    const source = selection('branch-b', 'src/features/catalogue/ProductQuickViewShelf.tsx', 9, 'ProductQuickViewShelf', 'right');
     const first = await analyze('branch-b', source);
     const second = await analyze('branch-b', source);
     const included = paths(first);
@@ -47,7 +47,7 @@ describe('Product Catalogue fixture feature slices', () => {
     for (const path of [
       'src/features/catalogue/ProductQuickView.tsx',
       'src/hooks/useSelectedProduct.ts',
-      'src/features/catalogue/ProductCardWithQuickView.tsx',
+      'src/features/catalogue/ProductQuickViewShelf.tsx',
       'src/features/catalogue/ProductGrid.tsx',
       'src/config/quickViewTargets.ts',
       'src/features/catalogue/quick-view.css',
@@ -62,7 +62,7 @@ describe('Product Catalogue fixture feature slices', () => {
   });
 
   test('refuses stale branch commits and stale source locations', async () => {
-    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 17, 'CategorySidebar', 'left');
+    const source = selection('branch-a', 'src/features/catalogue/CategorySidebar.tsx', 10, 'CategorySidebar', 'left');
     const analyzer = new FeatureSliceAnalyzer(fixture);
     expect((await analyzer.analyze({ baseRef: 'main', branchRef: 'branch-a', expectedBranchCommit: '0'.repeat(40), selection: source })).slice.status).toBe('refused');
     expect((await analyzer.analyze({ baseRef: 'main', branchRef: 'branch-a', expectedBranchCommit: await repository.resolveRef('branch-a'), selection: { ...source, line: 999 } })).slice.status).toBe('refused');

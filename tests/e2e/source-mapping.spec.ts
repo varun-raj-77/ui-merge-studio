@@ -12,11 +12,13 @@ test('replays rendered Product Catalogue selections with generated source eviden
   await expect(evidence).toContainText('src/features/catalogue/CategorySidebar.tsx');
   await evidence.getByRole('button', { name: 'Close technical evidence' }).click();
 
-  await versionB(page).getByRole('heading', { name: 'Arc Headphones' }).scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' }).click();
+  await versionB(page).getByRole('button', { name: 'Quick view Arc Headphones' }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const addQuickView = versionB(page).getByRole('button', { name: 'Add Quick View on Arc Headphones' });
+  await expect(addQuickView).toBeVisible();
+  await addQuickView.click();
   await page.getByRole('button', { name: 'Evidence for Quick View · Arc Headphones' }).click();
   evidence = page.getByRole('dialog', { name: 'Quick View · Arc Headphones' });
-  await expect(evidence).toContainText('ProductCardWithQuickView');
-  await expect(evidence).toContainText('src/features/catalogue/ProductCardWithQuickView.tsx');
+  await expect(evidence).toContainText('ProductQuickViewShelf');
+  await expect(evidence).toContainText('src/features/catalogue/ProductQuickViewShelf.tsx');
   await expect(evidence).toContainText('p-101');
 });

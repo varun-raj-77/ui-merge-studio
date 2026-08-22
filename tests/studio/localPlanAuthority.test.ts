@@ -29,8 +29,8 @@ async function authorityFixture() {
   const left = sessions.get('left')!;
   const right = sessions.get('right')!;
   const artifacts = await Promise.all([
-    analyzer.analyze({ baseRef: 'main', branchRef: left.branch, expectedBranchCommit: left.branchCommit, selection: source(left, 'src/features/catalogue/CategorySidebar.tsx', 17, 'CategorySidebar') }),
-    analyzer.analyze({ baseRef: 'main', branchRef: right.branch, expectedBranchCommit: right.branchCommit, selection: source(right, 'src/features/catalogue/ProductCardWithQuickView.tsx', 6, 'ProductCardWithQuickView') })
+    analyzer.analyze({ baseRef: 'main', branchRef: left.branch, expectedBranchCommit: left.branchCommit, selection: source(left, 'src/features/catalogue/CategorySidebar.tsx', 10, 'CategorySidebar') }),
+    analyzer.analyze({ baseRef: 'main', branchRef: right.branch, expectedBranchCommit: right.branchCommit, selection: source(right, 'src/features/catalogue/ProductQuickViewShelf.tsx', 9, 'ProductQuickViewShelf') })
   ]);
   const authority = new LocalPlanAuthority(fixture, localRepositoryId(fixture), 'main', 'trust-boundary-result', id => sessions.get(id) ?? null, () => [...sessions.values()]);
   const evidence = await Promise.all([authority.register(left, artifacts[0], '/catalogue'), authority.register(right, artifacts[1], '/catalogue')]);
@@ -47,9 +47,9 @@ describe('local canonical-plan authority', () => {
     authority.registerInstrumentedBoundaries(left, [{
       selectionReceipt,
       source: {
-        boundaryId: staticBoundaryId(sourcePath, 17, 8, 'CategorySidebar'),
+        boundaryId: staticBoundaryId(sourcePath, 10, 8, 'CategorySidebar'),
         repositoryRelativePath: sourcePath,
-        line: 17,
+        line: 10,
         column: 8,
         componentName: 'CategorySidebar',
         exportName: 'CategorySidebar',

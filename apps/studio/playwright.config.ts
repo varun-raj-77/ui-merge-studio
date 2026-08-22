@@ -5,7 +5,7 @@ export default defineConfig({
   // These two proofs require a separately configured unrelated repository and
   // create real source/candidate branches. They are not part of the hosted
   // fresh-production suite and must be invoked with their dedicated external setup.
-  testIgnore: ['external-vite-candidate.spec.ts', 'external-vite-mapping.spec.ts'],
+  testIgnore: ['external-vite-candidate.spec.ts', 'external-vite-mapping.spec.ts', 'external-vite-falsification.spec.ts'],
   timeout: 120_000,
   workers: 1,
   use: {

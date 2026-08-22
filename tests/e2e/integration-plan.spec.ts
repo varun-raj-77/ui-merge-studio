@@ -26,8 +26,10 @@ async function configureSidebar(page: Page, options: {
 }
 
 async function addQuickView(page: Page, product: string) {
-  await versionB(page).getByRole('heading', { name: product }).scrollIntoViewIfNeeded();
-  await versionB(page).getByRole('button', { name: `Add Quick View on ${product}` }).click();
+  await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const button = versionB(page).getByRole('button', { name: `Add Quick View on ${product}` });
+  await expect(button).toBeVisible();
+  await button.click();
 }
 
 async function expectQuickView(frame: FrameLocator, product: string, present: boolean) {
