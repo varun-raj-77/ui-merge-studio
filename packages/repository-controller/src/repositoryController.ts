@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 
@@ -30,8 +30,13 @@ export class RepositoryController {
   }
   async removeWorktree(path: string) {
     const expected = resolve(tmpdir()); const target = resolve(path);
-    if (!target.startsWith(`${expected}\\ui-merge-studio-preview-`) && !target.startsWith(`${expected}/ui-merge-studio-preview-`)) throw new Error(`Refusing to remove unrecognized worktree: ${target}`);
-    await this.git(['worktree', 'remove', '--force', target]);
+    if (dirname(target) !== expected || !basename(target).startsWith('ui-merge-studio-preview-')) throw new Error(`Refusing to remove unrecognized worktree: ${target}`);
+    const registered = (await this.git(['worktree', 'list', '--porcelain']))
+      .split(/\r?\n/)
+      .filter(line => line.startsWith('worktree '))
+      .map(line => resolve(line.slice('worktree '.length)))
+      .some(worktree => process.platform === 'win32' ? worktree.toLowerCase() === target.toLowerCase() : worktree === target);
+    if (registered) await this.git(['worktree', 'remove', '--force', target]);
     await rm(target, { recursive: true, force: true });
   }
 }

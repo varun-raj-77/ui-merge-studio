@@ -167,7 +167,7 @@ export class LocalPlanAuthority {
     };
     this.records.set(selection.capabilityId, { artifact, selection, preview });
     const sourceRefs = this.sessions()
-      .filter(current => current.branch !== this.foundationRef && current.branch !== this.candidateBranch)
+      .filter(current => current.status === 'running' && current.branch !== this.foundationRef && current.branch !== this.candidateBranch)
       .map(current => current.branch);
     return { artifact, selection, foundation: await this.foundation(sourceRefs) };
   }
@@ -218,7 +218,7 @@ export class LocalPlanAuthority {
         );
       }
       const current = this.session(record.preview.previewId);
-      if (!current || !samePreviewIdentity(current, record.preview) || current.branchCommit !== record.preview.branchCommit) {
+      if (!current || current.status !== 'running' || !samePreviewIdentity(current, record.preview) || current.branchCommit !== record.preview.branchCommit) {
         refuseIntegrationPlan(
           'A selected feature belongs to a stale preview session. Re-select it from the current preview.',
           `Preview ${record.preview.previewId} no longer matches session ${record.preview.sessionId}.`

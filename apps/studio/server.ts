@@ -53,7 +53,7 @@ const server = createServer(async (request, response) => {
     if (request.url === '/api/repository' && request.method === 'GET') { const inspected = await repository.inspect(); return json(response, 200, { repositoryId: planAuthority.repositoryId, discovery, foundation: await planAuthority.foundation(), branches: inspected.branches, preferredBranches, candidateBranch, clean: inspected.clean, sessions: previews.sessions() }); }
     const analysisPreviewId = analysisPreviewRoute(request.url);
     if (analysisPreviewId && request.method === 'POST') {
-      const session = previews.session(analysisPreviewId); if (!session) return json(response, 409, { error: 'The preview session is not running.' });
+      const session = previews.session(analysisPreviewId); if (!session || session.status !== 'running' || !previews.isAlive(analysisPreviewId)) return json(response, 409, { error: 'The preview session is not running.' });
       const value = await body(request); const selectionReceipt = value && typeof value === 'object' ? (value as { selectionReceipt?: unknown }).selectionReceipt : null;
       if (typeof selectionReceipt !== 'string') return json(response, 400, { error: 'A rendered-selection receipt is required; browser-authored source metadata is not accepted.' });
       const selection = planAuthority.resolveRenderedSelection(session, selectionReceipt);
@@ -80,6 +80,10 @@ const server = createServer(async (request, response) => {
       const value = await body(request);
       if (!value || typeof value !== 'object' || typeof (value as { branch?: unknown }).branch !== 'string') return json(response, 400, { error: 'A branch string is required.' });
       return json(response, 202, previewOperations.launch(previewId, (value as { branch: string }).branch));
+    }
+    if (previewId && request.method === 'GET') {
+      const session = previews.session(previewId);
+      return json(response, 200, { previewId, alive: previews.isAlive(previewId), session });
     }
     if (previewId && request.method === 'DELETE') { await previewOperations.stop(previewId); return json(response, 200, { stopped: true, previewId }); }
     if (request.url === '/api/preview' && request.method === 'DELETE') { await previewOperations.stopAll(); return json(response, 200, { stopped: true }); }

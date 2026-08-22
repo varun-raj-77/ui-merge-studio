@@ -12,7 +12,7 @@ const fixture = resolve(import.meta.dirname, '../../fixtures/generated/product-c
 const repository = new GitSourceRepository(fixture);
 
 function preview(previewId: 'left' | 'right', branch: string, branchCommit: string): PreviewSession {
-  return { previewId, branch, branchCommit, generation: 1, sessionId: `${previewId}-authority-session`, protocolVersion: 2, url: `http://127.0.0.1/${previewId}`, origin: 'http://127.0.0.1', port: previewId === 'left' ? 5101 : 5102, worktreePath: `C:/temp/${previewId}`, status: 'running', failure: null };
+  return { previewId, branch, repositoryPath: fixture, commit: branchCommit, branchCommit, packageManager: 'npm', generation: 1, sessionId: `${previewId}-authority-session`, protocolVersion: 2, url: `http://127.0.0.1/${previewId}`, origin: 'http://127.0.0.1', port: previewId === 'left' ? 5101 : 5102, processId: previewId === 'left' ? 5101 : 5102, worktreePath: `C:/temp/${previewId}`, status: 'running', failure: null };
 }
 
 function source(session: PreviewSession, path: string, line: number, componentName: string): SourceIdentity {

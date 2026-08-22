@@ -32,6 +32,7 @@ describe('bounded local repository configuration', () => {
   test('accepts a local repository path from the command line with precedence over environment configuration', () => {
     const configuration = loadRepositoryConfiguration('C:/studio', { UI_MERGE_REPOSITORY_PATH: 'C:/environment-repository' }, ['--repository', 'C:/command-line-repository']);
     expect(configuration.repositoryPath).toBe('C:/command-line-repository');
+    expect(configuration.previewPath).toBe('/');
     expect(() => loadRepositoryConfiguration('C:/studio', {}, ['--repository'])).toThrow('--repository requires');
   });
 
