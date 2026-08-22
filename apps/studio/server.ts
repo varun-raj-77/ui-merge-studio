@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { createServer as createViteServer } from 'vite';
 import { RepositoryController } from '../../packages/repository-controller/src/repositoryController';
+import { discoverRepository } from '../../packages/repository-controller/src/repositoryDiscovery';
 import { PreviewController } from '../../packages/preview-runtime/src/previewController';
 import { PreviewOperationManager } from '../../packages/preview-runtime/src/previewOperations';
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
@@ -14,16 +15,17 @@ import { LocalPlanAuthority, localPlanErrorStatus, localRepositoryId } from './l
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
 const configuration = loadRepositoryConfiguration(workspaceRoot);
-const { repositoryPath: fixturePath, baseRef, previewPath, preferredBranches, candidateBranch, verificationCommands } = configuration;
+const discovery = await discoverRepository(configuration.repositoryPath);
+const { repositoryPath, baseRef, previewPath, preferredBranches, candidateBranch, verificationCommands } = { ...configuration, repositoryPath: discovery.repositoryPath };
 const host = '127.0.0.1';
 const port = Number(process.env.UI_MERGE_STUDIO_PORT ?? 4310);
-const repository = new RepositoryController(fixturePath);
+const repository = new RepositoryController(repositoryPath);
 const previews = new PreviewController(repository, resolve(import.meta.dirname, 'preview.vite.config.ts'), previewPath);
 const previewOperations = new PreviewOperationManager(previews);
-const analyzer = new FeatureSliceAnalyzer(fixturePath, workspaceRoot);
-const planAuthority = new LocalPlanAuthority(fixturePath, localRepositoryId(fixturePath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions());
+const analyzer = new FeatureSliceAnalyzer(repositoryPath, workspaceRoot);
+const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(repositoryPath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions());
 let candidateProgress: { status: 'idle' | 'running' | 'succeeded' | 'refused' | 'failed'; stage: string | null; message: string; planIdentity?: string; sliceId?: string; path?: string; verification?: string } = { status:'idle',stage:null,message:'No candidate generation is running.' };
-const candidateGenerator = new CandidateGenerator(fixturePath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',planIdentity:candidateProgress.planIdentity,...event};}});
+const candidateGenerator = new CandidateGenerator(repositoryPath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',planIdentity:candidateProgress.planIdentity,...event};}});
 const vite = await createViteServer({ configFile: resolve(import.meta.dirname, 'vite.config.ts'), server: { middlewareMode: true }, appType: 'spa' });
 
 async function body(request: import('node:http').IncomingMessage) { const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown; }
@@ -48,7 +50,7 @@ const server = createServer(async (request, response) => {
       planAuthority.registerInstrumentedBoundaries(authenticated, boundaries as InstrumentedBoundaryMapping[]);
       return json(response, 200, { registered: boundaries.length });
     }
-    if (request.url === '/api/repository' && request.method === 'GET') { const inspected = await repository.inspect(); return json(response, 200, { repositoryId: planAuthority.repositoryId, foundation: await planAuthority.foundation(), branches: inspected.branches, preferredBranches, candidateBranch, clean: inspected.clean, sessions: previews.sessions() }); }
+    if (request.url === '/api/repository' && request.method === 'GET') { const inspected = await repository.inspect(); return json(response, 200, { repositoryId: planAuthority.repositoryId, discovery, foundation: await planAuthority.foundation(), branches: inspected.branches, preferredBranches, candidateBranch, clean: inspected.clean, sessions: previews.sessions() }); }
     const analysisPreviewId = analysisPreviewRoute(request.url);
     if (analysisPreviewId && request.method === 'POST') {
       const session = previews.session(analysisPreviewId); if (!session) return json(response, 409, { error: 'The preview session is not running.' });

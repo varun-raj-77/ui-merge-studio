@@ -16,9 +16,14 @@ function verificationCommands(value: string | undefined): VerificationCommand[] 
   return parsed as VerificationCommand[];
 }
 
-export function loadRepositoryConfiguration(workspaceRoot: string, environment: Environment = process.env) {
+export function loadRepositoryConfiguration(workspaceRoot: string, environment: Environment = process.env, arguments_: string[] = process.argv.slice(2)) {
+  const repositoryArgument = arguments_.find(argument => argument.startsWith('--repository='))?.slice('--repository='.length);
+  const repositoryIndex = arguments_.indexOf('--repository');
+  const repositoryValue = repositoryIndex >= 0 ? arguments_[repositoryIndex + 1] : undefined;
+  if ((repositoryArgument !== undefined && !repositoryArgument) || (repositoryIndex >= 0 && (!repositoryValue || repositoryValue.startsWith('--')))) throw new Error('--repository requires a local repository path.');
+  const repositoryPath = repositoryArgument ?? repositoryValue ?? environment.UI_MERGE_REPOSITORY_PATH ?? environment.UI_MERGE_FIXTURE_PATH ?? resolve(workspaceRoot, 'fixtures/generated/product-catalogue');
   return {
-    repositoryPath: environment.UI_MERGE_REPOSITORY_PATH ?? environment.UI_MERGE_FIXTURE_PATH ?? resolve(workspaceRoot, 'fixtures/generated/product-catalogue'),
+    repositoryPath,
     baseRef: environment.UI_MERGE_BASE_REF ?? 'main',
     previewPath: environment.UI_MERGE_PREVIEW_ROUTE ?? '/catalogue',
     preferredBranches: [environment.UI_MERGE_LEFT_BRANCH, environment.UI_MERGE_RIGHT_BRANCH].filter((value): value is string => Boolean(value)),

@@ -26,6 +26,14 @@ Open:
 http://127.0.0.1:4310/?mode=local
 ```
 
+To inspect a different local repository before Studio starts any preview work, pass its repository root:
+
+```sh
+npm run dev -- --repository /absolute/path/to/react-vite-repository
+```
+
+`UI_MERGE_REPOSITORY_PATH` remains available for scripted startup. Repository discovery refuses non-Git, non-React, non-TypeScript, and non-Vite inputs before worktree or runtime preparation.
+
 Open the hosted-style sample locally at:
 
 ```text
