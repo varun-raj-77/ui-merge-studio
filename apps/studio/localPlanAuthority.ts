@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-import type { CandidateGenerationRequest } from '../../packages/candidate-generation/src/types';
+import type { CandidateGenerationProfile, CandidateGenerationRequest } from '../../packages/candidate-generation/src/types';
 import {
   canonicalizeLocalIntegrationPlan,
   localIntegrationPlanIdentity,
@@ -67,7 +67,8 @@ export class LocalPlanAuthority {
     readonly foundationRef: string,
     readonly candidateBranch: string,
     private readonly session: (previewId: string) => PreviewSession | null,
-    private readonly sessions: () => PreviewSession[]
+    private readonly sessions: () => PreviewSession[],
+    private readonly generationProfile: CandidateGenerationProfile = 'phase0'
   ) {
     this.repositoryRoot = resolve(repositoryRoot);
     this.repository = new GitSourceRepository(this.repositoryRoot);
@@ -255,6 +256,7 @@ export class LocalPlanAuthority {
         candidateBranch: this.candidateBranch,
         artifacts,
         analyzerSchemaVersion: featureSliceVersion,
+        generationProfile: this.generationProfile,
         integrationPlan: { version: plan.version, identity: planIdentity }
       }
     };

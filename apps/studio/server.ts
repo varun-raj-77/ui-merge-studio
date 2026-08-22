@@ -6,7 +6,7 @@ import { RepositoryController } from '../../packages/repository-controller/src/r
 import { discoverRepository } from '../../packages/repository-controller/src/repositoryDiscovery';
 import { PreviewController } from '../../packages/preview-runtime/src/previewController';
 import { PreviewOperationManager } from '../../packages/preview-runtime/src/previewOperations';
-import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
+import { FeatureSliceAnalyzer, FeatureSliceRefusal } from '../../packages/source-analysis/src/featureSliceAnalyzer';
 import type { InstrumentedBoundaryMapping } from '../../packages/source-instrumentation/src/instrumentReactSource';
 import { isPreviewIdentity } from '../../packages/shared/src/bridge';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
@@ -17,13 +17,14 @@ const workspaceRoot = resolve(import.meta.dirname, '../..');
 const configuration = loadRepositoryConfiguration(workspaceRoot);
 const discovery = await discoverRepository(configuration.repositoryPath);
 const { repositoryPath, baseRef, previewPath, preferredBranches, candidateBranch, verificationCommands } = { ...configuration, repositoryPath: discovery.repositoryPath };
+const externalFeatureSlices = Boolean(process.env.UI_MERGE_REPOSITORY_PATH || process.argv.some(argument => argument === '--repository' || argument.startsWith('--repository=')));
 const host = '127.0.0.1';
 const port = Number(process.env.UI_MERGE_STUDIO_PORT ?? 4310);
 const repository = new RepositoryController(repositoryPath);
 const previews = new PreviewController(repository, resolve(import.meta.dirname, 'preview.vite.config.ts'), previewPath);
 const previewOperations = new PreviewOperationManager(previews);
 const analyzer = new FeatureSliceAnalyzer(repositoryPath, workspaceRoot);
-const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(repositoryPath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions());
+const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(repositoryPath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions(), externalFeatureSlices ? 'external-react-vite' : 'phase0');
 let candidateProgress: { status: 'idle' | 'running' | 'succeeded' | 'refused' | 'failed'; stage: string | null; message: string; planIdentity?: string; sliceId?: string; path?: string; verification?: string } = { status:'idle',stage:null,message:'No candidate generation is running.' };
 const candidateGenerator = new CandidateGenerator(repositoryPath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',planIdentity:candidateProgress.planIdentity,...event};}});
 const vite = await createViteServer({ configFile: resolve(import.meta.dirname, 'vite.config.ts'), server: { middlewareMode: true }, appType: 'spa' });
@@ -57,7 +58,8 @@ const server = createServer(async (request, response) => {
       const value = await body(request); const selectionReceipt = value && typeof value === 'object' && !Array.isArray(value) ? (value as { selectionReceipt?: unknown }).selectionReceipt : null;
       if (typeof selectionReceipt !== 'string' || !value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length !== 1) return json(response, 400, { error: 'Only one rendered-selection receipt is accepted; browser-authored source metadata is not accepted.' });
       const selection = planAuthority.resolveRenderedSelection(session, selectionReceipt);
-      const artifact = await analyzer.analyze({ baseRef, branchRef: session.branch, expectedBranchCommit: session.branchCommit, selection });
+      const analysisRequest = { baseRef, branchRef: session.branch, expectedBranchCommit: session.branchCommit, selection };
+      const artifact = externalFeatureSlices ? await analyzer.analyzeExternal(analysisRequest) : await analyzer.analyze(analysisRequest);
       return json(response, 200, await planAuthority.register(session, artifact, previewPath));
     }
     const analysisId = artifactRoute(request.url);
@@ -88,7 +90,7 @@ const server = createServer(async (request, response) => {
     if (previewId && request.method === 'DELETE') { await previewOperations.stop(previewId); return json(response, 200, { stopped: true, previewId }); }
     if (request.url === '/api/preview' && request.method === 'DELETE') { await previewOperations.stopAll(); return json(response, 200, { stopped: true }); }
     vite.middlewares(request, response, (error?: Error) => { if (error) json(response, 500, { error: error.message }); else { response.statusCode = 404; response.end(); } });
-  } catch (error) { json(response, localPlanErrorStatus(error), { error: error instanceof Error ? error.message : String(error) }); }
+  } catch (error) { json(response, error instanceof FeatureSliceRefusal ? 409 : localPlanErrorStatus(error), { error: error instanceof Error ? error.message : String(error) }); }
 });
 server.listen(port, host, () => console.log(`UI Merge Studio: http://${host}:${port}`));
 async function shutdown() { await previewOperations.stopAll().catch(error => console.error(error)); await vite.close(); server.close(); }

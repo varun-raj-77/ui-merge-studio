@@ -75,12 +75,13 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   const [preflight, setPreflight] = useState<CandidatePreflight | null>(null);
   const [report, setReport] = useState<CandidateGenerationReport | null>(null);
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState('Waiting for two selected features.');
+  const [progress, setProgress] = useState('Waiting for a selected feature.');
   const [error, setError] = useState<string | null>(null);
   const inputKey = inputs.map(item => `${item.artifact?.analysisId ?? 'none'}:${item.selection?.capabilityId ?? 'none'}:${item.status}:${item.sessionId ?? 'none'}`).join('|');
   const artifacts = inputs.map(item => item.artifact).filter((item): item is FeatureSliceArtifact => Boolean(item));
   const selections = inputs.map(item => item.selection).filter((item): item is LocalIntegrationSelection => Boolean(item));
-  const ready = inputs.length === 2 && artifacts.length === 2 && selections.length === 2 && Boolean(foundation) && inputs.every(item => item.status === 'resolved') && artifacts.every(item => item.slice.status === 'resolved');
+  const selectedInputs = inputs.filter(item => item.artifact || item.selection);
+  const ready = inputs.length === 2 && selectedInputs.length >= 1 && selectedInputs.length <= 2 && artifacts.length === selectedInputs.length && selections.length === selectedInputs.length && Boolean(foundation) && selectedInputs.every(item => item.status === 'resolved' && item.artifact?.slice.status === 'resolved');
   const plan = ready && foundation ? canonicalizeLocalIntegrationPlan({ version: 2, foundation, selections }) : null;
   const planIdentity = plan ? localIntegrationPlanIdentity(plan) : null;
   const request = () => ({ plan, planIdentity });

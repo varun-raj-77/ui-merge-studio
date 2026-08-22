@@ -2,6 +2,12 @@ import type { FeatureSliceArtifact, ImportRequirement, SourceRegion, TestFileSli
 
 export const candidateGenerationVersion = 1 as const;
 export type CandidateStatus = 'succeeded' | 'refused' | 'failed';
+export type CandidateGenerationProfile = 'phase0' | 'external-react-vite';
+export type CandidateOwnershipClassification =
+  | 'declaration-owned-source'
+  | 'region-owned-integration'
+  | 'exclusive-atomic-dependency'
+  | 'conservative-file-transfer';
 export type CandidateOperationKind =
   | 'add-file'
   | 'replace-declaration'
@@ -44,6 +50,8 @@ export interface CandidateGenerationRequest {
   candidateBranch: string;
   artifacts: FeatureSliceArtifact[];
   analyzerSchemaVersion: number;
+  /** Server-owned transform grammar. External generation is deliberately narrower than Phase 0. */
+  generationProfile?: CandidateGenerationProfile;
   sourceConfigurations?: CandidateSourceConfiguration[];
   /** Trace evidence for requests projected from a validated canonical Integration Plan V2. */
   integrationPlan?: { version: 2; identity: string };
@@ -70,10 +78,13 @@ export interface CandidateOperation {
   evidenceEdgeIds: string[];
   precondition: { baseContentHash: string | null; targetContentHash: string | null; description: string };
   postcondition: { expectedContentHash: string; description: string };
+  /** What the analyzer actually proved; this is not a claim of semantic ownership for atomic blobs. */
+  ownership: CandidateOwnershipClassification;
   detail: string;
   importRequirement?: ImportRequirement;
   testSlice?: TestFileSlice;
   declarationNames?: string[];
+  allowedBareImportSources?: string[];
   exportRequirement?: { exported: string; imported: string; source: string };
   sourceConfiguration?: CandidateSourceConfiguration;
   jsxProjection?: JsxRegionProjectionEvidence;
@@ -100,6 +111,7 @@ export interface CandidatePlan {
     foundationCommit?: string;
     commonBaseRef?: string;
     commonBaseCommit?: string;
+    generationProfile?: CandidateGenerationProfile;
   };
   sliceIds: string[];
   operations: CandidateOperation[];
@@ -118,7 +130,15 @@ export interface CandidateGenerationReport {
   status: CandidateStatus;
   stage: 'validate' | 'plan' | 'transform' | 'verify' | 'commit' | 'complete';
   message: string;
-  repository: { baseCommit: string; candidateBranch: string; candidateCommit?: string; candidateTree?: string; worktreePath?: string; idempotent?: boolean };
+  repository: {
+    baseCommit: string;
+    candidateBranch: string;
+    candidateCommit?: string;
+    candidateTree?: string;
+    worktreePath?: string;
+    idempotent?: boolean;
+    provenance: { planIdentity: string; generationId: string; profile: CandidateGenerationProfile };
+  };
   sliceIds: string[];
   plan: CandidatePlan;
   appliedOperations: AppliedOperation[];
