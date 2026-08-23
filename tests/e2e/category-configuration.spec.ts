@@ -258,7 +258,7 @@ test('desktop configures the sidebar atomically and composes it with Desk Stand 
   await versionB(page).getByRole('heading', { name: 'Desk Stand' }).scrollIntoViewIfNeeded();
   await addQuickView(page, 'Desk Stand');
   await page.getByRole('button', { name: 'View combined' }).click();
-  await expect(page.getByText('Configured preview', { exact: true })).toBeVisible();
+  await expect(page.getByText('Recorded convergence', { exact: true })).toBeVisible();
   await expect(combined(page).getByRole('button', { name: 'All', exact: true })).toHaveCount(0);
   await expect(combined(page).getByRole('button', { name: 'Audio', exact: true })).toBeVisible();
   await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toHaveAttribute('aria-pressed', 'true');

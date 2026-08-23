@@ -53,4 +53,13 @@ describe('prepared Showcase candidate matrix', () => {
     expect(canonicalArtifactBytes('preview.png', binary)).toEqual(binary);
     expect(hashArtifactBytes('preview.png', binary)).not.toBe(hashArtifactBytes('preview.png', Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0a, 0x1a, 0x0a])));
   });
+
+  it('ships explicit reduced-motion and narrow responsive treatment for the public surface', () => {
+    const css = readFileSync(resolve(import.meta.dirname, '../../apps/studio/src/catalogue-public.css'), 'utf8');
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)');
+    expect(css).toContain('animation-duration: .001ms !important');
+    expect(css).toContain('@media (max-width: 700px)');
+    expect(css).toContain('.hero-demo-previews { grid-template-columns: 1fr; }');
+    expect(css).toContain('.showcase-result-summary { grid-template-columns: 1fr; }');
+  });
 });
