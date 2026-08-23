@@ -1,6 +1,6 @@
 import { expect, test, type FrameLocator, type Page } from '@playwright/test';
 
-const compareUrl = '/?mode=showcase&view=compare';
+const compareUrl = '/?mode=showcase&view=compare&select=parts';
 
 function versionA(page: Page) {
   return page.frameLocator('iframe[title="Version A live application"]');
@@ -20,9 +20,15 @@ function productCard(frame: FrameLocator, name: string) {
 
 async function addQuickView(page: Page, product: string) {
   await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
-  const button = versionB(page).getByRole('button', { name: `Add Quick View on ${product}` });
+  await productCard(versionB(page), product).hover();
+  const button = versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` });
   await expect(button).toBeVisible();
   await button.click();
+}
+
+async function keepSidebar(page: Page) {
+  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
+  await versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
 }
 
 function collectConsoleErrors(page: Page) {
@@ -47,34 +53,23 @@ test('desktop preserves Desk from Version A through the configured result and ba
   await expect(versionA(page).getByRole('article')).toHaveCount(2);
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
   await expect(versionB(page).getByRole('article')).toHaveCount(2);
-  await page.screenshot({
-    path: 'docs/evidence/product-catalogue-showcase/shared-context-desk-synchronized.png',
-    fullPage: true
-  });
-
-  await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
+  await keepSidebar(page);
   await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
   await addQuickView(page, 'Desk Stand');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
-  await expect(page.getByRole('button', { name: 'Remove Quick View · Desk Stand' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selected');
   const deskQuickButton = versionB(page).getByRole('button', { name: 'Quick view Desk Stand', exact: true });
   await deskQuickButton.press('Enter');
   await expect(versionB(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-product', 'p-105');
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-quick-view', 'true');
 
-  await page.getByRole('button', { name: 'View combined' }).click();
+  await page.getByRole('button', { name: /Combine 2 parts/ }).click();
   await expect(combined(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
   await expect(combined(page).getByRole('article')).toHaveCount(2);
   await expect(combined(page).getByRole('complementary', { name: 'Category sidebar' })).toBeVisible();
   await expect(combined(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await expect(combined(page).getByRole('button', { name: 'Quick view', exact: true })).toHaveCount(1);
-  await page.screenshot({
-    path: 'docs/evidence/product-catalogue-showcase/shared-context-desk-combined.png',
-    fullPage: true
-  });
-
-  await page.getByRole('button', { name: '← Back to comparison' }).click();
+  await page.getByRole('button', { name: 'Compare again' }).click();
   await expect(versionA(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
   expect(consoleErrors).toEqual([]);
@@ -93,9 +88,8 @@ test('Version B becomes the latest context source and the combined result follow
 
   await productCard(versionB(page), 'Arc Headphones').scrollIntoViewIfNeeded();
   await addQuickView(page, 'Arc Headphones');
-  await expect(page.getByRole('button', { name: 'Remove Quick View · Arc Headphones' })).toBeVisible();
   await versionB(page).getByRole('button', { name: 'Quick view Arc Headphones', exact: true }).press('Enter');
-  await page.getByRole('button', { name: 'View combined' }).click();
+  await page.getByRole('button', { name: /Combine 1 part/ }).click();
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-category', 'audio');
   await expect(combined(page).getByRole('article')).toHaveCount(2);
   await expect(combined(page).getByRole('dialog', { name: 'Arc Headphones quick view' })).toBeVisible();
@@ -106,13 +100,12 @@ test('configured-result incompatibility keeps compatible context and announces t
   await page.goto(compareUrl);
 
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
-  await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
+  await keepSidebar(page);
   await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
   await addQuickView(page, 'Desk Stand');
-  await expect(page.getByRole('button', { name: 'Remove Quick View · Desk Stand' })).toBeVisible();
   await productCard(versionB(page), 'Task Lamp').scrollIntoViewIfNeeded();
   await versionB(page).getByRole('button', { name: 'Quick view Task Lamp', exact: true }).press('Enter');
-  await page.getByRole('button', { name: 'View combined' }).click();
+  await page.getByRole('button', { name: /Combine 2 parts/ }).click();
 
   await expect(combined(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
   await expect(combined(page).getByRole('article')).toHaveCount(2);
@@ -121,10 +114,6 @@ test('configured-result incompatibility keeps compatible context and announces t
     hasText: 'Quick View is not included for Task Lamp in this configured result. The product list remains selected.'
   });
   await expect(notice).toBeVisible();
-  await page.screenshot({
-    path: 'docs/evidence/product-catalogue-showcase/shared-context-quick-view-fallback.png',
-    fullPage: true
-  });
   await expect(page.getByTitle('Combined result application')).toBeVisible();
 });
 
@@ -143,8 +132,7 @@ test('changing the plan in combined view reapplies context and mobile tabs retai
   await deskStandLauncher.press('Enter');
   await expect(versionB(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-quick-view', 'true');
-  await page.getByRole('button', { name: '1 selection Review' }).click();
-  await page.getByRole('button', { name: 'View combined' }).click();
+  await page.getByRole('button', { name: /Combine 1 part/ }).click();
 
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-context-category', 'desk');
   await expect(combined(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
@@ -155,14 +143,10 @@ test('changing the plan in combined view reapplies context and mobile tabs retai
     hasText: 'Quick View is not included for Desk Stand in this configured result.'
   })).toBeVisible();
 
-  await page.getByRole('button', { name: '← Back to comparison' }).click();
+  await page.getByRole('button', { name: 'Compare again' }).click();
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
   await page.getByRole('button', { name: 'Version A', exact: true }).click();
   await expect(versionA(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-  await page.screenshot({
-    path: 'docs/evidence/product-catalogue-showcase/shared-context-mobile.png',
-    fullPage: true
-  });
   expect(consoleErrors).toEqual([]);
 });

@@ -10,7 +10,11 @@ afterEach(() => {
 });
 
 function open() {
-  fireEvent.click(screen.getByRole('button', { name: 'Try the interactive example' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Try interactive demo' }));
+}
+
+function selectParts() {
+  fireEvent.click(screen.getByRole('button', { name: 'Select parts' }));
 }
 
 function attachDocument(frame: HTMLIFrameElement) {
@@ -29,49 +33,49 @@ function installScope(frameTitle: string, scope: string, label: string, content 
   return host;
 }
 
-describe('Product Catalogue landing', () => {
-  it('explains the outcome in five seconds without implementation terminology', () => {
+function openDropdown(name: string) {
+  const trigger = screen.getByRole('button', { name });
+  trigger.focus();
+  fireEvent.keyDown(trigger, { key: 'Enter', code: 'Enter' });
+}
+
+describe('public landing', () => {
+  it('communicates the outcome and keeps technical evidence out of the hero', () => {
     render(<CatalogueShowcase />);
-    expect(screen.getByRole('heading', { name: 'Compare two implementations. Click the parts you prefer. Create one verified branch.' })).toBeVisible();
-    expect(screen.getByText(/select preferred visible features, and let UI Merge trace the required source changes/i)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Try the interactive example' })).toBeVisible();
-    expect(screen.getAllByRole('link', { name: 'How it works' }).length).toBeGreaterThan(0);
-    const heroDemo = screen.getByLabelText('Illustration of two source versions converging into one verified result');
-    expect(heroDemo).toHaveTextContent('Selected');
-    expect(heroDemo).toHaveTextContent('Source');
-    expect(heroDemo).toHaveTextContent('Candidate');
-    expect(heroDemo).toHaveTextContent('Verified');
-    expect(screen.queryByText(/candidate ID|AST|Product Catalogue/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Build the version you actually want.' })).toBeVisible();
+    expect(screen.getByText('Compare parallel implementations, select the parts you prefer, and create one verified branch.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Try interactive demo' })).toBeVisible();
+    const demo = screen.getByLabelText('Illustration of two source versions converging into one verified result');
+    expect(demo).toHaveTextContent('Sidebar A');
+    expect(demo).toHaveTextContent('Quick View B');
+    expect(demo).toHaveTextContent('Verified');
+    expect(screen.queryByText(/candidate ID|AST|operation ID/i)).not.toBeInTheDocument();
   });
 
-  it('keeps public navigation and the local-product boundary truthful', () => {
+  it('keeps hosted and local product boundaries truthful', () => {
     render(<CatalogueShowcase />);
-    expect(screen.getByRole('navigation', { name: 'Public navigation' })).toBeVisible();
-    expect(screen.getByText('No repository access in the browser')).toBeVisible();
-    const localLinks = screen.getAllByRole('link', { name: /Run locally|Clone and run locally/ });
-    expect(localLinks.every(link => link.getAttribute('href') === 'https://github.com/varun-raj-77/ui-merge-studio#run-locally')).toBe(true);
-    expect(screen.getByRole('heading', { name: 'Try it on your repository.' })).toBeVisible();
+    const hosted = screen.getByRole('note', { name: 'Hosted showcase boundary' });
+    expect(hosted).toHaveTextContent('Controlled, recorded proof');
+    expect(hosted).toHaveTextContent('No repository access in the browser');
+    expect(screen.getByRole('region', { name: 'The real workspace stays local.' })).toHaveTextContent('React · TypeScript · Vite · Local Git');
+    expect(screen.getByRole('link', { name: 'Setup' })).toHaveAttribute('href', 'https://github.com/varun-raj-77/ui-merge-studio#run-locally');
   });
 });
 
-describe('quiet comparison workspace', () => {
-  it('opens two interactive versions with no mode toggle, combined panel, or empty review UI', () => {
+describe('three-act presentation', () => {
+  it('opens in Compare with side-by-side canvases, explicit selection, and no premature evidence or island', () => {
     render(<CatalogueShowcase />); open();
     expect(screen.getByRole('heading', { name: 'Compare versions' })).toBeVisible();
     expect(screen.getByTitle('Version A live application')).toBeVisible();
     expect(screen.getByTitle('Version B live application')).toBeVisible();
-    expect(screen.getByTitle('Combined result application')).not.toBeVisible();
-    expect(screen.queryByRole('button', { name: 'Play' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Select' })).not.toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('FoundationMain');
-    const causality = screen.getByRole('region', { name: 'Controlled integration evidence state' });
-    expect(causality).toHaveTextContent('0 selected');
-    expect(causality).toHaveTextContent('Selected');
-    expect(causality).toHaveTextContent('Verified');
-    expect(screen.getByText('Browser-only replay · no repository access')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible();
+    expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    const compare = screen.getByRole('region', { name: 'Compare versions' });
+    expect(within(compare).queryByText(/Pinned commit|Integration Plan|operation/i)).not.toBeInTheDocument();
   });
 
-  it('keeps normal app clicks independent from the nearby source-backed Add control', () => {
+  it('keeps app interaction normal until Select mode and exits Select with Escape', () => {
     render(<CatalogueShowcase />); open();
     const appClick = vi.fn();
     const frame = screen.getByTitle('Version B live application') as HTMLIFrameElement;
@@ -79,161 +83,125 @@ describe('quiet comparison workspace', () => {
     host.innerHTML = '<div data-ums-scope="product-quick-view:p-102" data-ums-label="Quick View on Studio Speaker"><button id="quick">Quick view</button></div>';
     host.querySelector('#quick')!.addEventListener('click', appClick);
     fireEvent.load(frame);
-
     fireEvent.click(host.querySelector('#quick')!);
     expect(appClick).toHaveBeenCalledOnce();
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('0 selections');
+    expect(screen.queryByRole('button', { name: 'Keep Quick View on Studio Speaker from Version B' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Studio Speaker' }));
-    const dock = screen.getByRole('complementary', { name: 'Current selections' });
-    expect(dock).toHaveTextContent('Added from Version B');
-    expect(dock).toHaveTextContent('Quick ViewStudio Speaker');
-    const causality = screen.getByRole('region', { name: 'Controlled integration evidence state' });
-    expect(causality).toHaveTextContent('1 selected');
-    expect(causality.querySelector('[data-state="active"]')).toHaveTextContent('Candidate');
+    selectParts();
+    expect(screen.getByRole('button', { name: /Selecting/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Keep Quick View on Studio Speaker from Version B' })).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Keep Quick View on Studio Speaker from Version B' })).not.toBeInTheDocument();
   });
 
-  it('offers customization before selection and changes to editing after the sidebar is selected', () => {
-    render(<CatalogueShowcase />); open();
-    installScope(
-      'Version A live application',
-      'category-sidebar',
-      'Category sidebar',
-      '<aside>Categories</aside>'
-    );
-    const customize = screen.getByRole('button', { name: 'Customize & add' });
-    expect(customize).toBeEnabled();
-    fireEvent.click(customize);
-    expect(within(screen.getByRole('dialog', { name: 'Category sidebar' })).getByRole('button', { name: 'Add customized sidebar' })).toBeVisible();
-    fireEvent.click(within(screen.getByRole('dialog', { name: 'Category sidebar' })).getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
-    const edit = screen.getByRole('button', { name: 'Edit categories' });
-    fireEvent.click(edit);
-    expect(within(screen.getByRole('dialog', { name: 'Category sidebar' })).getByRole('button', { name: 'Save customization' })).toBeVisible();
-  });
-
-  it('applies category customization as one dock row and one undoable decision', () => {
-    render(<CatalogueShowcase />); open();
+  it('creates the compact action island only after a real selection', () => {
+    render(<CatalogueShowcase />); open(); selectParts();
     installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Edit categories' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Category sidebar from Version A' }));
+    const island = screen.getByRole('complementary', { name: 'Current selections' });
+    expect(island).toHaveTextContent('1 selected');
+    expect(within(island).getByRole('button', { name: 'Combine 1 part' })).toBeInTheDocument();
+    expect(screen.queryByText('FoundationMain')).not.toBeInTheDocument();
+  });
+
+  it('preserves selected state while switching narrow Version tabs', () => {
+    render(<CatalogueShowcase />); open(); selectParts();
+    installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Category sidebar from Version A' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Version B$/ }));
+    expect(screen.getByRole('button', { name: /^Version B$/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('1 selected');
+  });
+
+  it('keeps category customization contextual and undoable', () => {
+    render(<CatalogueShowcase />); open(); selectParts();
+    installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
+    openDropdown('More selection actions for Version A');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Customize Category sidebar' }));
     const dialog = screen.getByRole('dialog', { name: 'Category sidebar' });
     fireEvent.click(within(dialog).getByRole('checkbox', { name: 'All' }));
-    expect(within(dialog).getByRole('button', { name: 'Save customization' })).toBeDisabled();
-    expect(dialog).toHaveTextContent('Choose a default category from the categories you kept.');
     fireEvent.click(within(dialog).getByRole('radio', { name: 'Desk' }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save customization' }));
-    const dock = screen.getByRole('complementary', { name: 'Current selections' });
-    expect(dock).toHaveTextContent('Audio, Desk, Travel');
-    expect(dock).toHaveTextContent('Default: Desk');
-    fireEvent.click(screen.getByRole('button', { name: 'History' }));
-    expect(screen.getByRole('region', { name: 'Selection history' })).toHaveTextContent('Customized Category sidebar');
-    fireEvent.click(screen.getByRole('button', { name: /^Undo$/ }));
-    expect(dock).not.toHaveTextContent('Default: Desk');
-    fireEvent.click(screen.getByRole('button', { name: /^Redo$/ }));
-    expect(dock).toHaveTextContent('Default: Desk');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add customized sidebar' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect Category sidebar selection' }));
+    expect(screen.getByText(/Audio, Desk, Travel · Default Desk/)).toBeVisible();
+    openDropdown('More workspace actions');
+    fireEvent.click(screen.getByRole('menuitem', { name: /Undo/ }));
+    expect(screen.getByRole('main')).toHaveAttribute('data-history-future', '1');
   });
 
-  it('adds all Quick View instances as one capability action without a new candidate shape', () => {
-    render(<CatalogueShowcase />); open();
-
-    const addAll = screen.getByRole('button', { name: 'Add Quick View to all products' });
-    fireEvent.click(addAll);
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('5 selections');
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Catalogue · /catalogue');
-    fireEvent.click(screen.getByRole('button', { name: 'History' }));
-    expect(screen.getByRole('region', { name: 'Selection history' })).toHaveTextContent(
-      'Added Quick View to all products'
-    );
+  it('keeps the all-instances capability in the preview overflow', () => {
+    render(<CatalogueShowcase />); open(); selectParts();
+    openDropdown('More selection actions for Version B');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Keep Quick View for all products' }));
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('5 selected');
+    expect(screen.getByRole('button', { name: 'Combine 5 parts' })).toBeInTheDocument();
   });
 
-  it('describes sidebar ownership and the configurable category level', () => {
-    render(<CatalogueShowcase />); open();
-    installScope(
-      'Version A live application',
-      'category-sidebar',
-      'Category sidebar',
-      '<aside>Categories</aside>'
-    );
+  it('uses a micro-popover before the focus-trapped evidence sheet', async () => {
+    render(<CatalogueShowcase />); open(); selectParts();
+    installScope('Version B live application', 'product-quick-view:p-103', 'Quick View on Task Lamp');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Quick View on Task Lamp from Version B' }));
+    const token = screen.getByRole('button', { name: 'Inspect Quick View · Task Lamp selection' });
+    fireEvent.click(token);
+    expect(screen.getByText('Source resolved')).toBeVisible();
+    expect(screen.queryByText('src/features/catalogue/ProductQuickViewShelf.tsx:9')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect evidence' }));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Details for Category sidebar' }));
-    const dialog = screen.getByRole('dialog', { name: 'Category sidebar' });
-    expect(dialog).toHaveTextContent('Whole feature');
-    expect(dialog).toHaveTextContent('Version A');
-    expect(dialog).toHaveTextContent('/catalogue');
-    expect(dialog).toHaveTextContent('product-catalogue');
-    expect(dialog).toHaveTextContent('Customize categories');
-    expect(dialog).toHaveTextContent('permanent default');
-    expect(dialog).not.toHaveTextContent(/\.tsx?|src\//);
-  });
-
-  it('transitions to a distinct combined result and returns to comparison', async () => {
-    render(<CatalogueShowcase />); open();
-    const app = installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'View combined' }));
-
-    expect(screen.getByText('Recorded convergence')).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'One verified combined result' })).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Recorded result convergence' })).toHaveTextContent('Category sidebar');
-    const gates = screen.getByLabelText('Recorded verification gates');
-    expect(gates).toHaveTextContent('TypeScriptPassed');
-    expect(gates).toHaveTextContent('Production buildPassed');
-    expect(screen.getByRole('region', { name: 'Controlled integration evidence state' }).querySelectorAll('[data-state="complete"]')).toHaveLength(5);
-    expect(screen.getByTitle('Combined result application')).toBeVisible();
-    expect(screen.getByTitle('Version A live application')).not.toBeVisible();
-
-    fireEvent.click(screen.getByRole('button', { name: '← Back to comparison' }));
-    expect(screen.getByTitle('Version A live application')).toBeVisible();
-    await waitFor(() => expect(screen.getByTitle('Combined result application')).not.toBeVisible());
-  });
-
-  it('opens optional evidence from a selected chip and returns focus on Escape', () => {
-    render(<CatalogueShowcase />); open();
-    const app = installScope('Version B live application', 'product-quick-view:p-103', 'Quick View on Task Lamp');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Task Lamp' }));
-    const evidenceButton = screen.getByRole('button', { name: 'Evidence for Quick View · Task Lamp' });
-    fireEvent.click(evidenceButton);
-
-    const dialog = screen.getByRole('dialog', { name: 'Quick View · Task Lamp' });
-    expect(dialog).toHaveTextContent('ProductQuickViewShelf');
-    expect(dialog).toHaveTextContent('src/features/catalogue/ProductQuickViewShelf.tsx:9');
-    expect(dialog).toHaveTextContent('Branch B · branch-b');
-    expect(dialog).toHaveTextContent('a3e6df521dcd');
-    expect(within(dialog).getByRole('tab', { name: 'source' })).toHaveAttribute('aria-selected', 'true');
-    fireEvent.click(within(dialog).getByRole('tab', { name: 'dependencies' }));
-    expect(dialog).toHaveTextContent('src/hooks/useSelectedProduct.ts');
-    expect(dialog).toHaveTextContent('src/utils/inventorySummary.ts');
-    fireEvent.click(within(dialog).getByRole('tab', { name: 'source' }));
-    const closeButton = within(dialog).getByRole('button', { name: 'Close technical evidence' });
-    const verificationTab = within(dialog).getByRole('tab', { name: 'verification' });
-    expect(closeButton).toHaveFocus();
-    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
-    expect(verificationTab).toHaveFocus();
-    fireEvent.keyDown(window, { key: 'Tab' });
-    expect(closeButton).toHaveFocus();
-    fireEvent.keyDown(window, { key: 'Escape' });
+    const sheet = screen.getByRole('dialog', { name: 'Quick View · Task Lamp' });
+    expect(sheet).toHaveTextContent('ProductQuickViewShelf');
+    expect(sheet).toHaveTextContent('src/features/catalogue/ProductQuickViewShelf.tsx:9');
+    expect(within(sheet).getByRole('tab', { name: 'overview' })).toHaveAttribute('data-state', 'active');
+    fireEvent.focus(within(sheet).getByRole('tab', { name: 'dependencies' }));
+    await waitFor(() => expect(sheet).toHaveTextContent('src/hooks/useSelectedProduct.ts'));
+    fireEvent.focus(within(sheet).getByRole('tab', { name: 'integration' }));
+    await waitFor(() => expect(sheet).toHaveTextContent('Add selected component'));
+    fireEvent.focus(within(sheet).getByRole('tab', { name: 'verification' }));
+    await waitFor(() => expect(sheet).toHaveTextContent('Check the generated candidate with TypeScript.'));
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(evidenceButton).toHaveFocus();
   });
 
-  it('reviews and recovers from the Product-ID conflict without clearing safe selections', () => {
-    render(<CatalogueShowcase />); open();
-    const app = installScope('Version B live application', 'product-quick-view:p-101', 'Quick View on Arc Headphones');
-    fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Arc Headphones' }));
-    fireEvent.click(screen.getByRole('button', { name: '+ Experimental Product-ID change' }));
+  it('makes Result the payoff and hides comparison and redundant metadata', async () => {
+    render(<CatalogueShowcase />); open(); selectParts();
+    installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Category sidebar from Version A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Combine 1 part' }));
+    expect(screen.getByRole('heading', { name: 'Combined result' })).toBeInTheDocument();
+    expect(screen.getByTitle('Combined result application')).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveAttribute('data-workspace-state', 'combined');
+    expect(screen.queryByText(/plan-v2|tree hash|operation ID/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Preparing recorded candidate')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Compare again/ }));
+    expect(screen.getByTitle('Version A live application')).toBeVisible();
+  });
 
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Conflict');
-    fireEvent.click(screen.getByRole('button', { name: 'Review conflict' }));
+  it('presents refusal as a protected outcome and defers technical evidence', () => {
+    render(<CatalogueShowcase />); open(); selectParts();
+    installScope('Version B live application', 'product-quick-view:p-101', 'Quick View on Arc Headphones');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Quick View on Arc Headphones from Version B' }));
+    openDropdown('More workspace actions');
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Experimental Product-ID change' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review refusal' }));
     const dialog = screen.getByRole('dialog', { name: 'Cannot combine safely' });
     expect(dialog).toHaveTextContent('No combined result was produced.');
+    expect(dialog).not.toHaveTextContent('src/types/product.ts#Product');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Why?' }));
     expect(dialog).toHaveTextContent('src/types/product.ts#Product');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'See why' }));
-    expect(dialog).toHaveTextContent('One selected slice replaces the existing Product contract');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove incompatible change' }));
-
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Change selection' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick ViewArc Headphones');
-    expect(screen.getByRole('button', { name: 'View combined' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Combine 1 part' })).toBeInTheDocument();
+  });
+
+  it('honors reduced-motion preference without removing state changes', () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(query => ({
+      matches: query.includes('prefers-reduced-motion'), media: query, onchange: null,
+      addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn()
+    }));
+    render(<CatalogueShowcase />); open(); selectParts();
+    expect(screen.getByRole('button', { name: /Selecting/ })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible();
   });
 });

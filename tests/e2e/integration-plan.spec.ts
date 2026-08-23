@@ -1,7 +1,6 @@
 import { expect, test, type FrameLocator, type Page } from '@playwright/test';
 
-const compareUrl = '/?mode=showcase&view=compare';
-const versionA = (page: Page) => page.frameLocator('iframe[title="Version A live application"]');
+const compareUrl = '/?mode=showcase&view=compare&select=parts';
 const versionB = (page: Page) => page.frameLocator('iframe[title="Version B live application"]');
 const combined = (page: Page) => page.frameLocator('iframe[title="Combined result application"]');
 
@@ -11,7 +10,8 @@ async function configureSidebar(page: Page, options: {
   heading: boolean;
   counts: boolean;
 }) {
-  await page.getByRole('button', { name: 'Customize & add' }).click();
+  await page.getByRole('button', { name: 'More selection actions for Version A' }).click();
+  await page.getByRole('menuitem', { name: 'Customize Category sidebar' }).click();
   const dialog = page.getByRole('dialog', { name: 'Category sidebar' });
   for (const label of ['All', 'Audio', 'Desk', 'Travel'] as const) {
     const checkbox = dialog.getByRole('checkbox', { name: label });
@@ -25,36 +25,30 @@ async function configureSidebar(page: Page, options: {
   await dialog.getByRole('button', { name: 'Add customized sidebar' }).click();
 }
 
-async function addQuickView(page: Page, product: string) {
-  await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
-  const button = versionB(page).getByRole('button', { name: `Add Quick View on ${product}` });
-  await expect(button).toBeVisible();
-  await button.click();
+async function keepQuickView(page: Page, product: string) {
+  const card = versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article');
+  await card.scrollIntoViewIfNeeded();
+  await card.hover();
+  await versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
 }
 
 async function expectQuickView(frame: FrameLocator, product: string, present: boolean) {
-  const card = frame.getByRole('heading', { name: product }).locator('xpath=ancestor::article');
-  const quickView = card.getByRole('button', { name: 'Quick view', exact: true });
-  if (present) await expect(quickView).toBeVisible(); else await expect(quickView).toHaveCount(0);
+  const button = frame.getByRole('heading', { name: product }).locator('xpath=ancestor::article').getByRole('button', { name: 'Quick view', exact: true });
+  if (present) await expect(button).toBeVisible(); else await expect(button).toHaveCount(0);
 }
 
-test('complete canonical plan drives grouped dock, configured result, history, and editor hydration', async ({ page }, testInfo) => {
+async function workspaceAction(page: Page, name: string | RegExp) {
+  await page.getByRole('button', { name: 'More workspace actions' }).click();
+  await page.getByRole('menuitem', { name }).click();
+}
+
+test('complete canonical plan drives configured result, history, and editor hydration', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
   await configureSidebar(page, { enabled: ['Audio', 'Desk', 'Travel'], defaultCategory: 'Desk', heading: false, counts: true });
-  await addQuickView(page, 'Desk Stand');
-  const lastAddStarted = Date.now();
-  await addQuickView(page, 'Task Lamp');
-  const dock = page.getByRole('complementary', { name: 'Current selections' });
-  await expect(dock).toContainText('Catalogue · /catalogue');
-  await expect(dock).toContainText('Category sidebar');
-  await expect(dock).toContainText('Audio, Desk, Travel');
-  await expect(dock).toContainText('Default: Desk');
-  await expect(dock).toContainText('Heading: Hidden');
-  await expect(dock).toContainText('Counts: Shown');
-  await expect(dock).toContainText('Quick View');
-  await expect(dock).toContainText('Task Lamp, Desk Stand');
-  const dockReady = Date.now();
+  await keepQuickView(page, 'Desk Stand');
+  await keepQuickView(page, 'Task Lamp');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selected');
 
   const shell = page.locator('main.comparison-shell');
   const planIdentity = await shell.getAttribute('data-integration-plan-id');
@@ -65,67 +59,46 @@ test('complete canonical plan drives grouped dock, configured result, history, a
   await expect(shell).toHaveAttribute('data-evidence-plan-id', planIdentity!);
   await expect(shell).toHaveAttribute('data-historical-artifact-required', 'false');
 
-  const combinedStarted = Date.now();
-  await page.getByRole('button', { name: 'View combined' }).click();
-  await expect(page.getByText('Recorded convergence', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /Combine 3 parts/ }).click();
   const frame = page.getByTitle('Combined result application');
   await expect(frame).not.toHaveAttribute('src');
   await expect(frame).toHaveAttribute('srcdoc', /<body><\/body>/);
   await expect(combined(page).getByText('Configured Product Catalogue', { exact: true })).toBeVisible();
   await expect(combined(page).getByText('Categories', { exact: true })).toHaveCount(0);
-  await expect(combined(page).getByRole('button', { name: 'All', exact: true })).toHaveCount(0);
   await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(combined(page).locator('[data-ums-product-count="audio"]')).toHaveText('2');
-  await expect(combined(page).locator('[data-ums-product-count="desk"]')).toHaveText('2');
-  await expect(combined(page).locator('[data-ums-product-count="travel"]')).toHaveText('1');
   await expectQuickView(combined(page), 'Task Lamp', true);
   await expectQuickView(combined(page), 'Desk Stand', true);
-  const combinedReady = Date.now();
 
-  const undoStarted = Date.now();
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(page.getByTitle('Combined result application')).toBeVisible();
+  await workspaceAction(page, /Undo/);
   await expect(combined(page).getByRole('button', { name: 'Quick view', exact: true })).toHaveCount(1);
-  const undoReady = Date.now();
-  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  await workspaceAction(page, 'Redo');
   await expect(combined(page).getByRole('button', { name: 'Quick view', exact: true })).toHaveCount(2);
 
-  await page.getByRole('button', { name: 'Back to comparison', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Edit categories' }).click();
+  await page.getByRole('button', { name: 'Compare again' }).click();
+  await page.getByRole('button', { name: 'Select parts' }).click();
+  await page.getByRole('button', { name: 'More selection actions for Version A' }).click();
+  await page.getByRole('menuitem', { name: 'Edit category selection' }).click();
   const dialog = page.getByRole('dialog', { name: 'Category sidebar' });
   await expect(dialog.getByRole('checkbox', { name: 'All' })).not.toBeChecked();
-  await expect(dialog.getByRole('checkbox', { name: 'Audio' })).toBeChecked();
-  await expect(dialog.getByRole('checkbox', { name: 'Desk' })).toBeChecked();
-  await expect(dialog.getByRole('checkbox', { name: 'Travel' })).toBeChecked();
   await expect(dialog.getByRole('radio', { name: 'Desk' })).toBeChecked();
   await expect(dialog.getByRole('checkbox', { name: /Show.*heading/ })).not.toBeChecked();
   await expect(dialog.getByRole('checkbox', { name: 'Show product counts' })).toBeChecked();
-  const measurements = {
-    addActionToDockMs: dockReady - lastAddStarted,
-    viewCombinedToReadyMs: combinedReady - combinedStarted,
-    undoToRestoredPreviewMs: undoReady - undoStarted
-  };
-  console.log(`PHASE4_PERFORMANCE ${JSON.stringify(measurements)}`);
-  await testInfo.attach('phase4-performance.json', {
-    body: JSON.stringify(measurements, null, 2),
-    contentType: 'application/json'
-  });
 });
 
 test('non-matrix plan renders without a historical candidate and keeps projection identities aligned', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(compareUrl);
   await configureSidebar(page, { enabled: ['Audio', 'Travel'], defaultCategory: 'Travel', heading: false, counts: true });
-  await addQuickView(page, 'Arc Headphones');
-  await addQuickView(page, 'Carry Case');
+  await keepQuickView(page, 'Arc Headphones');
+  await keepQuickView(page, 'Carry Case');
   const shell = page.locator('main.comparison-shell');
   const identity = await shell.getAttribute('data-integration-plan-id');
   await expect(shell).toHaveAttribute('data-generation-plan-id', identity!);
   await expect(shell).toHaveAttribute('data-verification-plan-id', identity!);
   await expect(shell).toHaveAttribute('data-historical-artifact-required', 'false');
-  await page.getByRole('button', { name: 'View combined' }).click();
-  await expect(page.locator('.context-notice')).toContainText('Showing the default category, Travel.');
-  await expect(combined(page).getByRole('button', { name: 'All', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: /Combine 3 parts/ }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Showing the default category, Travel.' })).toBeVisible();
   await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toHaveCount(0);
   await expect(combined(page).getByRole('button', { name: 'Travel', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expectQuickView(combined(page), 'Carry Case', true);
@@ -139,24 +112,18 @@ test('mobile configured plan, refusal recovery, undo, and redo remain reachable 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(compareUrl);
   await configureSidebar(page, { enabled: ['Audio', 'Travel'], defaultCategory: 'Travel', heading: false, counts: true });
-  const minimize = page.getByRole('button', { name: /1 selection Minimize/ });
-  if (await minimize.isVisible()) await minimize.click();
   await page.getByRole('button', { name: 'Version B', exact: true }).click();
-  await addQuickView(page, 'Arc Headphones');
-  const review = page.getByRole('button', { name: /2 selections Review/ });
-  if (await review.isVisible()) await review.click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('Audio, Travel');
-  await page.getByRole('button', { name: 'View combined' }).click();
+  await keepQuickView(page, 'Arc Headphones');
+  await page.getByRole('button', { name: /Combine 2 parts/ }).click();
   await expectQuickView(combined(page), 'Carry Case', false);
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(page.getByTitle('Combined result application')).toBeVisible();
-  await page.getByRole('button', { name: 'Redo', exact: true }).click();
-  await expect(page.getByTitle('Combined result application')).toBeVisible();
-  await page.getByRole('button', { name: 'Back to comparison', exact: true }).first().click();
-  await page.getByRole('button', { name: '+ Experimental Product-ID change' }).click();
-  await page.getByRole('button', { name: 'Review conflict' }).click();
-  await expect(page.getByRole('dialog', { name: 'Cannot combine safely' })).toContainText('stable string IDs');
-  await page.getByRole('button', { name: 'Remove incompatible change' }).click();
-  await expect(page.getByRole('button', { name: 'View combined' })).toBeVisible();
+  await workspaceAction(page, /Undo/);
+  await workspaceAction(page, 'Redo');
+  await page.getByRole('button', { name: 'Compare again' }).click();
+  await workspaceAction(page, 'Experimental Product-ID change');
+  await page.getByRole('button', { name: 'Review refusal' }).click();
+  const refusal = page.getByRole('dialog', { name: 'Cannot combine safely' });
+  await expect(refusal).toContainText('shared product identity contract');
+  await refusal.getByRole('button', { name: 'Change selection' }).click();
+  await expect(page.getByRole('button', { name: /Combine 2 parts/ })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 });

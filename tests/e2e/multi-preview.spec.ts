@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 test('keeps independent Product Catalogue versions interactive and synchronized', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?mode=showcase&view=compare');
+  await page.goto('/?mode=showcase&view=compare&select=parts');
   const versionA = page.frameLocator('iframe[title="Version A live application"]');
   const versionB = page.frameLocator('iframe[title="Version B live application"]');
   await versionA.getByRole('button', { name: 'Desk', exact: true }).click();

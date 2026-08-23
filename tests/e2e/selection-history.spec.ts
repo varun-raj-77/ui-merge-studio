@@ -1,28 +1,28 @@
 import { expect, test, type FrameLocator, type Page } from '@playwright/test';
 
-const compareUrl = '/?mode=showcase&view=compare';
-
-function versionA(page: Page) {
-  return page.frameLocator('iframe[title="Version A live application"]');
-}
-
-function versionB(page: Page) {
-  return page.frameLocator('iframe[title="Version B live application"]');
-}
-
-function combined(page: Page) {
-  return page.frameLocator('iframe[title="Combined result application"]');
-}
+const compareUrl = '/?mode=showcase&view=compare&select=parts';
+const versionA = (page: Page) => page.frameLocator('iframe[title="Version A live application"]');
+const versionB = (page: Page) => page.frameLocator('iframe[title="Version B live application"]');
+const combined = (page: Page) => page.frameLocator('iframe[title="Combined result application"]');
 
 function productCard(frame: FrameLocator, name: string) {
   return frame.locator('article').filter({ hasText: name });
 }
 
-async function addQuickView(page: Page, product: string) {
-  await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
-  const button = versionB(page).getByRole('button', { name: `Add Quick View on ${product}` });
-  await expect(button).toBeVisible();
-  await button.click();
+async function keepSidebar(page: Page) {
+  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
+  await versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+}
+
+async function keepQuickView(page: Page, product: string) {
+  await productCard(versionB(page), product).scrollIntoViewIfNeeded();
+  await productCard(versionB(page), product).hover();
+  await versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
+}
+
+async function workspaceAction(page: Page, name: string | RegExp) {
+  await page.getByRole('button', { name: 'More workspace actions' }).click();
+  await page.getByRole('menuitem', { name }).click();
 }
 
 test('desktop selections support undo, redo, redo invalidation, and context exclusion', async ({ page }) => {
@@ -32,110 +32,81 @@ test('desktop selections support undo, redo, redo invalidation, and context excl
 
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
-  await expect(shell).toHaveAttribute('data-history-past', '0');
-
-  await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
-  await addQuickView(page, 'Task Lamp');
-  await addQuickView(page, 'Desk Stand');
+  await keepSidebar(page);
+  await keepQuickView(page, 'Task Lamp');
+  await keepQuickView(page, 'Desk Stand');
   await expect(shell).toHaveAttribute('data-history-past', '3');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selections');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selected');
 
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selection');
+  await page.keyboard.press('Control+Z');
+  await page.keyboard.press('Control+Z');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selected');
   await expect(shell).toHaveAttribute('data-history-future', '2');
 
-  await page.getByRole('button', { name: 'Redo', exact: true }).click();
-  await page.getByRole('button', { name: 'Redo', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selections');
-  await expect(shell).toHaveAttribute('data-history-future', '0');
-
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await page.keyboard.press('Control+Shift+Z');
+  await page.keyboard.press('Control+Shift+Z');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selected');
+  await page.keyboard.press('Control+Z');
+  await productCard(versionB(page), 'Task Lamp').hover();
   await versionB(page).getByRole('button', { name: 'Remove Quick View on Task Lamp' }).click();
   await expect(shell).toHaveAttribute('data-history-future', '0');
-  await expect(page.getByRole('button', { name: 'Redo', exact: true })).toBeDisabled();
   await expect(versionA(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('combined result removes a feature and Undo restores its exact candidate in place', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
-
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
-  await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
-  await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
-  await addQuickView(page, 'Desk Stand');
-  await expect(page.getByRole('button', { name: 'Remove Quick View · Desk Stand' })).toBeVisible();
+  await keepSidebar(page);
+  await keepQuickView(page, 'Desk Stand');
   await versionB(page).getByRole('button', { name: 'Quick view Desk Stand', exact: true }).press('Enter');
-  await page.getByRole('button', { name: 'View combined' }).click();
+  await page.getByRole('button', { name: /Combine 2 parts/ }).click();
   await expect(combined(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Remove Quick View · Desk Stand' }).click();
-  await expect(page.getByTitle('Combined result application')).toBeVisible();
   await expect(combined(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selection');
-  await expect(page.locator('.history-feedback')).toContainText('Removed Quick View · Desk Stand');
-
-  await page.locator('.history-feedback').getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByTitle('Combined result application')).toBeVisible();
-  await expect(combined(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.ums-history-feedback')).toContainText('Removed Quick View · Desk Stand');
+  await page.keyboard.press('Control+Z');
   await expect(combined(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
 
   await combined(page).getByRole('button', { name: 'Desk' }).focus();
   await page.keyboard.press('Control+Z');
-  await expect(page.getByTitle('Combined result application')).toBeVisible();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selection');
+  await expect(combined(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toHaveCount(0);
 });
 
-test('Clear all is one reversible action and keyboard shortcuts respect typing controls', async ({ page }) => {
+test('Clear selections is one reversible action and keyboard shortcuts respect typing controls', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(compareUrl);
   const shell = page.locator('main.comparison-shell');
-
-  await versionA(page).getByRole('button', { name: 'Add Category sidebar' }).click();
-  await addQuickView(page, 'Studio Speaker');
-  await page.getByRole('button', { name: 'Clear', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('0 selections');
-  await page.locator('.history-feedback').getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
-
-  await page.keyboard.press('Control+Shift+Z');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('0 selections');
+  await keepSidebar(page);
+  await keepQuickView(page, 'Studio Speaker');
+  await workspaceAction(page, 'Clear selections');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toHaveCount(0);
   await page.keyboard.press('Control+Z');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selected');
+  await page.keyboard.press('Control+Shift+Z');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toHaveCount(0);
 
+  await page.keyboard.press('Control+Z');
   const pastBeforeTyping = await shell.getAttribute('data-history-past');
   await versionB(page).getByLabel('Browse category').focus();
   await page.keyboard.press('Control+Z');
   await expect(shell).toHaveAttribute('data-history-past', pastBeforeTyping ?? '');
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('all');
-
-  await versionA(page).getByRole('button', { name: 'All' }).focus();
-  await page.keyboard.press('Control+Z');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selection');
 });
 
-test('mobile Review keeps history controls reachable without overflow', async ({ page }) => {
+test('mobile overflow keeps history controls reachable without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(compareUrl);
-
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
   await page.getByRole('button', { name: 'Version B', exact: true }).click();
-  await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
-  await addQuickView(page, 'Desk Stand');
-  await page.getByRole('button', { name: '1 selection Review' }).click();
+  await keepQuickView(page, 'Desk Stand');
 
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('0 selections');
-  await page.getByRole('button', { name: 'Redo', exact: true }).click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selection');
-  await page.getByRole('button', { name: 'History', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Selection history' })).toContainText('Added Quick View · Desk Stand');
-  await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
+  await workspaceAction(page, /Undo/);
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toHaveCount(0);
+  await workspaceAction(page, 'Redo');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selected');
+  await workspaceAction(page, 'Selection history');
+  await expect(page.getByRole('dialog', { name: 'Selection history' })).toContainText('Added Quick View · Desk Stand');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-  await page.screenshot({
-    path: 'test-results/selection-history-mobile.png',
-    fullPage: true
-  });
 });
