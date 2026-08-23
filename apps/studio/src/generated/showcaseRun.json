@@ -156,7 +156,7 @@
       "label": "Baseline",
       "ref": "main",
       "commit": "871bb5250f3a932028f70548edd0c12ceea20916",
-      "path": "/showcase-runs/752957b3fda60999/static/baseline/",
+      "path": "/showcase/static/baseline/",
       "sha256": "5a970509e5fbbf4bb8065bca9b75d5fa6a6effde95d9a24e89dc74ed7fbf1f27"
     },
     {
@@ -165,7 +165,7 @@
       "label": "Branch A · Category navigation",
       "ref": "branch-a",
       "commit": "92297487d786592a1e1a1fd494f8dc2ac078b7be",
-      "path": "/showcase-runs/752957b3fda60999/static/branch-a/",
+      "path": "/showcase/static/branch-a/",
       "sha256": "fd4db00ee6f96dbb0de180e8a2656371f84bcd4b103bb646079a6de5ada86212"
     },
     {
@@ -174,7 +174,7 @@
       "label": "Branch B · Product Quick View",
       "ref": "branch-b",
       "commit": "a3e6df521dcd119cc0cfb8eca445848341b727a0",
-      "path": "/showcase-runs/752957b3fda60999/static/branch-b/",
+      "path": "/showcase/static/branch-b/",
       "sha256": "935bc52882c5ba641b7d30be345c88ae9351542d7d2333d01fd05461fb9a266b"
     }
   ],
@@ -194,7 +194,7 @@
         "label": "Combined · Baseline",
         "ref": "main",
         "commit": "871bb5250f3a932028f70548edd0c12ceea20916",
-        "path": "/showcase-runs/752957b3fda60999/static/baseline/",
+        "path": "/showcase/static/baseline/",
         "sha256": "5a970509e5fbbf4bb8065bca9b75d5fa6a6effde95d9a24e89dc74ed7fbf1f27"
       },
       "sliceIds": [],
@@ -252,7 +252,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101",
         "commit": "6855db69b756c9dea59561d4d2b3e63b2838f76d",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101/",
         "sha256": "49c5e1a63885517268a4398b2df1c17bb44a6952b2abfdbec236d82741b83d05"
       },
       "sliceIds": [
@@ -330,7 +330,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102",
         "commit": "2b0dcc1f737b743edc42618294184304f9b65aac",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-102/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-102/",
         "sha256": "28cd5025ec0815758739590c956d294af96342500a349f1ef7d3931a7fcfa6bf"
       },
       "sliceIds": [
@@ -410,7 +410,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-103",
         "commit": "5e21b94faec8f414a7caabed424505ac03947847",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-102_p-103/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-102_p-103/",
         "sha256": "f098b0b8ef0d478a819a2900df4c61e46781604188eed46e64a5dfd13af3a372"
       },
       "sliceIds": [
@@ -492,7 +492,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-103-104",
         "commit": "54a3e8b26e814f81dc0cd4d3a6959a74375660ba",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-102_p-103_p-104/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-102_p-103_p-104/",
         "sha256": "6e66b352c6f586598b5a0c0ff3b17fc82c3f43b4e486a2a1041d7e83a62deb97"
       },
       "sliceIds": [
@@ -576,7 +576,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-103-104-105",
         "commit": "6c4f191e0304eb942f541613a162b2b5bdce6a27",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-102_p-103_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-102_p-103_p-104_p-105/",
         "sha256": "8f3dbca804720c620b2fe4a15e03d80845716062147a4b4dfc0b84bc5ecf1917"
       },
       "sliceIds": [
@@ -660,7 +660,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-103-105",
         "commit": "633abbe1eeb76237126a4d29129ef765728c511a",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-102_p-103_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-102_p-103_p-105/",
         "sha256": "038911307a1efac2eac68e936aac27c511e12e860f02e84bf8e9890e6ff37816"
       },
       "sliceIds": [
@@ -742,7 +742,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-104",
         "commit": "baaa186e600ddabe43e319a91b69279fa4290f28",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-102_p-104/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-102_p-104/",
         "sha256": "136730b4e5d6883b21050a11abd73b5a660df26b3095ad7c4044336cbe6c9acd"
       },
       "sliceIds": [
@@ -824,7 +824,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-104-105",
         "commit": "d03aea6bc451c4d9d8d59268371354b697a89c19",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-102_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-102_p-104_p-105/",
         "sha256": "a8cf1940a5cecb1a82cf71b80ed2d0d1629960afb19349f0a59dfe78abaad201"
       },
       "sliceIds": [
@@ -906,7 +906,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-102-105",
         "commit": "685a67800a86b47977ab15c77fa8aed446b18e30",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-102_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-102_p-105/",
         "sha256": "9577ceca948447121d6318314f939b40af28a62b239cfc063bca4c1f764ccc2d"
       },
       "sliceIds": [
@@ -986,7 +986,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-103",
         "commit": "253cdbc5c8a6ac330863583af9f3aae4aa6ee8fd",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-103/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-103/",
         "sha256": "bb51502175762f39bb38f7b56926f75a6f87766a9740a4f24ab52a32b8d3cf17"
       },
       "sliceIds": [
@@ -1066,7 +1066,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-103-104",
         "commit": "c3ffa781c42c8541d4414eaaf028e6eb6ef0cdfc",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-103_p-104/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-103_p-104/",
         "sha256": "8396501a43432c8d745844c026426f93bb8f902040c5315e4d74684af81b18e2"
       },
       "sliceIds": [
@@ -1148,7 +1148,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-103-104-105",
         "commit": "fd65c6c9d042b6e79b12bc90327561f3ca6a96a6",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-103_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-103_p-104_p-105/",
         "sha256": "7d6b7ca938184f122bc387d6b36112d41c1e9532f9ef4fd8de777192376c8ea8"
       },
       "sliceIds": [
@@ -1230,7 +1230,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-103-105",
         "commit": "b378183c16ccba79192e93d1dfa684581662c88a",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-103_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-103_p-105/",
         "sha256": "50e2e4d21a3800b0c696584445cad12338b72fd24b2166ea34d0e76470b75a96"
       },
       "sliceIds": [
@@ -1310,7 +1310,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-104",
         "commit": "c53cf58466261bf6405b542718ec1bfc43d8d5cd",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-104/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-104/",
         "sha256": "975acc37bc0a561e063d08bdb395211e385ff050d23c8c0a0d850af4d4742be4"
       },
       "sliceIds": [
@@ -1390,7 +1390,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-104-105",
         "commit": "6386d326a8305d0b3743be27e340139cc3d51c87",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-104_p-105/",
         "sha256": "c53e7a88ea5d3c9cbb6d78fe512ebf02dd0062659de0c15b316bed2942137aeb"
       },
       "sliceIds": [
@@ -1470,7 +1470,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-101-105",
         "commit": "60253c62b459637fafb7b8ae281610242dc00c30",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-101_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-101_p-105/",
         "sha256": "69dcfbd76fde92aebbf2c1dbb3fe019fb59b6577aa5194e88cc7eaceb0467404"
       },
       "sliceIds": [
@@ -1548,7 +1548,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102",
         "commit": "3f097bc8d4817df7ea43f2a7187ce2e3f1c3fe7f",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-102/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-102/",
         "sha256": "dd9bfb21cae403fd6513fa649fbee9d52125693a1ee0c98c701f45102d7508c6"
       },
       "sliceIds": [
@@ -1626,7 +1626,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-103",
         "commit": "bc6245f2c271b6b04e440d52c70b6e6e5b65b0e2",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-102_p-103/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-102_p-103/",
         "sha256": "4ba8e5489076a6c94dce8df6ae436f6fa064d6199810a6e0073c1c918f018026"
       },
       "sliceIds": [
@@ -1706,7 +1706,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-103-104",
         "commit": "29d14cff516941d8a15b330b98ac19c312cf047e",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-102_p-103_p-104/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-102_p-103_p-104/",
         "sha256": "c1da9e06ee45f394ee2de38620bbc109e0d4fa4014725a27d23fe85b4bb33586"
       },
       "sliceIds": [
@@ -1788,7 +1788,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-103-104-105",
         "commit": "b193b189477345c73b8fdcbabad8174990821e1a",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-102_p-103_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-102_p-103_p-104_p-105/",
         "sha256": "843e069c9fb2573c1abc4e0929d37cecdf856d043f0f889c8f1ba9e2aa6a4341"
       },
       "sliceIds": [
@@ -1870,7 +1870,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-103-105",
         "commit": "88b028d3a095e5060ea82d4101d688f915e88c7e",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-102_p-103_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-102_p-103_p-105/",
         "sha256": "b2422595c726ce9c93d408370c5b3d71a8c7ed9047d1d9a361e9ddd05dca4ecf"
       },
       "sliceIds": [
@@ -1950,7 +1950,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-104",
         "commit": "8cff9f259ec02501801d036f63e6faa7230a87c3",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-102_p-104/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-102_p-104/",
         "sha256": "4c2b1007bcb753ca5c6575cce7a182d0b0ad41be7ab8b7614b4ae4cae4f80b54"
       },
       "sliceIds": [
@@ -2030,7 +2030,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-104-105",
         "commit": "7598ccf7c9dc43f79885ae2ced4dbf44f854f805",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-102_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-102_p-104_p-105/",
         "sha256": "4ec1ba767aa9aeb45e87a7704e4007e28b18e0398bfabe2affc3ff0081999f48"
       },
       "sliceIds": [
@@ -2110,7 +2110,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-102-105",
         "commit": "910f55331cfb2cee37370fae394c2756a2d5f767",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-102_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-102_p-105/",
         "sha256": "d03679c0e1f0bb10bb113380bbedae1648474536a98c37162712d15573c9d033"
       },
       "sliceIds": [
@@ -2188,7 +2188,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-103",
         "commit": "acc84825b4c90fbb6eccb15a3492bfc08c08d9eb",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-103/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-103/",
         "sha256": "0724532bb22917166e76bd39e046539ec89f26e89e0595e2c756542a1e0fa32f"
       },
       "sliceIds": [
@@ -2266,7 +2266,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-103-104",
         "commit": "c7deeb57cce8de479ccfb9f302fe23e30dbed014",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-103_p-104/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-103_p-104/",
         "sha256": "7f5d5dce9a7ca6ece958bc063371a2bb0d4f6554857031f6d4892cf9015eeb02"
       },
       "sliceIds": [
@@ -2346,7 +2346,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-103-104-105",
         "commit": "2af33f65c136ca2fc344216db2a29df6760ce4c1",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-103_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-103_p-104_p-105/",
         "sha256": "1c5017b4d2bf9881e9d669854c2fef35d555714d3df4a7ff9fb1d0c724e15475"
       },
       "sliceIds": [
@@ -2426,7 +2426,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-103-105",
         "commit": "157c1fc7bafce93b328003e377b70d26dba60c36",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-103_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-103_p-105/",
         "sha256": "69a767ca1edf3423129e77594872f5345706842bb79ba85b22f1bcc4cd1a7e06"
       },
       "sliceIds": [
@@ -2504,7 +2504,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-104",
         "commit": "9258fcb31a9bd6f0cf864cb3cecce7349e3b9bbf",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-104/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-104/",
         "sha256": "59c44fb42336b51acb089cfa36349273fd7f7cedd2d8e36f87c29883d4ce68e1"
       },
       "sliceIds": [
@@ -2582,7 +2582,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-104-105",
         "commit": "55830e974cb245e7c76124e8034c1675c2323610",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-104_p-105/",
         "sha256": "cd1052b142f236775a781c3e4c83e30cae619b3da769aaf018754aef48a71e79"
       },
       "sliceIds": [
@@ -2660,7 +2660,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s0-q-105",
         "commit": "548b0d464f006f12b7c8da447333b7f89091a3cd",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-0--quick-p-105/",
+        "path": "/showcase/candidates/sidebar-0--quick-p-105/",
         "sha256": "ce9679db6fb9d739fdeb1533da7fda5e2c69637d9982d6ec665b62e3230f0daf"
       },
       "sliceIds": [
@@ -2735,7 +2735,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-none",
         "commit": "71fee88011f1ba68b17d01d56ea9550e8712ec77",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-none/",
+        "path": "/showcase/candidates/sidebar-1--quick-none/",
         "sha256": "be6ad29da1f0d672f7e8bd8e68fbbc8be6a36025e796077427eb651b82dc413e"
       },
       "sliceIds": [
@@ -2811,7 +2811,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101",
         "commit": "4186748b691d813ee9fe01f5aab80882e9df731e",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101/",
         "sha256": "29dfff204d79c49fcd668bf81f43d5155712a70ddb263913066b7ddf333e12da"
       },
       "sliceIds": [
@@ -2905,7 +2905,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102",
         "commit": "9f2c9ff1ccb5c80cca9bfd87fd15c1dd7a993506",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-102/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-102/",
         "sha256": "1d463d2e1b36be8f8670ece50680f12663997fa47582213ceec60e103b0abbf9"
       },
       "sliceIds": [
@@ -3001,7 +3001,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-103",
         "commit": "3e21791af1f4001a4713cc251754c8934fb572cb",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-102_p-103/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-102_p-103/",
         "sha256": "e8a317b8ec996e8e90284da04dd6583a0c339958563baecd51b3a74ff2e05ecd"
       },
       "sliceIds": [
@@ -3099,7 +3099,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-103-104",
         "commit": "78347cb48cd588c2ec6d27838242eaf23053a992",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-102_p-103_p-104/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-102_p-103_p-104/",
         "sha256": "2d11724db9cb2f614736786e99ca1b37d0ee2e23dc70e6ac8f973dc0de7d23a5"
       },
       "sliceIds": [
@@ -3199,7 +3199,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-103-104-105",
         "commit": "13969330126a716f999513bc7685b09f481495f6",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-102_p-103_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-102_p-103_p-104_p-105/",
         "sha256": "8db6a7571514cd7e3f86bd091a1e6f6d23bae39355c876be3e2728752c4d3f88"
       },
       "sliceIds": [
@@ -3299,7 +3299,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-103-105",
         "commit": "681f00cea751eacc88bd5b0ed333a7369763ff7b",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-102_p-103_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-102_p-103_p-105/",
         "sha256": "9622d3ddaa6f3fe96e6954f5fe55eb814255588bc22b99c5a5421b1e6f7acd98"
       },
       "sliceIds": [
@@ -3397,7 +3397,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-104",
         "commit": "0f7f5f6776543b06d1ae5b42210eb03f45105487",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-102_p-104/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-102_p-104/",
         "sha256": "59cd5d2df7b77677c0d9b9207177e011aa63dd6fd20873aa6414cdbac7dcc898"
       },
       "sliceIds": [
@@ -3495,7 +3495,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-104-105",
         "commit": "d54f6e1bea1d5f07c41ec1e0ec91148301ae44ff",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-102_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-102_p-104_p-105/",
         "sha256": "52daffb3d24048c5cf0e7e1398ab02b4a8fca416733f1b5dddf6f5ce590069ae"
       },
       "sliceIds": [
@@ -3593,7 +3593,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-102-105",
         "commit": "ae74d14ad4f93b5150eb937a22573fa4e6d94174",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-102_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-102_p-105/",
         "sha256": "23ae82c861a46ffcee1b09343961d8b8d0e720fd75cc9ed7b1b3fd16ffb2592a"
       },
       "sliceIds": [
@@ -3689,7 +3689,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-103",
         "commit": "bcc2bb48e8a9c8d3a34272c1bc67354d0c756d02",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-103/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-103/",
         "sha256": "f9a75eeee831d5658bbc25226be6019fdb65e0dad3e9f311347d937a9fe85eef"
       },
       "sliceIds": [
@@ -3785,7 +3785,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-103-104",
         "commit": "13b1f91e50b856292b3ca080ecf7c8364cc727c7",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-103_p-104/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-103_p-104/",
         "sha256": "041d378e6699afb53786677223a0aadcfc8824037a2b4886652cea859163004c"
       },
       "sliceIds": [
@@ -3883,7 +3883,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-103-104-105",
         "commit": "27dbed2082222c9a2f8e69b17f556d2c78d76b6b",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-103_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-103_p-104_p-105/",
         "sha256": "6734c961b5c22fbb7788a935e13a2bbdac5d47774150e367a5b73b6bfea0e207"
       },
       "sliceIds": [
@@ -3981,7 +3981,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-103-105",
         "commit": "5a26a0e69c794a8ac3e2043eefde58ef344f721f",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-103_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-103_p-105/",
         "sha256": "b4915a0fa38fd7a46dd788efadacaad7c96db9e1f8dbe585d138d39c105c9af8"
       },
       "sliceIds": [
@@ -4077,7 +4077,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-104",
         "commit": "4a2e413b924c7a3b33950205a963cc1370f5ff1c",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-104/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-104/",
         "sha256": "e30d25da98b75ab8a0ebd63811a3775802adbfeb7cd26c1c23f58426818d74a4"
       },
       "sliceIds": [
@@ -4173,7 +4173,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-104-105",
         "commit": "10ed247384feb6c204cd0220d3a184bf4c30a24e",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-104_p-105/",
         "sha256": "ed2f1fe7a99c688612cf3eeb762eea6cc0ce3797485a8e511bea19c44f693144"
       },
       "sliceIds": [
@@ -4269,7 +4269,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-101-105",
         "commit": "41b2e4858dac50ef0627b57d708e885dc6ead360",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-101_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-101_p-105/",
         "sha256": "7de60f162036fcfaa487126b8c2d74f3ef03f92e83e2a60925ec05b82309eabb"
       },
       "sliceIds": [
@@ -4363,7 +4363,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102",
         "commit": "26e11d066bbd073e0e541fbf8fc57f97355a49fb",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-102/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-102/",
         "sha256": "d30fbc82cebe3d8eb2b2a5facd4d5722d55971bc5cbce65ac431633eeb9c3d88"
       },
       "sliceIds": [
@@ -4457,7 +4457,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-103",
         "commit": "02c7f86556ee58960c0d35d16db1a39fbd61c768",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-102_p-103/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-102_p-103/",
         "sha256": "223c138e2c719ea234f4b71e6271200cfe61e100b032824f3d1e48f30241dc9b"
       },
       "sliceIds": [
@@ -4553,7 +4553,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-103-104",
         "commit": "469ca6426a597d34c519341e0f19dd439f221ee7",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-102_p-103_p-104/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-102_p-103_p-104/",
         "sha256": "c9d06eae7e5a66bfdd67eca74bbc0b2d340f86ce5cc5eac00c6b59127dba323c"
       },
       "sliceIds": [
@@ -4651,7 +4651,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-103-104-105",
         "commit": "c24f1b405b570db1643dbd0b20e68e2c9a27cbf4",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-102_p-103_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-102_p-103_p-104_p-105/",
         "sha256": "583d70ecbf1c314e4af3330e3d1764a5ff4900305ff2cfb2dce272aa57041bec"
       },
       "sliceIds": [
@@ -4749,7 +4749,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-103-105",
         "commit": "44d3c243e759e647750f188e57fed34ab50f77e7",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-102_p-103_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-102_p-103_p-105/",
         "sha256": "7bf59c238341dba8bcb9cc9a54f40820fec81534d5823ceb674bc33e0369c3fd"
       },
       "sliceIds": [
@@ -4845,7 +4845,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-104",
         "commit": "fddef35aaf36798dd7305f80dd5282e815767154",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-102_p-104/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-102_p-104/",
         "sha256": "2977355ce3f5f1ea48b077cbce57eaebc64e047420523e4d563d3319cf39bbff"
       },
       "sliceIds": [
@@ -4941,7 +4941,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-104-105",
         "commit": "920a5396a82eb309c30553fe07d1977d2c92eb4b",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-102_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-102_p-104_p-105/",
         "sha256": "36a63fa43f10c1ab9447bcd402ebac5728a75e5fd871b40973b2fc19b7491556"
       },
       "sliceIds": [
@@ -5037,7 +5037,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-102-105",
         "commit": "c6ce40e441770909d987334e1d6849f1bbfc6301",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-102_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-102_p-105/",
         "sha256": "3805d5212457faefe2b3e741d358f912d3fc093978111ac15041723cd0935fb0"
       },
       "sliceIds": [
@@ -5131,7 +5131,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-103",
         "commit": "135fa52e71c6f86742b0207a591953f6bea34eb1",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-103/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-103/",
         "sha256": "b5b8d2dc7856e58a644af74fefe761a2aff525eb8243643bc1a9ea05c300c40b"
       },
       "sliceIds": [
@@ -5225,7 +5225,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-103-104",
         "commit": "b490641f48bbf0e9c4fea454abbdb2541079fa0a",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-103_p-104/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-103_p-104/",
         "sha256": "c7a28ee060c465efcb24a36a1462be4d831b8451b75fea2302d10951ff7f92c6"
       },
       "sliceIds": [
@@ -5321,7 +5321,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-103-104-105",
         "commit": "a905ce5b310047db006aa038e7428aed0797bc55",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-103_p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-103_p-104_p-105/",
         "sha256": "84d32dfa0e1a09d0a724393171e08cd499b741febdc4e4d61d60bed394e206ce"
       },
       "sliceIds": [
@@ -5417,7 +5417,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-103-105",
         "commit": "1d285c5a6daf4bd272894b874e38f2872446c4da",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-103_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-103_p-105/",
         "sha256": "e49cd5156e6bd1af37a258298f34dce359b9455b13b149fd873a7d1798274eb5"
       },
       "sliceIds": [
@@ -5511,7 +5511,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-104",
         "commit": "1f505490382abbd115ae363e2b5142cda291056f",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-104/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-104/",
         "sha256": "2ffa1b8502eaa28473890ed5fd50f3d8f40541ff36bc0ae8afea27293c34e9ee"
       },
       "sliceIds": [
@@ -5605,7 +5605,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-104-105",
         "commit": "effaaef658eb83731871cb9d187e2b99d3c14f7b",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-104_p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-104_p-105/",
         "sha256": "3f116d3b594264a54d75c5591d246052bbdda6068328deadddcd500152547ea5"
       },
       "sliceIds": [
@@ -5699,7 +5699,7 @@
         "label": "Combined candidate",
         "ref": "showcase-s1-q-105",
         "commit": "bc4d2985bf198b87d76009073a754c401debd71e",
-        "path": "/showcase-runs/752957b3fda60999/candidates/sidebar-1--quick-p-105/",
+        "path": "/showcase/candidates/sidebar-1--quick-p-105/",
         "sha256": "5f20fcd81a1e0969095f960d3c52904590e9a8634bb213ee4f3ec39701d6f288"
       },
       "sliceIds": [
@@ -5793,5 +5793,5 @@
     "source": "https://github.com/varun-raj-77/ui-merge-studio",
     "localSetup": "https://github.com/varun-raj-77/ui-merge-studio#run-the-controlled-demo"
   },
-  "manifestSha256": "f56b2ace8fc6d0b77d17f3bb2ce8b5f463f8a36739852ce50bc3e99cff69c258"
+  "manifestSha256": "9f5cb6fe296dacb117f94089d8af4b23d10fac761bbbf26582512dfb9819d6b2"
 }

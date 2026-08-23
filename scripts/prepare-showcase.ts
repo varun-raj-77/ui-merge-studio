@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { CandidateGenerator } from '../packages/candidate-generation/src/candidateGenerator';
 import type { CandidateGenerationReport, CandidateSourceConfiguration } from '../packages/candidate-generation/src/types';
 import { FeatureSliceAnalyzer } from '../packages/source-analysis/src/featureSliceAnalyzer';
@@ -20,8 +20,9 @@ import {
   type PublicVerificationGate
 } from '../packages/showcase-evidence/src/schema';
 import { captureShowcaseSelections } from './capture-showcase-selections';
+import { promoteShowcasePackage } from './promote-showcase';
 import { verifyFixture } from './verify-phase0-fixture';
-import { generatedManifestPath, hashDirectory, manifestHash, normalizedJson, publicRoot, reportPath, repositoryRoot } from './showcase-lib';
+import { canonicalPublicPathPrefix, hashDirectory, manifestHash, publicRoot, repositoryRoot } from './showcase-lib';
 
 const fixture = resolve(repositoryRoot, 'fixtures/generated/product-catalogue');
 const repo = new GitSourceRepository(fixture);
@@ -87,11 +88,11 @@ function prepareArtifactShell(target: string) {
   writeFileSync(indexPath, `<base href="./"><script>history.replaceState({}, "", "/catalogue")</script>${source}`);
 }
 
-function artifact(id: string, kind: ArtifactKind, label: string, ref: string, commit: string, target: string, runId: string, suffix: string): PublicArtifact {
-  return { id, kind, label, ref, commit, path: `/showcase-runs/${runId}/${suffix}/`, sha256: hashDirectory(target) };
+function artifact(id: string, kind: ArtifactKind, label: string, ref: string, commit: string, target: string, suffix: string): PublicArtifact {
+  return { id, kind, label, ref, commit, path: `${canonicalPublicPathPrefix}${suffix}/`, sha256: hashDirectory(target) };
 }
 
-function buildStaticArtifact(id: 'baseline' | 'branch-a' | 'branch-b', label: string, ref: string, commit: string, outputRoot: string, temporaryRoot: string, runId: string) {
+function buildStaticArtifact(id: 'baseline' | 'branch-a' | 'branch-b', label: string, ref: string, commit: string, outputRoot: string, temporaryRoot: string) {
   const worktree = resolve(temporaryRoot, id);
   git(['worktree', 'add', '--detach', worktree, commit]);
   try {
@@ -103,7 +104,7 @@ function buildStaticArtifact(id: 'baseline' | 'branch-a' | 'branch-b', label: st
     mkdirSync(target, { recursive: true });
     cpSync(resolve(worktree, 'dist'), target, { recursive: true });
     prepareArtifactShell(target);
-    return artifact(id, id, label, ref, commit, target, runId, `static/${id}`);
+    return artifact(id, id, label, ref, commit, target, `static/${id}`);
   } finally {
     try { git(['worktree', 'remove', '--force', worktree]); } catch {}
   }
@@ -156,9 +157,9 @@ export async function prepareShowcase() {
 
   try {
     const staticArtifacts = [
-      buildStaticArtifact('baseline', 'Baseline', 'main', base, outputRoot, temporaryRoot, stableRunId),
-      buildStaticArtifact('branch-a', 'Branch A · Category navigation', 'branch-a', branchA, outputRoot, temporaryRoot, stableRunId),
-      buildStaticArtifact('branch-b', 'Branch B · Product Quick View', 'branch-b', branchB, outputRoot, temporaryRoot, stableRunId)
+      buildStaticArtifact('baseline', 'Baseline', 'main', base, outputRoot, temporaryRoot),
+      buildStaticArtifact('branch-a', 'Branch A · Category navigation', 'branch-a', branchA, outputRoot, temporaryRoot),
+      buildStaticArtifact('branch-b', 'Branch B · Product Quick View', 'branch-b', branchB, outputRoot, temporaryRoot)
     ] as PublicShowcaseReport['artifacts'];
 
     const baselineGates = [
@@ -233,7 +234,7 @@ export async function prepareShowcase() {
       });
       if (generated.status !== 'succeeded' || !generated.repository.candidateCommit) throw new Error(`Candidate ${key} failed: ${generated.message}`);
       const commit = generated.repository.candidateCommit;
-      const candidateArtifact = artifact(`candidate:${key}`, 'candidate', 'Combined candidate', generated.repository.candidateBranch, commit, target, stableRunId, `candidates/${key}`);
+      const candidateArtifact = artifact(`candidate:${key}`, 'candidate', 'Combined candidate', generated.repository.candidateBranch, commit, target, `candidates/${key}`);
       candidates[index] = {
         key,
         selection: state,
@@ -302,10 +303,7 @@ export async function prepareShowcase() {
       }
     } satisfies Omit<PublicShowcaseReport, 'manifestSha256'>;
     const report = validatePublicShowcaseReport({ ...withoutHash, manifestSha256: manifestHash(withoutHash) });
-    mkdirSync(dirname(reportPath), { recursive: true });
-    mkdirSync(dirname(generatedManifestPath), { recursive: true });
-    writeFileSync(reportPath, normalizedJson(report));
-    writeFileSync(generatedManifestPath, normalizedJson(report));
+    promoteShowcasePackage(report);
     console.log(`PASS: prepared ${candidates.length} Product Catalogue candidates in engine run ${stableRunId}.`);
   } finally {
     rmSync(temporaryRoot, { recursive: true, force: true });

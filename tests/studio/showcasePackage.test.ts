@@ -1,8 +1,16 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { canonicalSelectionKey, validatePublicShowcaseReport } from '../../packages/showcase-evidence/src/schema';
-import { canonicalArtifactBytes, generatedManifestPath, hashArtifactBytes, hashDirectory, manifestHash, publicRoot, readAndValidateReport } from '../../scripts/showcase-lib';
+import { canonicalArtifactBytes, canonicalPublicPackageRoot, canonicalPublicPathPrefix, generatedManifestPath, hashArtifactBytes, hashDirectory, manifestHash, readAndValidateReport, repositoryRoot, resolveCanonicalArtifactPath } from '../../scripts/showcase-lib';
+
+function packageFiles(root: string): string[] {
+  return readdirSync(root).flatMap(name => {
+    const path = resolve(root, name);
+    return statSync(path).isDirectory() ? packageFiles(path) : [relative(repositoryRoot, path).replaceAll('\\', '/')];
+  });
+}
 
 describe('prepared Showcase candidate matrix', () => {
   it('validates every canonical state, artifact hash, and verification record', () => {
@@ -13,12 +21,23 @@ describe('prepared Showcase candidate matrix', () => {
       expect(candidate.key).toBe(canonicalSelectionKey(candidate.selection));
       expect(candidate.candidateCommit).toMatch(/^[a-f0-9]{40}$/);
       expect(candidate.verification.every(item => item.result === 'passed' && item.exitCode === 0)).toBe(true);
-      const path = resolve(publicRoot, candidate.artifact.path.replace(/^\/+/, ''));
+      expect(candidate.artifact.path.startsWith(canonicalPublicPathPrefix)).toBe(true);
+      const path = resolveCanonicalArtifactPath(candidate.artifact.path);
       expect(existsSync(resolve(path, 'index.html'))).toBe(true);
       expect(hashDirectory(path)).toBe(candidate.artifact.sha256);
     }
     expect(JSON.parse(readFileSync(generatedManifestPath, 'utf8'))).toEqual(report);
   }, 60_000);
+
+  it('represents the build-required canonical package in non-ignored repository inputs', () => {
+    const relativeRoot = relative(repositoryRoot, canonicalPublicPackageRoot).replaceAll('\\', '/');
+    const git = (...args: string[]) => execFileSync('git', ['-c', `safe.directory=${repositoryRoot.replaceAll('\\', '/')}`, ...args], { cwd: repositoryRoot, encoding: 'utf8' });
+    expect(() => git('check-ignore', '--no-index', '-q', relativeRoot)).toThrow();
+    const represented = new Set(git('ls-files', '--cached', '--others', '--exclude-standard', '--', relativeRoot).trim().split(/\r?\n/));
+    const files = packageFiles(canonicalPublicPackageRoot);
+    expect(files.length).toBeGreaterThan(0);
+    expect(files.every(file => represented.has(file))).toBe(true);
+  });
 
   it('is click-order independent and records exact instance configuration', () => {
     const report = readAndValidateReport();
