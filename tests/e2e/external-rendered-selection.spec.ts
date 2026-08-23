@@ -26,11 +26,11 @@ test.afterEach(async ({ request }) => { await request.delete('/api/preview').cat
 test('external rendered click resolves only its opaque receipt to server-owned source identity', async ({ page, request }) => {
   test.setTimeout(600_000);
   await page.goto('/?mode=local');
-  await page.getByRole('button', { name: /Try sample demo/i }).click();
+  await page.getByRole('button', { name: /Continue to comparison/i }).click();
   const leftCard = page.locator('[data-preview-id="left"]');
   const rightCard = page.locator('[data-preview-id="right"]');
-  await expect(leftCard).toContainText('Live and synchronized', { timeout: 180_000 });
-  await expect(rightCard).toContainText('Live and synchronized', { timeout: 180_000 });
+  await expect(leftCard).toContainText('Running', { timeout: 180_000 });
+  await expect(rightCard).toContainText('Running', { timeout: 180_000 });
 
   const repositoryState = await request.get('/api/repository').then(response => response.json()) as {
     repositoryId: string;
@@ -52,7 +52,7 @@ test('external rendered click resolves only its opaque receipt to server-owned s
   await leftFrame.getByRole('button', { name: 'Login as Demo User' }).click();
   await expect(leftFrame.getByRole('img', { name: 'Revenue trend over the last six months' })).toBeVisible({ timeout: 30_000 });
 
-  await leftCard.getByRole('button', { name: 'Choose feature' }).click();
+  await page.getByRole('button', { name: 'Select parts' }).click();
   await leftFrame.locator('body').evaluate(body => body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
   await expect(leftCard).toContainText('No eligible project-owned React boundary');
 

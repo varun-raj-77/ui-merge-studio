@@ -33,37 +33,28 @@ test.afterEach(async ({ request }) => {
 test('a rendered two-branch decision causes one canonical plan and a verified real candidate preview', async ({ page, request }) => {
   test.setTimeout(600_000);
   await page.goto('/?mode=local');
-  await page.getByRole('button', { name: /Try sample demo/i }).click();
+  await page.getByRole('button', { name: /Continue to comparison/i }).click();
 
   const leftCard = page.locator('[data-preview-id="left"]');
   const rightCard = page.locator('[data-preview-id="right"]');
-  const branchA = page.frameLocator('iframe[title="Category sidebar branch live application"]');
-  const branchB = page.frameLocator('iframe[title="Quick-view branch live application"]');
-  await expect(leftCard).toContainText('Live and synchronized', { timeout: 120_000 });
-  await expect(rightCard).toContainText('Live and synchronized', { timeout: 120_000 });
+  const branchA = page.frameLocator('iframe[title="Source A · branch-a live application"]');
+  const branchB = page.frameLocator('iframe[title="Source B · branch-b live application"]');
+  await expect(leftCard).toContainText('Running', { timeout: 120_000 });
+  await expect(rightCard).toContainText('Running', { timeout: 120_000 });
 
-  await leftCard.getByRole('button', { name: 'Choose feature' }).click();
+  await page.getByRole('button', { name: 'Select parts' }).click();
   const leftAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/left/analysis') && request.method() === 'POST');
   await branchA.getByRole('complementary', { name: 'Category sidebar' }).click();
   const leftAnalysisBody = (await leftAnalysisRequestPromise).postDataJSON();
   expect(leftAnalysisBody).toEqual({ selectionReceipt: expect.stringMatching(/^rendered-[A-Za-z0-9_-]{32}$/) });
   expect(JSON.stringify(leftAnalysisBody)).not.toMatch(/repositoryRelativePath|componentName|SourceIdentity|\.tsx/);
-  const confirmCategory = leftCard.getByRole('button', { name: 'Confirm selection' });
-  await expect(confirmCategory).toBeVisible({ timeout: 30_000 });
-  await confirmCategory.click();
-
-  await rightCard.getByRole('button', { name: 'Choose feature' }).click();
   const renderedQuickView = branchB.locator('[data-ums-scope="product-quick-view:p-105"]');
+  const preflightResponsePromise = page.waitForResponse(response => response.url().endsWith('/api/candidate/preflight') && response.request().method() === 'POST');
   const rightAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/right/analysis') && request.method() === 'POST');
   await renderedQuickView.click({ position: { x: 2, y: 2 } });
   const rightAnalysisBody = (await rightAnalysisRequestPromise).postDataJSON();
   expect(rightAnalysisBody).toEqual({ selectionReceipt: expect.stringMatching(/^rendered-[A-Za-z0-9_-]{32}$/) });
   expect(JSON.stringify(rightAnalysisBody)).not.toMatch(/repositoryRelativePath|componentName|SourceIdentity|\.tsx/);
-  const confirmQuickView = rightCard.getByRole('button', { name: 'Confirm selection' });
-  await expect(confirmQuickView).toBeVisible({ timeout: 30_000 });
-
-  const preflightResponsePromise = page.waitForResponse(response => response.url().endsWith('/api/candidate/preflight') && response.request().method() === 'POST');
-  await confirmQuickView.click();
   const preflightResponse = await preflightResponsePromise;
   expect(preflightResponse.status()).toBe(200);
   const outgoing = preflightResponse.request().postDataJSON() as { plan: { version: number; foundation: { repositoryId: string; branchRef: string; commitSha: string; commonAncestorCommit: string }; selections: { capabilityId: string; sourceBranch: string; sourceCommitSha: string; route: string; pageId: string }[] }; planIdentity: string };
@@ -86,10 +77,10 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   expect(regionOperations.every((operation:{jsxProjection?:{mode:string}})=>operation.jsxProjection?.mode==='insert-child')).toBe(true);
   expect(preflight.plan.operations.some((operation:{kind:string;target:{symbol:string|null}})=>operation.kind==='replace-declaration'&&(operation.target.symbol==='CatalogueWorkspace'||operation.target.symbol==='ProductGrid'))).toBe(false);
   await expect(page.locator('.combine-tray')).toHaveAttribute('data-plan-identity', outgoing.planIdentity);
-  await expect(page.getByRole('button', { name: 'Create verified branch' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Create combined branch' })).toBeEnabled();
 
   const generationResponsePromise = page.waitForResponse(response => response.url().endsWith('/api/candidate/generate') && response.request().method() === 'POST', { timeout: 540_000 });
-  await page.getByRole('button', { name: 'Create verified branch' }).click();
+  await page.getByRole('button', { name: 'Create combined branch' }).click();
   const generationResponse = await generationResponsePromise;
   expect(generationResponse.status()).toBe(200);
   expect(generationResponse.request().postDataJSON()).toEqual(outgoing);
@@ -104,10 +95,9 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   expect(report.excludedSourceChanges.some((change: { path: string }) => change.path === 'src/utils/inventorySummary.ts')).toBe(true);
   expect(await git(['rev-parse', `${candidateBranch}^`])).toBe(outgoing.plan.foundation.commitSha);
 
-  await page.getByRole('button', { name: 'View combined app' }).click();
   const resultCard = page.locator('[data-preview-id="right"]');
-  const candidateFrameElement = page.getByTitle('Combined result live application');
-  const candidate = page.frameLocator('iframe[title="Combined result live application"]');
+  const candidateFrameElement = page.getByTitle(`Combined result · ${candidateBranch} live application`);
+  const candidate = page.frameLocator(`iframe[title="Combined result · ${candidateBranch} live application"]`);
   await expect(resultCard).toHaveAttribute('data-plan-identity', outgoing.planIdentity);
   await expect(resultCard).toHaveAttribute('data-candidate-preview', 'generated-worktree');
   await expect(candidateFrameElement).toHaveAttribute('src', /^http:\/\/127\.0\.0\.1:\d+\/catalogue$/, { timeout: 120_000 });
@@ -127,8 +117,9 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
 
   await stopPreviews(request);
   await removeCandidate();
-  const repositoryState = await request.get('/api/repository').then(response => response.json());
-  expect(repositoryState.sessions).toEqual([]);
+  const repositoryState = await request.get('/api/repository').then(response => response.json()) as { sessions: Array<{ status: string }> };
+  expect(repositoryState.sessions).toHaveLength(2);
+  expect(repositoryState.sessions.every(session => session.status === 'stopped')).toBe(true);
   expect(await git(['status', '--porcelain'])).toBe('');
   expect(await git(['branch', '--list', candidateBranch])).toBe('');
   expect(await git(['worktree', 'list', '--porcelain'])).not.toMatch(/ui-merge-studio-(?:preview|candidate)-/);

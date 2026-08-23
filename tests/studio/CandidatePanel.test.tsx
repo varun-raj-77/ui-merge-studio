@@ -18,10 +18,10 @@ const identity = localIntegrationPlanIdentity({ version: 2, foundation, selectio
 function preflight(status: 'ready' | 'refused' = 'ready'): CandidatePreflight { return { generationId: 'f'.repeat(16), integrationPlan: { version: 2, identity }, plan: { version: 1, repository: { baseCommit: '1'.repeat(40), candidateBranch: 'combined-result' }, sliceIds: ['a'.repeat(16), 'b'.repeat(16)], operations: status === 'ready' ? [{ id: 'op:1', kind: 'add-file', sliceIds: ['a'.repeat(16)], source: { branchCommit: '2'.repeat(40), path: 'src/Feature.tsx', region: null, contentHash: 'hash' }, target: { path: 'src/Feature.tsx', region: null, symbol: null }, evidenceEdgeIds: ['edge'], precondition: { baseContentHash: null, targetContentHash: null, description: 'absent' }, postcondition: { expectedContentHash: 'hash', description: 'present' }, ownership: 'conservative-file-transfer', detail: 'add' }] : [], conflicts: status === 'refused' ? [{ id: 'conflict:1', kind: 'overlap', path: 'src/App.tsx', symbol: 'App', sliceIds: ['a'.repeat(16), 'b'.repeat(16)], operationIds: ['one', 'two'], evidenceEdgeIds: ['edge'], reason: 'Both slices replace App differently.', manualResolution: 'Resolve manually.' }] : [], unresolved: [], status } }; }
 function report(status: 'succeeded' | 'failed' = 'succeeded'): CandidateGenerationReport { return { version: 1, generationId: 'f'.repeat(16), integrationPlan: { version: 2, identity }, status, stage: status === 'succeeded' ? 'complete' : 'verify', message: status === 'succeeded' ? 'Candidate registered.' : 'Verification failed.', repository: { baseCommit: '1'.repeat(40), candidateBranch: 'combined-result', candidateCommit: status === 'succeeded' ? '4'.repeat(40) : undefined, candidateTree: status === 'succeeded' ? '5'.repeat(40) : undefined, idempotent: true, provenance: { planIdentity: identity, generationId: 'f'.repeat(16), profile: 'phase0' } }, sliceIds: ['a'.repeat(16), 'b'.repeat(16)], plan: preflight().plan, appliedOperations: [], excludedSourceChanges: [], conflicts: [], verification: [{ name: 'typecheck', command: 'npm run typecheck', status: status === 'succeeded' ? 'passed' : 'failed', exitCode: status === 'succeeded' ? 0 : 1, outputTail: '' }], cleanup: { worktreeRemoved: true, processesStopped: true, detail: 'clean' }, relativePath: '.ums/generation/f/candidate-report.json' }; }
 
-test('blocks the primary action until two current resolved slices exist', () => {
+test('keeps the primary action blocked until server preflight accepts the resolved selection', () => {
   render(<CandidatePanel inputs={[inputs()[0]]} foundation={foundation} onLaunch={() => undefined} />);
-  expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
-  expect(screen.getAllByText(/Select one branch-specific change from each live app/).length).toBeGreaterThan(0);
+  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
+  expect(screen.getByText('1 selected')).toBeVisible();
 });
 
 test('accepts one current rendered feature when the other preview is the pinned base', async () => {
@@ -29,7 +29,7 @@ test('accepts one current rendered feature when the other preview is the pinned 
   const singleIdentity = localIntegrationPlanIdentity({ version: 2, foundation, selections: [selected.selection] });
   vi.spyOn(globalThis, 'fetch').mockImplementation(() => response({ ...preflight(), integrationPlan: { version: 2, identity: singleIdentity }, plan: { ...preflight().plan, sliceIds: [selected.artifact!.analysisId] } }));
   render(<CandidatePanel inputs={[{ artifact: null, selection: null, status: 'awaiting-confirmation', sessionId: 'base-session' }, selected]} foundation={foundation} onLaunch={() => undefined} />);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled());
 });
 
 test('runs safety checking automatically, creates the candidate, and exposes verification', async () => {
@@ -42,24 +42,81 @@ test('runs safety checking automatically, creates the candidate, and exposes ver
     return response({ error: 'unexpected' }, 500);
   });
   render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={launch} />);
-  const button = screen.getByRole('button', { name: 'Create verified branch' });
+  const button = screen.getByRole('button', { name: 'Create combined branch' });
   await waitFor(() => expect(button).toBeEnabled());
-  expect(screen.getByText(/Both selections passed the compatibility check/)).toBeVisible();
+  expect(screen.getByText(/selected source slices can be combined safely/)).toBeVisible();
   fireEvent.click(button);
-  expect(await screen.findByText('Verified branch created')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'View combined app' }));
-  expect(launch).toHaveBeenCalledWith(expect.objectContaining({ repository: expect.objectContaining({ candidateBranch: 'combined-result' }) }));
-  fireEvent.click(screen.getByText('Verification summary'));
-  expect(screen.getByText('Code checks:')).toBeVisible();
-  expect(screen.getByText(/Cleanup: clean/)).toBeVisible();
+  await waitFor(() => expect(launch).toHaveBeenCalledWith(expect.objectContaining({ repository: expect.objectContaining({ candidateBranch: 'combined-result' }) })));
+  const causality = screen.getByRole('list', { name: 'Selection to verification progress' });
+  expect(causality.querySelector('.causal-complete')).toBeTruthy();
+  expect(screen.getByText('Candidate').closest('li')).toHaveClass('causal-complete');
+  expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-complete');
+});
+
+test('keeps candidate progress evidence-backed and monotonic through verification and later writing stages', async () => {
+  let statusCalls = 0;
+  let finishGeneration: ((value: Response) => void) | undefined;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/status') {
+      statusCalls += 1;
+      return response(statusCalls === 1
+        ? { status: 'running', stage: 'verification', message: 'Running verification.', verification: 'typecheck' }
+        : { status: 'running', stage: 'writing-tree', message: 'Writing the verified candidate tree.' });
+    }
+    if (url === '/api/candidate/generate') return new Promise<Response>(resolve => { finishGeneration = resolve; });
+    return response({ error: 'unexpected' }, 500);
+  });
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  await waitFor(() => {
+    expect(screen.getByText('Candidate').closest('li')).toHaveClass('causal-working');
+    expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-working');
+  });
+  await waitFor(() => expect(statusCalls).toBeGreaterThan(1), { timeout: 1_500 });
+  expect(screen.getByText('Candidate').closest('li')).toHaveClass('causal-working');
+  expect(screen.getByText('Candidate').closest('li')).not.toHaveClass('causal-complete');
+  expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-working');
+  finishGeneration?.(new Response(JSON.stringify(report()), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  await waitFor(() => expect(screen.getByText('Candidate').closest('li')).toHaveClass('causal-complete'));
+  expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-complete');
+});
+
+test('shows a distinct uncertainty state when the generation request loses transport', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/status') return response({ status: 'failed', stage: 'verify', message: 'Connection state unavailable.' });
+    if (url === '/api/candidate/generate') return Promise.reject(new TypeError('fetch failed: ECONNRESET'));
+    return response({ error: 'unexpected' }, 500);
+  });
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  expect(await screen.findByText('Generation status unknown')).toBeVisible();
+  expect(screen.getByText(/candidate may or may not have been created/i)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Check current state' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: /Create combined branch|Creating branch/i })).not.toBeInTheDocument();
+  expect(screen.queryByText(/No candidate was created/)).not.toBeInTheDocument();
+  expect(document.querySelector('.combine-tray')).toHaveClass('tray-uncertain');
+  expect(document.querySelector('.combine-tray')).not.toHaveClass('tray-refused');
+  expect(screen.getByText('Slice').closest('li')).toHaveClass('causal-complete');
+  expect(screen.getByText('Candidate').closest('li')).not.toHaveClass('causal-complete');
+  expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
 });
 
 test('states a safety refusal without enabling combination', async () => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(() => response(preflight('refused')));
   render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
   await screen.findAllByText(/cannot be combined safely/);
-  expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeDisabled();
-  expect(screen.getAllByText(/cannot be combined safely/i).length).toBeGreaterThan(0);
+  expect(screen.queryByRole('button', { name: 'Create combined branch' })).not.toBeInTheDocument();
+  expect(screen.getAllByText(/cannot combine safely/i).length).toBeGreaterThan(0);
+  expect(screen.getByText(/No candidate was created/)).toBeVisible();
+  expect(screen.getByText('Candidate').closest('li')).not.toHaveClass('causal-complete');
 });
 
 test('uses plain failure language and replaces branch creation with a revision action', async () => {
@@ -77,13 +134,56 @@ test('uses plain failure language and replaces branch creation with a revision a
     return response({ error: 'unexpected' }, 500);
   });
   render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} onRevise={revise} />);
-  const create = screen.getByRole('button', { name: 'Create verified branch' });
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
   await waitFor(() => expect(create).toBeEnabled());
   fireEvent.click(create);
-  expect(await screen.findByText(/Code checks did not pass/)).toBeVisible();
+  expect(await screen.findByText(/TypeScript did not pass/)).toBeVisible();
   expect(screen.getByText(/No combined branch was created/)).toBeVisible();
-  expect(screen.queryByRole('button', { name: /Create/ })).not.toBeInTheDocument();
-  const change = screen.getByRole('button', { name: 'Change selected features' });
+  expect(screen.queryByRole('button', { name: /Create combined/ })).not.toBeInTheDocument();
+  const change = screen.getByRole('button', { name: 'Change selections' });
   fireEvent.click(change);
   expect(revise).toHaveBeenCalledOnce();
+});
+
+test('marks Candidate complete only when a failed report still proves a durable branch exists', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/status') return response({ status: 'running', stage: 'commit', message: 'Registering candidate.' });
+    if (url === '/api/candidate/generate') {
+      const cleanupFailure = report('failed');
+      cleanupFailure.repository.candidateCommit = '4'.repeat(40);
+      cleanupFailure.repository.candidateTree = '5'.repeat(40);
+      cleanupFailure.cleanup = { worktreeRemoved: false, processesStopped: true, detail: 'Temporary worktree cleanup failed.' };
+      return response(cleanupFailure);
+    }
+    return response({ error: 'unexpected' }, 500);
+  });
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  expect(await screen.findByText('Candidate needs attention')).toBeVisible();
+  expect(screen.getByText(/candidate branch exists/i)).toBeVisible();
+  expect(screen.queryByText(/No candidate was created/)).not.toBeInTheDocument();
+  expect(screen.getByText('Candidate').closest('li')).toHaveClass('causal-complete');
+});
+
+test('resets candidate and verification completion for a new selection attempt', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/status') return response({ status: 'running', stage: 'verify', message: 'Verifying.' });
+    if (url === '/api/candidate/generate') return response(report());
+    return response({ error: 'unexpected' }, 500);
+  });
+  const firstInputs = inputs();
+  const view = render(<CandidatePanel inputs={firstInputs} foundation={foundation} onLaunch={() => undefined} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  await waitFor(() => expect(screen.getByText('Candidate').closest('li')).toHaveClass('causal-complete'));
+  view.rerender(<CandidatePanel inputs={firstInputs.map(item => ({ ...item, sessionId: `${item.sessionId}-new` }))} foundation={foundation} onLaunch={() => undefined} />);
+  await waitFor(() => expect(screen.getByText('Candidate').closest('li')).toHaveClass('causal-pending'));
+  expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-pending');
 });

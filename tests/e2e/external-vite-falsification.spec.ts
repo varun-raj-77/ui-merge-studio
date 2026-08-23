@@ -9,7 +9,6 @@ const candidateBranch = 'prompt015-external-candidate';
 const foundationCommit = '8223897259151c450f954e462c57df3703d5508d';
 const externalRepository = resolve(process.env.UI_MERGE_EXTERNAL_REPOSITORY ?? resolve(import.meta.dirname, '../../.validation-worktrees/prompt015-external-vite'));
 const card = (page: Page, side: 'left' | 'right') => page.locator(`[data-preview-id="${side}"]`);
-const selectedPanel = (version: Locator) => version.locator('.evidence-card').filter({ hasText: 'Selected boundary' });
 const field = (panel: Locator, name: string) => panel.locator('dt', { hasText: name }).locator('xpath=following-sibling::dd[1]');
 
 test.afterEach(async ({ request }) => {
@@ -24,8 +23,8 @@ test('projects selected JSX regions without copying co-located or separate unrel
   });
 
   await page.goto('/?mode=local');
-  await page.getByRole('button', { name: /Try sample demo/ }).click();
-  await expect(page.locator('.workspace-status')).toHaveText('Both live apps are ready to compare', { timeout: 180_000 });
+  await page.getByRole('button', { name: /Continue to comparison/ }).click();
+  await expect(page.getByText('Two running versions', { exact: true })).toBeVisible({ timeout: 180_000 });
   await expect(card(page, 'left')).toContainText(leftBranch);
   await expect(card(page, 'right')).toContainText(rightBranch);
 
@@ -50,34 +49,33 @@ test('projects selected JSX regions without copying co-located or separate unrel
   await expect(rightFrame.getByText('Revenue pulse: healthy')).toBeVisible();
   await expect(rightFrame.getByText(/revenue experiment footer/)).toBeVisible();
 
-  await card(page, 'left').getByRole('button', { name: 'Choose feature' }).click();
+  await page.getByRole('button', { name: 'Select parts' }).click();
   await leftFrame.getByText('Release workspace ready').click();
-  await expect(card(page, 'left').locator('.selection-summary')).toBeVisible({ timeout: 120_000 });
-  await card(page, 'right').getByRole('button', { name: 'Choose feature' }).click();
+  await expect(card(page, 'left').locator('.attached-selection')).toBeVisible({ timeout: 120_000 });
+  const preflightResponse = page.waitForResponse(response => response.url().endsWith('/api/candidate/preflight') && response.request().method() === 'POST');
   await rightFrame.getByText('Revenue pulse: healthy').click();
-  await expect(card(page, 'right').locator('.selection-summary')).toBeVisible({ timeout: 120_000 });
+  await expect(card(page, 'right').locator('.attached-selection')).toBeVisible({ timeout: 120_000 });
 
-  await page.getByRole('button', { name: 'How are changes identified?' }).click();
-  const versions = page.getByRole('dialog').locator('.drawer-version');
-  const leftSelection = selectedPanel(versions.nth(0));
-  const rightSelection = selectedPanel(versions.nth(1));
+  await page.getByRole('button', { name: 'Inspect evidence' }).click();
+  const versions = page.getByRole('dialog').locator('.evidence-section');
+  const leftSelection = versions.nth(0);
+  const rightSelection = versions.nth(1);
   await expect(field(leftSelection, 'Component')).toHaveText('WorkspaceStatusBanner');
   await expect(field(leftSelection, 'Source')).toHaveText(/WorkspaceStatusBanner\.tsx:\d+:\d+/);
   await expect(field(rightSelection, 'Component')).toHaveText('RevenuePulseBadge');
   await expect(field(rightSelection, 'Source')).toHaveText(/RevenuePulseBadge\.tsx:\d+:\d+/);
   await expect(versions.nth(0)).toContainText('Expanded from WorkspaceStatusBanner to PageContent');
   await expect(versions.nth(1)).toContainText('Expanded from RevenuePulseBadge to RevenueTrendChart');
-  await expect(versions.nth(0)).toContainText('WorkspaceStatusBanner.module.css');
-  await expect(versions.nth(0)).toContainText('useWorkspaceStatus');
-  await expect(versions.nth(0)).toContainText('workspaceStatusConfig');
-  await expect(versions.nth(1)).toContainText('useRevenuePulse');
-  await expect(versions.nth(1)).toContainText('revenuePulseConfig');
-  await expect(versions.nth(1)).toContainText('src/components/layout/index.tsx');
-  await page.getByRole('button', { name: 'Close technical details' }).click();
+  await page.getByRole('tab', { name: 'Dependencies' }).click();
+  const dependencySections = page.getByRole('dialog').locator('.evidence-section');
+  await expect(dependencySections.nth(0)).toContainText('WorkspaceStatusBanner.module.css');
+  await expect(dependencySections.nth(0)).toContainText('useWorkspaceStatus');
+  await expect(dependencySections.nth(0)).toContainText('workspaceStatusConfig');
+  await expect(dependencySections.nth(1)).toContainText('useRevenuePulse');
+  await expect(dependencySections.nth(1)).toContainText('revenuePulseConfig');
+  await expect(dependencySections.nth(1)).toContainText('src/components/layout/index.tsx');
+  await page.getByRole('button', { name: 'Close evidence drawer' }).click();
 
-  await card(page, 'left').getByRole('button', { name: 'Confirm selection' }).click();
-  const preflightResponse = page.waitForResponse(response => response.url().endsWith('/api/candidate/preflight') && response.request().method() === 'POST');
-  await card(page, 'right').getByRole('button', { name: 'Confirm selection' }).click();
   const preflight = await preflightResponse.then(async response => ({ request: response.request().postDataJSON(), value: await response.json() }));
   expect(preflight.request.plan.version).toBe(2);
   expect(preflight.request.plan.foundation).toMatchObject({ branchRef: foundationBranch, commitSha: foundationCommit, commonAncestorCommit: foundationCommit });
@@ -89,7 +87,7 @@ test('projects selected JSX regions without copying co-located or separate unrel
   expect(operations.some(operation => operation.target.path === 'src/components/layout/index.tsx')).toBe(false);
 
   const generationResponse = page.waitForResponse(response => response.url().endsWith('/api/candidate/generate') && response.request().method() === 'POST', { timeout: 480_000 });
-  await page.getByRole('button', { name: 'Create verified branch' }).click();
+  await page.getByRole('button', { name: 'Create combined branch' }).click();
   const firstReport = await generationResponse.then(response => response.json());
   expect(firstReport.status, firstReport.message).toBe('succeeded');
   expect(firstReport.integrationPlan.identity).toBe(preflight.request.planIdentity);
@@ -112,7 +110,6 @@ test('projects selected JSX regions without copying co-located or separate unrel
   expect(candidateDiff).not.toContain('Experimental density controls enabled');
   expect(candidateDiff).not.toContain('revenue experiment footer');
 
-  await page.getByRole('button', { name: 'View combined app' }).click();
   await expect(card(page, 'right')).toContainText(candidateBranch);
   rightFrame = page.frameLocator('iframe').nth(1);
   await rightFrame.getByRole('button', { name: 'Login as Demo User' }).click();

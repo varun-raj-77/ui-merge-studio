@@ -15,9 +15,9 @@ test.afterEach(async ({ request }) => { await request.delete('/api/preview').cat
 test('refuses a real but unclicked source declaration supplied through the public analysis API', async ({ page, request }) => {
   test.setTimeout(240_000);
   await page.goto('/?mode=local');
-  await page.getByRole('button', { name: /Try sample demo/i }).click();
-  await expect(page.locator('[data-preview-id="left"]')).toContainText('Live and synchronized', { timeout: 120_000 });
-  await expect(page.locator('[data-preview-id="right"]')).toContainText('Live and synchronized', { timeout: 120_000 });
+  await page.getByRole('button', { name: /Continue to comparison/i }).click();
+  await expect(page.locator('[data-preview-id="left"]')).toContainText('Running', { timeout: 120_000 });
+  await expect(page.locator('[data-preview-id="right"]')).toContainText('Running', { timeout: 120_000 });
 
   const repositoryState = await request.get('/api/repository').then(response => response.json()) as {
     repositoryId: string;

@@ -5,11 +5,11 @@ test.afterEach(async ({ request }) => { await request.delete('/api/preview').cat
 test('controlled Phase 0 click still resolves through an opaque receipt', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/?mode=local');
-  await page.getByRole('button', { name: /Try sample demo/i }).click();
+  await page.getByRole('button', { name: /Continue to comparison/i }).click();
   const leftCard = page.locator('[data-preview-id="left"]');
-  await expect(leftCard).toContainText('Live and synchronized', { timeout: 120_000 });
+  await expect(leftCard).toContainText('Running', { timeout: 120_000 });
 
-  await leftCard.getByRole('button', { name: 'Choose feature' }).click();
+  await page.getByRole('button', { name: 'Select parts' }).click();
   const responsePromise = page.waitForResponse(response => response.url().endsWith('/api/previews/left/analysis') && response.request().method() === 'POST');
   await page.frameLocator('[data-preview-id="left"] iframe').getByRole('complementary', { name: 'Category sidebar' }).click();
   const response = await responsePromise;
