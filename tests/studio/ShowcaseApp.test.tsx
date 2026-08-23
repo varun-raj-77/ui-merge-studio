@@ -32,11 +32,25 @@ function installScope(frameTitle: string, scope: string, label: string, content 
 describe('Product Catalogue landing', () => {
   it('explains the outcome in five seconds without implementation terminology', () => {
     render(<CatalogueShowcase />);
-    expect(screen.getByRole('heading', { name: 'Combine the best parts of parallel React implementations.' })).toBeVisible();
-    expect(screen.getByText('Compare working versions, pick visible features, and generate one verified branch.')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Compare two implementations. Click the parts you prefer. Create one verified branch.' })).toBeVisible();
+    expect(screen.getByText(/select preferred visible features, and let UI Merge trace the required source changes/i)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Try the interactive example' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'How it works' })).toBeVisible();
-    expect(screen.queryByText(/Branch A|Branch B|candidate ID|AST|Product Catalogue/i)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'How it works' }).length).toBeGreaterThan(0);
+    const heroDemo = screen.getByLabelText('Illustration of two source versions converging into one verified result');
+    expect(heroDemo).toHaveTextContent('Selected');
+    expect(heroDemo).toHaveTextContent('Source');
+    expect(heroDemo).toHaveTextContent('Candidate');
+    expect(heroDemo).toHaveTextContent('Verified');
+    expect(screen.queryByText(/candidate ID|AST|Product Catalogue/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps public navigation and the local-product boundary truthful', () => {
+    render(<CatalogueShowcase />);
+    expect(screen.getByRole('navigation', { name: 'Public navigation' })).toBeVisible();
+    expect(screen.getByText('No repository access in the browser')).toBeVisible();
+    const localLinks = screen.getAllByRole('link', { name: /Run locally|Clone and run locally/ });
+    expect(localLinks.every(link => link.getAttribute('href') === 'https://github.com/varun-raj-77/ui-merge-studio#run-locally')).toBe(true);
+    expect(screen.getByRole('heading', { name: 'Try it on your repository.' })).toBeVisible();
   });
 });
 
@@ -50,6 +64,11 @@ describe('quiet comparison workspace', () => {
     expect(screen.queryByRole('button', { name: 'Play' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Select' })).not.toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('FoundationMain');
+    const causality = screen.getByRole('region', { name: 'Controlled integration evidence state' });
+    expect(causality).toHaveTextContent('0 selected');
+    expect(causality).toHaveTextContent('Selected');
+    expect(causality).toHaveTextContent('Verified');
+    expect(screen.getByText('Browser-only replay · no repository access')).toBeVisible();
   });
 
   it('keeps normal app clicks independent from the nearby source-backed Add control', () => {
@@ -66,7 +85,12 @@ describe('quiet comparison workspace', () => {
     expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('0 selections');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Quick View on Studio Speaker' }));
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Quick ViewStudio Speaker');
+    const dock = screen.getByRole('complementary', { name: 'Current selections' });
+    expect(dock).toHaveTextContent('Added from Version B');
+    expect(dock).toHaveTextContent('Quick ViewStudio Speaker');
+    const causality = screen.getByRole('region', { name: 'Controlled integration evidence state' });
+    expect(causality).toHaveTextContent('1 selected');
+    expect(causality.querySelector('[data-state="active"]')).toHaveTextContent('Candidate');
   });
 
   it('offers customization before selection and changes to editing after the sidebar is selected', () => {
@@ -149,8 +173,13 @@ describe('quiet comparison workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Add Category sidebar' }));
     fireEvent.click(screen.getByRole('button', { name: 'View combined' }));
 
-    expect(screen.getByText('Configured preview')).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Main foundation · 1 explicit addition' })).toBeVisible();
+    expect(screen.getByText('Recorded convergence')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'One verified combined result' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Recorded result convergence' })).toHaveTextContent('Category sidebar');
+    const gates = screen.getByLabelText('Recorded verification gates');
+    expect(gates).toHaveTextContent('TypeScriptPassed');
+    expect(gates).toHaveTextContent('Production buildPassed');
+    expect(screen.getByRole('region', { name: 'Controlled integration evidence state' }).querySelectorAll('[data-state="complete"]')).toHaveLength(5);
     expect(screen.getByTitle('Combined result application')).toBeVisible();
     expect(screen.getByTitle('Version A live application')).not.toBeVisible();
 
@@ -168,7 +197,14 @@ describe('quiet comparison workspace', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Quick View · Task Lamp' });
     expect(dialog).toHaveTextContent('ProductQuickViewShelf');
+    expect(dialog).toHaveTextContent('src/features/catalogue/ProductQuickViewShelf.tsx:9');
+    expect(dialog).toHaveTextContent('Branch B · branch-b');
+    expect(dialog).toHaveTextContent('a3e6df521dcd');
     expect(within(dialog).getByRole('tab', { name: 'source' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'dependencies' }));
+    expect(dialog).toHaveTextContent('src/hooks/useSelectedProduct.ts');
+    expect(dialog).toHaveTextContent('src/utils/inventorySummary.ts');
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'source' }));
     const closeButton = within(dialog).getByRole('button', { name: 'Close technical evidence' });
     const verificationTab = within(dialog).getByRole('tab', { name: 'verification' });
     expect(closeButton).toHaveFocus();
@@ -189,8 +225,11 @@ describe('quiet comparison workspace', () => {
 
     expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('Conflict');
     fireEvent.click(screen.getByRole('button', { name: 'Review conflict' }));
-    const dialog = screen.getByRole('dialog', { name: 'Cannot combine these selections' });
+    const dialog = screen.getByRole('dialog', { name: 'Cannot combine safely' });
+    expect(dialog).toHaveTextContent('No combined result was produced.');
     expect(dialog).toHaveTextContent('src/types/product.ts#Product');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'See why' }));
+    expect(dialog).toHaveTextContent('One selected slice replaces the existing Product contract');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Remove incompatible change' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

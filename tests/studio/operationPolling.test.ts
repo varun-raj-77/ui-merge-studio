@@ -15,6 +15,7 @@ function operation(state: PreviewOperation['state']): PreviewOperation {
     phases: [],
     result: null,
     error: null,
+    refusal: null,
     supersededBy: null
   };
 }

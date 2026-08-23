@@ -37,5 +37,5 @@ test('deselection updates the mounted configured runtime while staying in result
   await page.getByRole('button', { name: 'Remove Quick View · Arc Headphones' }).click();
   await expect(combinedFrame.getByRole('button', { name: 'Quick view' })).toHaveCount(1);
   await expect(combinedFrame.getByRole('heading', { name: 'Task Lamp' }).locator('xpath=ancestor::article').getByRole('button', { name: 'Quick view' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Main foundation · 1 explicit addition' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'One verified combined result' })).toBeVisible();
 });

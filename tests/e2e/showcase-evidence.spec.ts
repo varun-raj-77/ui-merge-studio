@@ -27,8 +27,8 @@ test.describe('outcome-first landing', () => {
   test('communicates the product without exposing implementation detail', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/?mode=showcase');
-    await expect(page.getByRole('heading', { name: 'Combine the best parts of parallel React implementations.' })).toBeVisible();
-    await expect(page.getByText('Compare working versions, pick visible features, and generate one verified branch.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Compare two implementations. Click the parts you prefer. Create one verified branch.' })).toBeVisible();
+    await expect(page.getByText(/select preferred visible features, and let UI Merge trace the required source changes/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try the interactive example' })).toBeVisible();
     await expect(page.getByText('Branch A')).toHaveCount(0);
     await expect(page.getByText('Branch B')).toHaveCount(0);
@@ -66,7 +66,7 @@ test.describe('mode-free comparison workspace', () => {
     await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selections');
     await page.getByRole('button', { name: 'View combined' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Main foundation · 2 explicit additions' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'One verified combined result' })).toBeVisible();
     await expect(page.getByTitle('Version A live application')).not.toBeVisible();
     await expect(page.getByTitle('Version B live application')).not.toBeVisible();
     await expect(page.getByTitle('Combined result application')).toBeVisible();
@@ -96,10 +96,10 @@ test.describe('mode-free comparison workspace', () => {
     await page.getByRole('button', { name: '+ Experimental Product-ID change' }).click();
     await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('Conflict');
     await page.getByRole('button', { name: 'Review conflict' }).click();
-    const conflict = page.getByRole('dialog', { name: 'Cannot combine these selections' });
+    const conflict = page.getByRole('dialog', { name: 'Cannot combine safely' });
     await expect(conflict).toContainText('src/types/product.ts#Product');
-    await conflict.getByRole('button', { name: 'Inspect evidence' }).click();
-    await expect(conflict).toContainText('The safe Integration Plan remains available');
+    await conflict.getByRole('button', { name: 'See why' }).click();
+    await expect(conflict).toContainText('One selected slice replaces the existing Product contract');
     await conflict.getByRole('button', { name: 'Remove incompatible change' }).click();
     await expect(conflict).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'View combined' })).toBeVisible();

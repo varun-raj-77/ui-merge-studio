@@ -1,0 +1,21 @@
+diff --git a/src/views/dashboard/RevenuePulseBadge.tsx b/src/views/dashboard/RevenuePulseBadge.tsx
+index 24140f0..16e9f21 100644
+--- a/src/views/dashboard/RevenuePulseBadge.tsx
++++ b/src/views/dashboard/RevenuePulseBadge.tsx
+@@ -1 +1,2 @@
++import pulseIcon from './revenue-pulse.svg'
+ import { useRevenuePulse } from './useRevenuePulse'
+@@ -7,3 +8,4 @@ export const RevenuePulseBadge = ({ width }: { width: number }) => {
+     <g aria-label="Revenue pulse">
+       <rect x={width - 170} y="2" width="150" height="22" rx="11" fill="#f6ffed" />
++      <image href={pulseIcon} x={width - 160} y="7" width="10" height="10" />
+       <text x={width - 95} y="17" textAnchor="middle" fill="#389e0d" fontSize="12">{pulse.label}</text>
+diff --git a/src/views/dashboard/revenue-pulse.svg b/src/views/dashboard/revenue-pulse.svg
+new file mode 100644
+index 0000000..3aaa62e
+--- /dev/null
++++ b/src/views/dashboard/revenue-pulse.svg
+@@ -0,0 +1,3 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
++  <circle cx="8" cy="8" r="7" fill="#52c41a" />
++</svg>

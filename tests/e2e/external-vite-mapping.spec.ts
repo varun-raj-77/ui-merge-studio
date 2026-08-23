@@ -1,17 +1,16 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const leftBranch = 'ui-merge-validation-left';
 const rightBranch = 'ui-merge-validation-right';
 const card = (page: Page, side: 'left' | 'right') => page.locator(`[data-preview-id="${side}"]`);
-const selectedPanel = (version: Locator) => version.locator('.evidence-card').filter({ hasText: 'Selected boundary' });
-const field = (panel: Locator, name: string) => panel.locator('dt', { hasText: name }).locator('xpath=following-sibling::dd[1]');
+const field = (panel: ReturnType<Page['locator']>, name: string) => panel.locator('dt', { hasText: name }).locator('xpath=following-sibling::dd[1]');
 
 test.afterEach(async ({ request }) => { await request.delete('/api/preview').catch(() => undefined); });
 
 test('launches and maps two unrelated Vite branches without repository-specific component names', async ({ page, request }) => {
   await page.goto('/?mode=local');
-  await page.getByRole('button', { name: /Try sample demo/ }).click();
-  await expect(page.locator('.workspace-status')).toHaveText('Both live apps are ready to compare', { timeout: 120_000 });
+  await page.getByRole('button', { name: /Continue to comparison/ }).click();
+  await expect(page.getByText('Two running versions', { exact: true })).toBeVisible({ timeout: 120_000 });
   await expect(card(page, 'left')).toContainText(leftBranch);
   await expect(card(page, 'right')).toContainText(rightBranch);
 
@@ -28,18 +27,17 @@ test('launches and maps two unrelated Vite branches without repository-specific 
   await expect(leftFrame.getByText('Validation workspace')).toBeVisible();
   await expect(rightFrame.getByText('Validated revenue outlook')).toBeVisible();
 
-  await card(page, 'left').getByRole('button', { name: 'Choose feature' }).click();
+  await page.getByRole('button', { name: 'Select parts' }).click();
   await leftFrame.getByText('Validation workspace').click();
-  await expect(card(page, 'left').getByRole('button', { name: 'Change' })).toBeVisible();
+  await expect(card(page, 'left').locator('.attached-selection')).toBeVisible({ timeout: 120_000 });
 
-  await card(page, 'right').getByRole('button', { name: 'Choose feature' }).click();
   await rightFrame.getByText('Validated revenue outlook').click();
-  await expect(card(page, 'right').getByRole('button', { name: 'Change' })).toBeVisible();
+  await expect(card(page, 'right').locator('.attached-selection')).toBeVisible({ timeout: 120_000 });
 
-  await page.getByRole('button', { name: 'How are changes identified?' }).click();
-  const versions = page.getByRole('dialog').locator('.drawer-version');
-  const left = selectedPanel(versions.nth(0));
-  const right = selectedPanel(versions.nth(1));
+  await page.getByRole('button', { name: 'Inspect evidence' }).click();
+  const versions = page.getByRole('dialog').locator('.evidence-section');
+  const left = versions.nth(0);
+  const right = versions.nth(1);
   await expect(field(left, 'Component')).toHaveText('PageContent');
   await expect(field(left, 'Source')).toHaveText(/src\/components\/layout\/contentbar\.tsx:\d+:\d+/);
   await expect(field(left, 'Branch')).toHaveText(leftBranch);

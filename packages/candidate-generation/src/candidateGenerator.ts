@@ -13,6 +13,7 @@ import { candidateGenerationVersion, type AppliedOperation, type CandidateConfli
 
 const execFileAsync = promisify(execFile);
 const textHash = (value: string | Buffer) => createHash('sha256').update((Buffer.isBuffer(value)?value.toString('utf8'):value).replace(/\r\n/g,'\n')).digest('hex');
+const blobHash = (value: string | Buffer) => createHash('sha256').update(value).digest('hex');
 const sourceIndexCache = new Map<string, ReturnType<typeof buildSourceIndex>>();
 function cachedSourceIndex(repository: GitSourceRepository, repositoryRoot: string, commit: string) {
   const key = `${repositoryRoot}:${commit}`;
@@ -31,6 +32,14 @@ function importRequirement(binding: ImportBinding, reason: string): ImportRequir
 function importKey(item: Pick<ImportRequirement,'source'|'local'|'imported'|'kind'>) { return `${item.source}:${item.local}:${item.imported}:${item.kind}`; }
 function projectionKey(item: NonNullable<CandidateOperation['jsxProjection']>) { return JSON.stringify({mode:item.mode,renderedBoundary:item.renderedBoundary,integrationBoundary:item.integrationBoundary,sourceNode:{kind:item.sourceNode.kind,name:item.sourceNode.name,structuralHash:item.sourceNode.structuralHash},baseParent:{kind:item.baseParent.kind,name:item.baseParent.name,structuralHash:item.baseParent.structuralHash},baseTarget:{structuralHash:item.baseTarget.structuralHash},anchor:item.anchor,requiredBindings:item.requiredBindings,excludedSourceSiblingCount:item.excludedSourceSiblingCount}); }
 function operationOrder(operation: CandidateOperation) { const rank: Record<CandidateOperation['kind'],number> = { 'add-file':0,'add-style-file':0,'add-asset':0,'replace-style-file':0,'reconstruct-source-file':0,'insert-import-specifier':1,'insert-export':2,'insert-declaration':3,'replace-declaration':3,'replace-jsx-region':3,'reconstruct-test-file':4,'configure-exported-const':5 }; return `${operation.target.path}:${rank[operation.kind]}:${operation.target.symbol ?? ''}:${operation.id}`; }
+const legacyPlanIdentity = 'legacy-v1-no-canonical-plan';
+type CandidateProvenance = CandidateGenerationReport['repository']['provenance'];
+function operationOwnership(kind: CandidateOperation['kind']): CandidateOperation['ownership'] {
+  if (kind === 'add-asset') return 'exclusive-atomic-dependency';
+  if (kind === 'replace-jsx-region') return 'region-owned-integration';
+  if (kind === 'add-file' || kind === 'add-style-file' || kind === 'replace-style-file') return 'conservative-file-transfer';
+  return 'declaration-owned-source';
+}
 
 export interface VerificationCommand { name: string; executable: string; args: string[] }
 export interface CandidateProgressEvent { stage: string; message: string; sliceId?: string; path?: string; verification?: string }
@@ -51,8 +60,9 @@ export class CandidateGenerator {
     const immutable = JSON.parse(JSON.stringify(request)) as CandidateGenerationRequest;
     const generationId = this.generationId(immutable); const unresolved = await this.validate(immutable); const operations: CandidateOperation[] = [];
     if (!unresolved.length) await this.buildOperations(immutable, operations, unresolved);
+    if (!unresolved.length) this.validateGenerationProfile(immutable, operations, unresolved);
     const normalized = this.normalizeOperations(operations); const conflicts = this.detectConflicts(normalized, immutable.artifacts);
-    const plan: CandidatePlan = { version:candidateGenerationVersion, repository:{baseCommit:immutable.expectedBaseCommit,candidateBranch:immutable.candidateBranch,repositoryId:immutable.repositoryId,foundationRef:immutable.baseRef,foundationCommit:immutable.expectedBaseCommit,commonBaseRef:immutable.commonBaseRef??immutable.baseRef,commonBaseCommit:immutable.expectedCommonBaseCommit??immutable.expectedBaseCommit}, sliceIds:stable(immutable.artifacts.map(item=>item.analysisId), value=>value), operations:normalized, conflicts, unresolved:stable(unresolved,item=>`${item.path}:${item.reason}`), status: conflicts.length || unresolved.length ? 'refused' : 'ready' };
+    const plan: CandidatePlan = { version:candidateGenerationVersion, repository:{baseCommit:immutable.expectedBaseCommit,candidateBranch:immutable.candidateBranch,repositoryId:immutable.repositoryId,foundationRef:immutable.baseRef,foundationCommit:immutable.expectedBaseCommit,commonBaseRef:immutable.commonBaseRef??immutable.baseRef,commonBaseCommit:immutable.expectedCommonBaseCommit??immutable.expectedBaseCommit,generationProfile:immutable.generationProfile??'phase0'}, sliceIds:stable(immutable.artifacts.map(item=>item.analysisId), value=>value), operations:normalized, conflicts, unresolved:stable(unresolved,item=>`${item.path}:${item.reason}`), status: conflicts.length || unresolved.length ? 'refused' : 'ready' };
     return { generationId, plan, integrationPlan: immutable.integrationPlan };
   }
 
@@ -81,12 +91,16 @@ export class CandidateGenerator {
       if (currentCandidate) {
         const existingTree = await this.git(['rev-parse',`${currentCandidate}^{tree}`]);
         if (existingTree !== tree) throw new CandidateRefusal(`Candidate branch ${immutable.candidateBranch} already exists at ${currentCandidate} with a different tree (${existingTree} instead of ${tree}).`);
+        const parents = (await this.git(['rev-list','--parents','-n','1',currentCandidate])).split(/\s+/);
+        if (parents.length !== 2 || parents[1] !== immutable.expectedBaseCommit) throw new CandidateRefusal(`Candidate branch ${immutable.candidateBranch} has the expected tree but not exactly the expected foundation parent ${immutable.expectedBaseCommit}.`);
+        const existingProvenance = await this.readCandidateProvenance(currentCandidate);
+        if (!existingProvenance || JSON.stringify(existingProvenance) !== JSON.stringify(report.repository.provenance)) throw new CandidateRefusal(`Candidate branch ${immutable.candidateBranch} has the expected tree and parent but its UI Merge plan/generation provenance does not match this request.`);
         report.repository.candidateCommit=currentCandidate; report.repository.idempotent=true; report.status='succeeded'; report.stage='complete'; report.message='Equivalent candidate already exists; generation is idempotent and created no divergent commit.';
       } else {
         report.stage='commit'; this.options.onStage?.('commit');
         this.options.onProgress?.({stage:'commit',message:'Registering the verified candidate commit atomically.'});
         const environment = { ...process.env, GIT_AUTHOR_NAME:'UI Merge Studio', GIT_AUTHOR_EMAIL:'candidate@ui-merge-studio.invalid', GIT_COMMITTER_NAME:'UI Merge Studio', GIT_COMMITTER_EMAIL:'candidate@ui-merge-studio.invalid', GIT_AUTHOR_DATE:'2000-01-01T00:00:00Z', GIT_COMMITTER_DATE:'2000-01-01T00:00:00Z' };
-        await this.git(['commit','-m','Generate verified UI Merge Studio candidate'],worktreePath,environment); const commit = await this.git(['rev-parse','HEAD'],worktreePath);
+        await this.git(['commit','-m',this.candidateCommitMessage(report.repository.provenance)],worktreePath,environment); const commit = await this.git(['rev-parse','HEAD'],worktreePath);
         if (await this.tryResolve(immutable.candidateBranch)) throw new CandidateRefusal(`Candidate branch ${immutable.candidateBranch} appeared before registration.`);
         await this.git(['branch',immutable.candidateBranch,commit]); report.repository.candidateCommit=commit; report.repository.idempotent=false; report.status='succeeded'; report.stage='complete'; report.message='Candidate transformations and verification passed; the candidate branch was registered atomically.';
       }
@@ -108,6 +122,7 @@ export class CandidateGenerator {
     if (resolve(request.repositoryRoot)!==this.repositoryRoot) reject('The immutable request repository does not match the configured generator repository.');
     if (!branchValid(request.candidateBranch)) reject(`Invalid candidate branch name: ${request.candidateBranch}.`);
     if (request.analyzerSchemaVersion!==featureSliceVersion) reject(`Unsupported analyzer schema version ${request.analyzerSchemaVersion}.`);
+    if (request.generationProfile && request.generationProfile!=='phase0' && request.generationProfile!=='external-react-vite') reject(`Unsupported candidate-generation profile ${String(request.generationProfile)}.`);
     if (request.artifacts.length < 1 || request.artifacts.length > 2) reject('One or two resolved feature-slice artifacts are required.');
     let base=''; try { base=await this.repository.resolveRef(request.baseRef); } catch(error){ reject(`Base ref resolution failed: ${error instanceof Error?error.message:String(error)}`); }
     if (base && base!==request.expectedBaseCommit) reject(`Stale base commit: expected ${request.expectedBaseCommit}, current ${base}.`);
@@ -144,7 +159,7 @@ export class CandidateGenerator {
       try { validateRepositoryPath(configuration.path); } catch (error) { reject(error instanceof Error ? error.message : String(error), configuration.path, configuration.sliceId); continue; }
       const change = artifact.slice.includedChanges.find(item => item.path === configuration.path);
       const file = artifact.slice.changedFiles.find(item => item.path === configuration.path);
-      if (!change || file?.status !== 'added') reject('Select the parent feature before generating this configuration. Configured source must be a fully included file added by its selected slice.', configuration.path, configuration.sliceId);
+      if (!change || file?.status !== 'added') reject('Select the parent feature before generating this configuration. Configured source must be an added file represented by the selected slice.', configuration.path, configuration.sliceId);
       if (!configuration.declaration) reject('Configured source declaration is required.', configuration.path, configuration.sliceId);
       if (configuration.expectedSourceContentHash) {
         try {
@@ -164,8 +179,34 @@ export class CandidateGenerator {
     return unresolved;
   }
 
+  private validateGenerationProfile(request:CandidateGenerationRequest,operations:CandidateOperation[],unresolved:CandidateUnresolved[]) {
+    if ((request.generationProfile??'phase0')!=='external-react-vite') return;
+    const reject=(path:string,sliceId:string,reason:string)=>this.unresolved(unresolved,path,sliceId,reason);
+    if(request.artifacts.length!==1){
+      unresolved.push({path:'<request>',sliceId:null,reason:'The bounded external React/Vite profile accepts exactly one rendered feature slice.',manualResolution:'Generate one visually selected external feature at a time.'});
+      return;
+    }
+    const artifact=request.artifacts[0]; const slice=artifact.slice;
+    if(!request.integrationPlan||request.integrationPlan.version!==2||!/^plan-v2-[a-f0-9]{8}$/.test(request.integrationPlan.identity))reject('<request>',artifact.analysisId,'The external React/Vite profile requires the server-owned canonical Integration Plan V2 identity.');
+    if(request.sourceConfigurations?.length)reject('<request>',artifact.analysisId,'Manual source configuration is outside the external React/Vite generation boundary.');
+    if(slice.selection.confidence!=='exact'||!slice.selection.componentName||!slice.selection.repositoryRelativePath.startsWith('src/')||!slice.selection.repositoryRelativePath.endsWith('.tsx'))reject(slice.selection.repositoryRelativePath,artifact.analysisId,'The external React/Vite profile requires an exact named TSX component selected through trusted rendered instrumentation.');
+    for(const change of slice.excludedChanges.filter(item=>item.proof!=='proven'))reject(change.path,artifact.analysisId,`Excluded change ${change.branchChangeId} is not proven unrelated.`);
+    const allowed=new Set<CandidateOperation['kind']>(['add-asset','reconstruct-source-file','insert-import-specifier','replace-jsx-region']);
+    for(const operation of operations){
+      if(operation.kind==='add-style-file'||operation.kind==='replace-style-file')reject(operation.target.path,artifact.analysisId,'Whole global stylesheet transfer is refused by the external React/Vite profile because CSS rule ownership is not implemented.');
+      if(!allowed.has(operation.kind))reject(operation.target.path,artifact.analysisId,`Operation ${operation.kind} is outside the bounded external React/Vite transform grammar.`);
+      if(!operation.target.path.startsWith('src/'))reject(operation.target.path,artifact.analysisId,'External candidate writes are restricted to the analyzed src/ dependency boundary.');
+      if(operation.kind==='reconstruct-source-file'&&operation.ownership!=='declaration-owned-source')reject(operation.target.path,artifact.analysisId,'External added source must be reconstructed from declaration-owned source evidence.');
+      if(operation.kind==='add-asset'&&operation.ownership!=='exclusive-atomic-dependency')reject(operation.target.path,artifact.analysisId,'External assets require exclusive atomic dependency evidence.');
+      if(operation.kind==='replace-jsx-region'&&operation.jsxProjection?.excludedSourceSiblingCount)reject(operation.target.path,artifact.analysisId,`Unrelated source changes modify the same JSX integration parent as ${operation.jsxProjection.renderedBoundary.symbol}; selective projection from that shared region is refused.`);
+    }
+    const integrations=operations.filter(item=>item.kind==='replace-jsx-region');
+    if(integrations.length!==1)reject(slice.selection.repositoryRelativePath,artifact.analysisId,`The external React/Vite profile requires exactly one structurally anchored JSX integration operation; planned ${integrations.length}.`);
+  }
+
   private async buildOperations(request: CandidateGenerationRequest, operations: CandidateOperation[], unresolved: CandidateUnresolved[]) {
     const baseIndex=await cachedSourceIndex(this.repository,this.repositoryRoot,request.expectedBaseCommit);
+    const external=(request.generationProfile??'phase0')==='external-react-vite';
     for(const artifact of stable(request.artifacts,item=>item.analysisId)) {
       const slice=artifact.slice; const sourceIndex=await cachedSourceIndex(this.repository,this.repositoryRoot,slice.repository.branchCommit); const changed=new Map(slice.changedFiles.map(item=>[item.path,item])); const includedByPath=new Map<string,typeof slice.includedChanges>();
       for(const change of slice.includedChanges){const list=includedByPath.get(change.path)??[];list.push(change);includedByPath.set(change.path,list);} const processed=new Set<string>();
@@ -178,12 +219,31 @@ export class CandidateGenerator {
         if(processed.has(path))continue; processed.add(path); const file=changed.get(path); if(!file){this.unresolved(unresolved,path,artifact.analysisId,'Included path is missing from the analyzed Git change set.');continue;} try{validateRepositoryPath(path);}catch(error){this.unresolved(unresolved,path,artifact.analysisId,error instanceof Error?error.message:String(error));continue;}
         const exclusions=slice.excludedChanges.filter(item=>item.path===path); const source=await this.gitBlob(slice.repository.branchCommit,path);
         if(file.status==='added') {
-          if(exclusions.length){const module=sourceIndex.moduleByPath.get(path);const names=changes.map(item=>item.symbol?.name).filter((value):value is string=>Boolean(value)).sort();if(!module||!names.length){this.unresolved(unresolved,path,artifact.analysisId,'An added file contains excluded source changes and lacks reconstructable included declarations.');continue;}const output=reconstructAddedModule(source.toString('utf8'),path,module,names);const operation=this.operation('reconstruct-source-file',artifact,path,null,null,source,textHash(output),changes.flatMap(item=>item.evidenceEdgeIds),'Reconstruct the added module from only the included AST declarations and their required imports.');operation.declarationNames=names;operations.push(operation);continue;}
-          const kind=path.endsWith('.css')?'add-style-file':changes.some(item=>item.category==='asset')?'add-asset':'add-file'; const output=textPath(path)?formattedText(source):source;operations.push(this.operation(kind,artifact,path,null,null,source,textHash(output),changes.flatMap(item=>item.evidenceEdgeIds),'Add the validated source blob because the analyzed added file is fully owned by this slice; normalize text EOF formatting deterministically.')); continue;
+          const reconstructSource=external&&/\.[jt]sx?$/.test(path);
+          if(exclusions.length&&!/\.[jt]sx?$/.test(path)){this.unresolved(unresolved,path,artifact.analysisId,'An added atomic file contains excluded source changes; selective semantic reconstruction is unavailable.');continue;}
+          if(exclusions.length||reconstructSource){
+            const module=sourceIndex.moduleByPath.get(path);const names=changes.map(item=>item.symbol?.name).filter((value):value is string=>Boolean(value)).sort();
+            if(!module||!names.length){this.unresolved(unresolved,path,artifact.analysisId,'An added source module lacks reconstructable included declaration evidence.');continue;}
+            const includedPaths=new Set(slice.includedChanges.map(item=>item.path));
+            const allowedBareImportSources=external?module.imports.filter(item=>item.kind==='style'&&item.resolvedPath&&includedPaths.has(item.resolvedPath)).map(item=>item.source).sort():undefined;
+            let output='';
+            try{output=reconstructAddedModule(source.toString('utf8'),path,module,names,{allowedBareImportSources,refuseUnsupportedTopLevel:external});}
+            catch(error){this.unresolved(unresolved,path,artifact.analysisId,`Added source cannot be reconstructed from declaration-owned content: ${error instanceof Error?error.message:String(error)}`);continue;}
+            const operation=this.operation('reconstruct-source-file',artifact,path,null,null,source,textHash(output),changes.flatMap(item=>item.evidenceEdgeIds),'Reconstruct declaration-owned added source from only reachable indexed declarations and structurally required imports.');operation.declarationNames=names;if(allowedBareImportSources?.length)operation.allowedBareImportSources=allowedBareImportSources;operations.push(operation);continue;
+          }
+          const kind=path.endsWith('.css')?'add-style-file':changes.some(item=>item.category==='asset')?'add-asset':'add-file';
+          if(external&&kind==='add-asset'){
+            if(await this.pathExistsAtCommit(request.expectedBaseCommit,path)){this.unresolved(unresolved,path,artifact.analysisId,'Atomic asset dependency already exists at the candidate foundation and is not an added exclusive dependency.');continue;}
+            const ownership=this.exclusiveAtomicAssetDependency(artifact,sourceIndex,path);
+            if(!ownership.ok){this.unresolved(unresolved,path,artifact.analysisId,ownership.reason);continue;}
+          }
+          const output=textPath(path)?formattedText(source):source;
+          const detail=kind==='add-asset'?'Add the unchanged atomic asset blob only as an exclusive static dependency; no semantic ownership of its bytes is claimed.':kind==='add-style-file'?'Plan a conservative whole-file stylesheet transfer; profiles that cannot prove CSS rule ownership must refuse it.':'Add the conservatively classified file blob with deterministic text normalization.';
+          operations.push(this.operation(kind,artifact,path,null,null,source,kind==='add-asset'?blobHash(output):textHash(output),changes.flatMap(item=>item.evidenceEdgeIds),detail)); continue;
         }
         if(path.endsWith('.css')) {
-          if(file.status!=='modified'||exclusions.length){this.unresolved(unresolved,path,artifact.analysisId,'Modified stylesheet is not wholly slice-owned; CSS rule-level reconstruction is unavailable.');continue;}
-          const base=await this.gitBlob(request.expectedBaseCommit,path); operations.push(this.operation('replace-style-file',artifact,path,null,null,source,textHash(formattedText(source)),changes.flatMap(item=>item.evidenceEdgeIds),'Replace the stylesheet only because the complete modified file is slice-owned, then normalize EOF formatting.',undefined,undefined,textHash(base))); continue;
+          if(file.status!=='modified'||exclusions.length){this.unresolved(unresolved,path,artifact.analysisId,'Modified stylesheet has excluded or unsupported content; CSS rule-level reconstruction is unavailable.');continue;}
+          const base=await this.gitBlob(request.expectedBaseCommit,path); operations.push(this.operation('replace-style-file',artifact,path,null,null,source,textHash(formattedText(source)),changes.flatMap(item=>item.evidenceEdgeIds),'Apply the legacy Phase 0 conservative complete-file stylesheet operation and normalize EOF formatting.',undefined,undefined,textHash(base))); continue;
         }
         if(!/\.[jt]sx?$/.test(path)||file.status!=='modified'){this.unresolved(unresolved,path,artifact.analysisId,`Changed file status/type ${file.status} is unsupported for reconstruction.`);continue;}
         const sourceText=source.toString('utf8'); const baseText=(await this.gitBlob(request.expectedBaseCommit,path)).toString('utf8'); const sourceModule=sourceIndex.moduleByPath.get(path); const baseModule=baseIndex.moduleByPath.get(path); if(!sourceModule||!baseModule){this.unresolved(unresolved,path,artifact.analysisId,'Modified TypeScript module is missing from the base/source AST index.');continue;}
@@ -235,12 +295,12 @@ export class CandidateGenerator {
   }
 
   private operation(kind:CandidateOperation['kind'],artifact:FeatureSliceArtifact,path:string,symbol:string|null,sourceRegion:CandidateOperation['source']['region'],sourceContent:string|Buffer,expectedHash:string,evidence:string[],detail:string,requirement?:ImportRequirement,testSlice?:CandidateOperation['testSlice'],baseHash:string|null=null,targetHash:string|null=null,targetRegion:CandidateOperation['target']['region']=null): CandidateOperation {
-    const without:{kind:CandidateOperation['kind'];source:CandidateOperation['source'];target:CandidateOperation['target'];precondition:CandidateOperation['precondition'];postcondition:CandidateOperation['postcondition'];detail:string;importRequirement?:ImportRequirement;testSlice?:CandidateOperation['testSlice']}={kind,source:{branchCommit:artifact.slice.repository.branchCommit,path,region:sourceRegion,contentHash:textHash(sourceContent)},target:{path,region:targetRegion,symbol},precondition:{baseContentHash:baseHash,targetContentHash:targetHash,description:baseHash?'Target file and AST identity must match the analyzed base.':'Target path must not contain conflicting content.'},postcondition:{expectedContentHash:expectedHash,description:'Result must parse where applicable and match the planned semantic content hash.'},detail}; if(requirement)without.importRequirement=requirement;if(testSlice)without.testSlice=testSlice; return {id:operationId(without),sliceIds:[artifact.analysisId],evidenceEdgeIds:stable([...new Set(evidence)],value=>value),...without};
+    const without:{kind:CandidateOperation['kind'];source:CandidateOperation['source'];target:CandidateOperation['target'];precondition:CandidateOperation['precondition'];postcondition:CandidateOperation['postcondition'];ownership:CandidateOperation['ownership'];detail:string;importRequirement?:ImportRequirement;testSlice?:CandidateOperation['testSlice']}={kind,source:{branchCommit:artifact.slice.repository.branchCommit,path,region:sourceRegion,contentHash:kind==='add-asset'?blobHash(sourceContent):textHash(sourceContent)},target:{path,region:targetRegion,symbol},precondition:{baseContentHash:baseHash,targetContentHash:targetHash,description:baseHash?'Target file and AST identity must match the analyzed base.':'Target path must not contain conflicting content.'},postcondition:{expectedContentHash:expectedHash,description:'Result must parse where applicable and match the planned deterministic content hash.'},ownership:operationOwnership(kind),detail}; if(requirement)without.importRequirement=requirement;if(testSlice)without.testSlice=testSlice; return {id:operationId(without),sliceIds:[artifact.analysisId],evidenceEdgeIds:stable([...new Set(evidence)],value=>value),...without};
   }
   private normalizeOperations(operations:CandidateOperation[]) {
     const map=new Map<string,CandidateOperation>();
     for(const operation of stable(operations,operationOrder)) {
-      const semanticKey=JSON.stringify({kind:operation.kind,target:operation.target,expectedContentHash:operation.postcondition.expectedContentHash,importRequirement:operation.importRequirement,exportRequirement:operation.exportRequirement,declarationNames:operation.declarationNames,sourceConfiguration:operation.sourceConfiguration,jsxProjection:operation.jsxProjection});
+      const semanticKey=JSON.stringify({kind:operation.kind,target:operation.target,expectedContentHash:operation.postcondition.expectedContentHash,ownership:operation.ownership,importRequirement:operation.importRequirement,exportRequirement:operation.exportRequirement,declarationNames:operation.declarationNames,allowedBareImportSources:operation.allowedBareImportSources,sourceConfiguration:operation.sourceConfiguration,jsxProjection:operation.jsxProjection});
       const existing=map.get(semanticKey);
       if(existing){existing.sliceIds=stable([...new Set([...existing.sliceIds,...operation.sliceIds])],value=>value);existing.evidenceEdgeIds=stable([...new Set([...existing.evidenceEdgeIds,...operation.evidenceEdgeIds])],value=>value);}
       else map.set(semanticKey,{...operation});
@@ -287,7 +347,7 @@ export class CandidateGenerator {
       const target=resolve(worktree,validateRepositoryPath(operation.target.path)); if(!target.startsWith(`${resolve(worktree)}\\`)&&!target.startsWith(`${resolve(worktree)}/`))throw new CandidateRefusal(`Unsafe target path ${operation.target.path}.`);
       if(operation.precondition.baseContentHash&&!verifiedBase.has(operation.target.path)){const current=await readFile(target);if(textHash(current)!==operation.precondition.baseContentHash)throw new CandidateRefusal(`Base content hash precondition failed for ${operation.target.path}.`);verifiedBase.add(operation.target.path);}
       let status:AppliedOperation['status']='applied';
-      if(['add-file','add-style-file','add-asset'].includes(operation.kind)) { const blob=await this.gitBlob(operation.source.branchCommit,operation.source.path);if(textHash(blob)!==operation.source.contentHash)throw new CandidateRefusal(`Source blob hash changed for ${operation.source.path}.`);const output=textPath(operation.target.path)?Buffer.from(formattedText(blob),'utf8'):blob;try{const existing=await readFile(target);if(textHash(existing)===textHash(output))status='deduplicated';else throw new CandidateRefusal(`Target ${operation.target.path} already exists with conflicting content.`);}catch(error){if(error instanceof CandidateRefusal)throw error;await mkdir(dirname(target),{recursive:true});await writeFile(target,output);} }
+      if(['add-file','add-style-file','add-asset'].includes(operation.kind)) { const blob=await this.gitBlob(operation.source.branchCommit,operation.source.path);const hash=operation.kind==='add-asset'?blobHash:textHash;if(hash(blob)!==operation.source.contentHash)throw new CandidateRefusal(`Source blob hash changed for ${operation.source.path}.`);const output=textPath(operation.target.path)?Buffer.from(formattedText(blob),'utf8'):blob;try{const existing=await readFile(target);if(hash(existing)===hash(output))status='deduplicated';else throw new CandidateRefusal(`Target ${operation.target.path} already exists with conflicting content.`);}catch(error){if(error instanceof CandidateRefusal)throw error;await mkdir(dirname(target),{recursive:true});await writeFile(target,output);} }
       else if(operation.kind==='replace-style-file'){const blob=await this.gitBlob(operation.source.branchCommit,operation.source.path);if(textHash(blob)!==operation.source.contentHash)throw new CandidateRefusal(`Source blob hash changed for ${operation.source.path}.`);await writeFile(target,formattedText(blob),'utf8');}
       else if(operation.kind==='insert-import-specifier'){const current=await readFile(target,'utf8');const next=reconcileImport(current,operation.target.path,operation.importRequirement!);if(next===current)status='deduplicated';else await writeFile(target,next,'utf8');}
       else if(operation.kind==='insert-export'){const current=await readFile(target,'utf8');const item=operation.exportRequirement!;const next=reconcileExport(current,operation.target.path,item.exported,item.source,item.imported);if(next===current)status='deduplicated';else await writeFile(target,next,'utf8');}
@@ -302,11 +362,11 @@ export class CandidateGenerator {
         await writeFile(target,projected.code,'utf8');
       }
       else if(['replace-declaration','insert-declaration'].includes(operation.kind)){const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const range=findDeclarationRange(source,operation.source.path,operation.target.symbol!);if(!range)throw new CandidateRefusal(`Source declaration ${operation.target.symbol} disappeared from ${operation.source.path}.`);const snippet=source.slice(range.start,range.end);if(textHash(snippet)!==operation.source.contentHash)throw new CandidateRefusal(`Source declaration hash changed for ${operation.target.symbol}.`);const current=await readFile(target,'utf8');if(operation.precondition.targetContentHash){const targetRange=findDeclarationRange(current,operation.target.path,operation.target.symbol!);if(!targetRange||textHash(current.slice(targetRange.start,targetRange.end))!==operation.precondition.targetContentHash)throw new CandidateRefusal(`Target declaration precondition failed for ${operation.target.symbol} in ${operation.target.path}.`);}const next=operation.kind==='insert-declaration'?insertDeclaration(current,operation.target.path,snippet):replaceDeclaration(current,operation.target.path,operation.target.symbol!,snippet);await writeFile(target,next,'utf8');}
-      else if(operation.kind==='reconstruct-source-file'){const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const index=await cachedSourceIndex(this.repository,this.repositoryRoot,operation.source.branchCommit);const module=index.moduleByPath.get(operation.source.path);if(!module)throw new CandidateRefusal(`Source module ${operation.source.path} disappeared.`);const output=reconstructAddedModule(source,operation.source.path,module,operation.declarationNames??[]);if(textHash(output)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Reconstructed source content differs from the planned output for ${operation.target.path}.`);await mkdir(dirname(target),{recursive:true});await writeFile(target,output,'utf8');}
+      else if(operation.kind==='reconstruct-source-file'){const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const index=await cachedSourceIndex(this.repository,this.repositoryRoot,operation.source.branchCommit);const module=index.moduleByPath.get(operation.source.path);if(!module)throw new CandidateRefusal(`Source module ${operation.source.path} disappeared.`);let output='';try{output=reconstructAddedModule(source,operation.source.path,module,operation.declarationNames??[],{allowedBareImportSources:operation.allowedBareImportSources,refuseUnsupportedTopLevel:plan.repository.generationProfile==='external-react-vite'});}catch(error){throw new CandidateRefusal(`Added source reconstruction became unsafe for ${operation.target.path}: ${error instanceof Error?error.message:String(error)}`);}if(textHash(output)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Reconstructed source content differs from the planned output for ${operation.target.path}.`);await mkdir(dirname(target),{recursive:true});await writeFile(target,output,'utf8');}
       else if(operation.kind==='reconstruct-test-file'){if(reconstructedTests.has(operation.target.path)){status='deduplicated';}else{const source=await this.gitBlobText(operation.source.branchCommit,operation.source.path);const index=await cachedSourceIndex(this.repository,this.repositoryRoot,operation.source.branchCommit);const module=index.moduleByPath.get(operation.source.path);if(!module)throw new CandidateRefusal(`Source test module ${operation.source.path} disappeared.`);const output=reconstructTestModule(source,operation.source.path,module,operation.testSlice!);if(textHash(output)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Reconstructed test content differs from the planned output for ${operation.target.path}.`);await mkdir(dirname(target),{recursive:true});await writeFile(target,output,'utf8');reconstructedTests.add(operation.target.path);}}
       else if(operation.kind==='configure-exported-const'){const configuration=operation.sourceConfiguration!;const current=await readFile(target,'utf8');const next=configureExportedConst(current,operation.target.path,configuration.declaration,configuration.value);if(textHash(next)!==operation.postcondition.expectedContentHash)throw new CandidateRefusal(`Configured source content differs from the planned output for ${operation.target.path}.`);if(next===current)status='deduplicated';else await writeFile(target,next,'utf8');}
       else throw new CandidateRefusal(`Unsupported operation kind ${operation.kind}.`);
-      if(/\.[jt]sx?$/.test(operation.target.path))parseModule(await readFile(target,'utf8'),operation.target.path); applied.push({operationId:operation.id,path:operation.target.path,status,resultingContentHash:textHash(await readFile(target)),detail:operation.detail});
+      if(/\.[jt]sx?$/.test(operation.target.path))parseModule(await readFile(target,'utf8'),operation.target.path); applied.push({operationId:operation.id,path:operation.target.path,status,resultingContentHash:operation.kind==='add-asset'?blobHash(await readFile(target)):textHash(await readFile(target)),detail:operation.detail});
     }
   }
   private defaultVerificationCommands(plan: CandidatePlan): VerificationCommand[] {
@@ -322,13 +382,41 @@ export class CandidateGenerator {
     ];
   }
   private async verify(worktree:string,results:VerificationResult[],plan:CandidatePlan) { for(const command of this.verificationCommands ?? this.defaultVerificationCommands(plan)){this.options.onProgress?.({stage:'verification',message:`Running verification: ${command.name}.`,verification:command.name});let output='';let exitCode=0;try{const result=await execFileAsync(command.executable,command.args,{cwd:worktree,encoding:'utf8',maxBuffer:20*1024*1024,windowsHide:true});output=`${result.stdout}\n${result.stderr}`;}catch(error){const value=error as Error&{stdout?:string;stderr?:string;code?:number};output=`${value.stdout??''}\n${value.stderr??''}\n${value.message}`;exitCode=typeof value.code==='number'?value.code:1;}results.push({name:command.name,command:[command.executable,...command.args].join(' '),status:exitCode===0?'passed':'failed',exitCode,outputTail:output.trim().slice(-4000)});if(exitCode!==0)throw new VerificationFailure(`Verification command ${command.name} failed with exit code ${exitCode}.`);} }
-  private generationId(request:CandidateGenerationRequest){return createHash('sha256').update(JSON.stringify({version:candidateGenerationVersion,repositoryRoot:resolve(request.repositoryRoot),repositoryId:request.repositoryId,baseRef:request.baseRef,expectedBaseCommit:request.expectedBaseCommit,commonBaseRef:request.commonBaseRef??request.baseRef,expectedCommonBaseCommit:request.expectedCommonBaseCommit??request.expectedBaseCommit,candidateBranch:request.candidateBranch,analyzerSchemaVersion:request.analyzerSchemaVersion,integrationPlan:request.integrationPlan,sliceIds:stable(request.artifacts.map(item=>item.analysisId),value=>value),sourceConfigurations:stable(request.sourceConfigurations ?? [],item=>`${item.sliceId}:${item.path}:${item.declaration}`)})).digest('hex').slice(0,16);}
-  private emptyReport(preflight:CandidatePreflight,request:CandidateGenerationRequest):CandidateGenerationReport{const excluded:ExcludedSourceChange[]=request.artifacts.flatMap(artifact=>artifact.slice.excludedChanges.map(item=>({sliceId:artifact.analysisId,path:item.path,symbol:item.symbol?.name??null,reason:item.reason})));const relativePath=`.ums/generation/${preflight.generationId}/candidate-report.json`;return{version:candidateGenerationVersion,generationId:preflight.generationId,integrationPlan:preflight.integrationPlan,status:'failed',stage:'validate',message:'Candidate generation has not completed.',repository:{baseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch},sliceIds:preflight.plan.sliceIds,plan:preflight.plan,appliedOperations:[],excludedSourceChanges:stable(excluded,item=>`${item.sliceId}:${item.path}:${item.symbol??''}`),conflicts:preflight.plan.conflicts,verification:[],cleanup:{worktreeRemoved:true,processesStopped:true,detail:'No worktree created.'},relativePath};}
+  private exclusiveAtomicAssetDependency(artifact:FeatureSliceArtifact,index:Awaited<ReturnType<typeof buildSourceIndex>>,path:string):{ok:true}|{ok:false;reason:string} {
+    const selectedDeclarations=new Set(artifact.slice.includedChanges.filter(item=>item.symbol).map(item=>`${item.path}#${item.symbol!.name}`));
+    const evidence=artifact.slice.evidence.some(item=>item.type==='imports-asset'&&item.to===path);
+    if(!evidence)return{ok:false,reason:'Atomic asset lacks a static imports-asset evidence edge from the selected reachable declaration graph.'};
+    let selectedReferences=0;
+    for(const module of index.modules){
+      for(const binding of module.imports.filter(item=>item.kind==='asset'&&item.resolvedPath===path)){
+        if(!binding.local)return{ok:false,reason:`Atomic asset ${path} has a bare or otherwise unbound project importer in ${module.path}; exclusivity is not provable.`};
+        const consumers=module.declarations.filter(item=>item.dependencies.includes(binding.local)||item.jsxReferences.includes(binding.local));
+        if(!consumers.length)return{ok:false,reason:`Atomic asset ${path} has an importer in ${module.path} whose declaration owner is not statically known.`};
+        for(const consumer of consumers){
+          if(!selectedDeclarations.has(consumer.key))return{ok:false,reason:`Atomic asset ${path} is also referenced by unrelated project declaration ${consumer.key}; it is not an exclusive atomic dependency.`};
+          selectedReferences+=1;
+        }
+      }
+    }
+    return selectedReferences>0?{ok:true}:{ok:false,reason:`Atomic asset ${path} has no statically owned reference from a selected declaration.`};
+  }
+  private expectedProvenance(preflight:CandidatePreflight):CandidateProvenance{return{planIdentity:preflight.integrationPlan?.identity??legacyPlanIdentity,generationId:preflight.generationId,profile:preflight.plan.repository.generationProfile??'phase0'};}
+  private candidateCommitMessage(provenance:CandidateProvenance){return `Generate verified UI Merge Studio candidate\n\nUI-Merge-Plan: ${provenance.planIdentity}\nUI-Merge-Generation: ${provenance.generationId}\nUI-Merge-Profile: ${provenance.profile}`;}
+  private async readCandidateProvenance(commit:string):Promise<CandidateProvenance|null>{
+    const message=await this.git(['show','-s','--format=%B',commit]);const values=new Map<string,string[]>();
+    for(const line of message.split(/\r?\n/)){const match=/^(UI-Merge-(?:Plan|Generation|Profile)):\s*(\S+)\s*$/.exec(line);if(!match)continue;const items=values.get(match[1])??[];items.push(match[2]);values.set(match[1],items);}
+    const plan=values.get('UI-Merge-Plan');const generation=values.get('UI-Merge-Generation');const profile=values.get('UI-Merge-Profile');
+    if(plan?.length!==1||generation?.length!==1||profile?.length!==1||!/^[a-f0-9]{16}$/.test(generation[0])||(profile[0]!=='phase0'&&profile[0]!=='external-react-vite'))return null;
+    return{planIdentity:plan[0],generationId:generation[0],profile:profile[0]};
+  }
+  private generationId(request:CandidateGenerationRequest){return createHash('sha256').update(JSON.stringify({version:candidateGenerationVersion,repositoryRoot:resolve(request.repositoryRoot),repositoryId:request.repositoryId,baseRef:request.baseRef,expectedBaseCommit:request.expectedBaseCommit,commonBaseRef:request.commonBaseRef??request.baseRef,expectedCommonBaseCommit:request.expectedCommonBaseCommit??request.expectedBaseCommit,candidateBranch:request.candidateBranch,analyzerSchemaVersion:request.analyzerSchemaVersion,generationProfile:request.generationProfile??'phase0',integrationPlan:request.integrationPlan,sliceIds:stable(request.artifacts.map(item=>item.analysisId),value=>value),sourceConfigurations:stable(request.sourceConfigurations ?? [],item=>`${item.sliceId}:${item.path}:${item.declaration}`)})).digest('hex').slice(0,16);}
+  private emptyReport(preflight:CandidatePreflight,request:CandidateGenerationRequest):CandidateGenerationReport{const excluded:ExcludedSourceChange[]=request.artifacts.flatMap(artifact=>artifact.slice.excludedChanges.map(item=>({sliceId:artifact.analysisId,path:item.path,symbol:item.symbol?.name??null,reason:item.reason})));const relativePath=`.ums/generation/${preflight.generationId}/candidate-report.json`;return{version:candidateGenerationVersion,generationId:preflight.generationId,integrationPlan:preflight.integrationPlan,status:'failed',stage:'validate',message:'Candidate generation has not completed.',repository:{baseCommit:request.expectedBaseCommit,candidateBranch:request.candidateBranch,provenance:this.expectedProvenance(preflight)},sliceIds:preflight.plan.sliceIds,plan:preflight.plan,appliedOperations:[],excludedSourceChanges:stable(excluded,item=>`${item.sliceId}:${item.path}:${item.symbol??''}`),conflicts:preflight.plan.conflicts,verification:[],cleanup:{worktreeRemoved:true,processesStopped:true,detail:'No worktree created.'},relativePath};}
   private unresolved(target:CandidateUnresolved[],path:string,sliceId:string,reason:string){target.push({path,sliceId,reason,manualResolution:'Use a supported non-overlapping source structure or resolve the source integration manually, then re-analyze.'});}
   private async persist(report:CandidateGenerationReport){const directory=resolve(this.artifactRoot,'.ums','generation',report.generationId);await mkdir(directory,{recursive:true});await writeFile(resolve(directory,'candidate-report.json'),`${JSON.stringify(report,null,2)}\n`,'utf8');}
   private async git(args:string[],cwd=this.repositoryRoot,env:NodeJS.ProcessEnv=process.env){return(await execFileAsync('git',args,{cwd,encoding:'utf8',maxBuffer:20*1024*1024,env,windowsHide:true})).stdout.trim();}
   private async gitBlob(commit:string,path:string){const result=await execFileAsync('git',['show',`${commit}:${validateRepositoryPath(path)}`],{cwd:this.repositoryRoot,encoding:'buffer',maxBuffer:20*1024*1024,windowsHide:true});return result.stdout as Buffer;}
   private async gitBlobText(commit:string,path:string){return(await this.gitBlob(commit,path)).toString('utf8');}
+  private async pathExistsAtCommit(commit:string,path:string){return(await this.git(['ls-tree','--name-only',commit,'--',validateRepositoryPath(path)]))===path;}
   private async tryResolve(ref:string){try{return await this.repository.resolveRef(ref);}catch{return null;}}
   private async removeWorktree(path:string){const target=resolve(path),prefix=resolve(tmpdir());if(!target.startsWith(`${prefix}\\ui-merge-studio-candidate-`)&&!target.startsWith(`${prefix}/ui-merge-studio-candidate-`))throw new Error(`Refusing to remove unrecognized candidate worktree ${target}.`);await this.git(['worktree','remove','--force',target]);await rm(target,{recursive:true,force:true});}
 }

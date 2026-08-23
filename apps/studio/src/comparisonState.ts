@@ -37,7 +37,7 @@ export const viewportPresets: Record<ViewportContext['preset'], ViewportContext>
   tablet: { preset: 'tablet', width: 768, height: 760 },
   mobile: { preset: 'mobile', width: 390, height: 720 }
 };
-export const initialComparisonState: ComparisonState = { branches: [], repositoryClean: false, repositoryStatus: 'Inspecting fixture…', previews: { left: slot('left'), right: slot('right') }, canonicalContext: null, viewport: viewportPresets.desktop, synchronizationStatus: 'Start both previews to negotiate synchronization.' };
+export const initialComparisonState: ComparisonState = { branches: [], repositoryClean: false, repositoryStatus: 'Inspecting repository…', previews: { left: slot('left'), right: slot('right') }, canonicalContext: null, viewport: viewportPresets.desktop, synchronizationStatus: 'Start both previews to negotiate synchronization.' };
 
 export interface CapabilityResult { compatible: boolean; reason: string }
 export function compareCapabilities(left: PreviewCapabilities | null, right: PreviewCapabilities | null): CapabilityResult {
@@ -81,7 +81,7 @@ export function comparisonReducer(state: ComparisonState, action: ComparisonActi
   if (action.type === 'repository-loaded') {
     const preferredLeft = action.branches[0] ?? '';
     const preferredRight = action.branches.find(item => item !== preferredLeft) ?? preferredLeft;
-    return { ...state, branches: action.branches, repositoryClean: action.clean, repositoryStatus: action.clean ? 'Ready' : 'Fixture is dirty', previews: { left: { ...state.previews.left, branch: preferredLeft }, right: { ...state.previews.right, branch: preferredRight } } };
+    return { ...state, branches: action.branches, repositoryClean: action.clean, repositoryStatus: action.clean ? 'Repository ready' : 'Working tree has changes', previews: { left: { ...state.previews.left, branch: preferredLeft }, right: { ...state.previews.right, branch: preferredRight } } };
   }
   if (action.type === 'repository-failed') return { ...state, repositoryStatus: action.error };
   if (action.type === 'set-branch') return updateSlot(state, action.previewId, current => ({ ...current, branch: action.branch }));

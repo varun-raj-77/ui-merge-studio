@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { extname, resolve, relative } from 'node:path';
+import { extname, resolve, relative, sep } from 'node:path';
 import { validatePublicShowcaseReport, type PublicShowcaseReport } from '../packages/showcase-evidence/src/schema';
 
 export const repositoryRoot = resolve(import.meta.dirname, '..');
 export const publicRoot = resolve(repositoryRoot, 'apps/studio/public');
+export const canonicalPublicPackageRoot = resolve(publicRoot, 'showcase');
+export const canonicalPublicPathPrefix = '/showcase/';
 export const reportPath = resolve(repositoryRoot, 'docs/evidence/showcase/latest/run-report.json');
 export const generatedManifestPath = resolve(repositoryRoot, 'apps/studio/src/generated/showcaseRun.json');
 
@@ -34,6 +36,14 @@ export function hashDirectory(root: string) {
     hash.update(relative(root, path).replaceAll('\\', '/')); hash.update('\0'); hash.update(canonicalArtifactBytes(path, readFileSync(path))); hash.update('\0');
   }
   return hash.digest('hex');
+}
+export function resolveCanonicalArtifactPath(artifactPath: string) {
+  if (!artifactPath.startsWith(canonicalPublicPathPrefix)) throw new Error(`Showcase artifact is not in the canonical public package: ${artifactPath}`);
+  const resolved = resolve(publicRoot, artifactPath.replace(/^\/+/, ''));
+  if (resolved !== canonicalPublicPackageRoot && !resolved.startsWith(`${canonicalPublicPackageRoot}${sep}`)) {
+    throw new Error(`Showcase artifact escapes the canonical public package: ${artifactPath}`);
+  }
+  return resolved;
 }
 export function manifestHash(report: Omit<PublicShowcaseReport, 'manifestSha256'> | PublicShowcaseReport) {
   const clone = structuredClone(report) as PublicShowcaseReport;

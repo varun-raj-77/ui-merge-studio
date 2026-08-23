@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
-import type { CandidateGenerationRequest } from '../../packages/candidate-generation/src/types';
+import type { CandidateGenerationProfile, CandidateGenerationRequest } from '../../packages/candidate-generation/src/types';
 import {
   canonicalizeLocalIntegrationPlan,
   localIntegrationPlanIdentity,
@@ -67,7 +67,8 @@ export class LocalPlanAuthority {
     readonly foundationRef: string,
     readonly candidateBranch: string,
     private readonly session: (previewId: string) => PreviewSession | null,
-    private readonly sessions: () => PreviewSession[]
+    private readonly sessions: () => PreviewSession[],
+    private readonly generationProfile: CandidateGenerationProfile = 'phase0'
   ) {
     this.repositoryRoot = resolve(repositoryRoot);
     this.repository = new GitSourceRepository(this.repositoryRoot);
@@ -167,7 +168,7 @@ export class LocalPlanAuthority {
     };
     this.records.set(selection.capabilityId, { artifact, selection, preview });
     const sourceRefs = this.sessions()
-      .filter(current => current.branch !== this.foundationRef && current.branch !== this.candidateBranch)
+      .filter(current => current.status === 'running' && current.branch !== this.foundationRef && current.branch !== this.candidateBranch)
       .map(current => current.branch);
     return { artifact, selection, foundation: await this.foundation(sourceRefs) };
   }
@@ -218,7 +219,7 @@ export class LocalPlanAuthority {
         );
       }
       const current = this.session(record.preview.previewId);
-      if (!current || !samePreviewIdentity(current, record.preview) || current.branchCommit !== record.preview.branchCommit) {
+      if (!current || current.status !== 'running' || !samePreviewIdentity(current, record.preview) || current.branchCommit !== record.preview.branchCommit) {
         refuseIntegrationPlan(
           'A selected feature belongs to a stale preview session. Re-select it from the current preview.',
           `Preview ${record.preview.previewId} no longer matches session ${record.preview.sessionId}.`
@@ -255,6 +256,7 @@ export class LocalPlanAuthority {
         candidateBranch: this.candidateBranch,
         artifacts,
         analyzerSchemaVersion: featureSliceVersion,
+        generationProfile: this.generationProfile,
         integrationPlan: { version: plan.version, identity: planIdentity }
       }
     };

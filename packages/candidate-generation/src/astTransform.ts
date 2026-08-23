@@ -262,24 +262,65 @@ export function reconcileExport(code: string, path: string, name: string, source
   const statement = `export { ${imported}${imported===name?'':` as ${name}`} } from ${JSON.stringify(source)};`; const next = `${code}${code.endsWith('\n') ? '' : '\n'}${statement}\n`; parseModule(next, path); return next;
 }
 
-export function reconstructAddedModule(source: string, path: string, module: ModuleRecord, includedNames: string[]) {
-  const ast = parseModule(source, path); const included = new Set(includedNames); const requiredBindings = new Set<string>();
+export interface AddedModuleReconstructionOptions {
+  /** Bare imports have no declaration binding, so external callers must authorize each one explicitly. */
+  allowedBareImportSources?: string[];
+  /** Refuse syntax that is not represented by the source index instead of silently carrying or dropping it. */
+  refuseUnsupportedTopLevel?: boolean;
+}
+
+export function reconstructAddedModule(source: string, path: string, module: ModuleRecord, includedNames: string[], options: AddedModuleReconstructionOptions = {}) {
+  const ast = parseModule(source, path); const included = new Set(includedNames); const indexed = new Set(module.declarations.map(item => item.name)); const requiredBindings = new Set<string>(); const allowedBareImports = new Set(options.allowedBareImportSources ?? []);
+  if (options.refuseUnsupportedTopLevel && ast.program.directives.length) {
+    const directives = ast.program.directives.map(directive => JSON.stringify(directive.value.value)).join(', ');
+    throw new Error(`Unsupported program directive ownership in added module ${path}: ${directives}.`);
+  }
+  if (options.refuseUnsupportedTopLevel && ast.program.interpreter) throw new Error(`Unsupported interpreter directive ownership in added module ${path}.`);
   for (const declaration of module.declarations.filter(item => included.has(item.name))) for (const dependency of [...declaration.dependencies,...declaration.jsxReferences]) requiredBindings.add(dependency.split('.',1)[0]);
   const filtered: t.Statement[] = [];
   for (const statement of ast.program.body) {
     if (t.isImportDeclaration(statement)) {
       const keep = statement.specifiers.filter(specifier => requiredBindings.has(specifier.local.name));
-      if (!statement.specifiers.length || keep.length) { statement.specifiers = keep; filtered.push(statement); }
+      if (!statement.specifiers.length) {
+        if (allowedBareImports.has(statement.source.value) || !options.refuseUnsupportedTopLevel) filtered.push(statement);
+        else throw new Error(`Unsupported bare side-effect import ${statement.source.value} in added module ${path}.`);
+      } else if (keep.length) { statement.specifiers = keep; filtered.push(statement); }
       continue;
     }
     if (t.isExportNamedDeclaration(statement) || t.isExportDefaultDeclaration(statement)) {
       const declaration = statement.declaration;
-      if (declaration && declaredName(declaration)) { if (included.has(declaredName(declaration)!)) filtered.push(statement); continue; }
-      if (t.isExportNamedDeclaration(statement)) { statement.specifiers = statement.specifiers.filter(specifier => t.isExportSpecifier(specifier) && included.has(t.isIdentifier(specifier.exported) ? specifier.exported.name : specifier.exported.value)); if (statement.specifiers.length) filtered.push(statement); }
+      if (t.isVariableDeclaration(declaration)) {
+        declaration.declarations = declaration.declarations.filter(item => t.isIdentifier(item.id) && included.has(item.id.name));
+        if (declaration.declarations.length) filtered.push(statement);
+        continue;
+      }
+      const name = declaredName(declaration);
+      if (name) {
+        if (!indexed.has(name) && options.refuseUnsupportedTopLevel) throw new Error(`Unsupported top-level ${declaration!.type} ${name} in added module ${path}.`);
+        if (included.has(name)) filtered.push(statement);
+        continue;
+      }
+      if (t.isExportDefaultDeclaration(statement) && t.isIdentifier(statement.declaration)) {
+        if (included.has(statement.declaration.name)) filtered.push(statement);
+        continue;
+      }
+      if (t.isExportNamedDeclaration(statement) && !statement.source) {
+        statement.specifiers = statement.specifiers.filter(specifier => t.isExportSpecifier(specifier) && included.has(specifier.local.name));
+        if (statement.specifiers.length) filtered.push(statement);
+        continue;
+      }
+      if (options.refuseUnsupportedTopLevel) throw new Error(`Unsupported top-level export in added module ${path}.`);
       continue;
     }
     if (t.isVariableDeclaration(statement)) { statement.declarations = statement.declarations.filter(item => t.isIdentifier(item.id) && included.has(item.id.name)); if (statement.declarations.length) filtered.push(statement); continue; }
-    const name = declaredName(statement); if (!name || included.has(name)) filtered.push(statement);
+    const name = declaredName(statement);
+    if (name) {
+      if (!indexed.has(name) && options.refuseUnsupportedTopLevel) throw new Error(`Unsupported top-level ${statement.type} ${name} in added module ${path}.`);
+      if (included.has(name)) filtered.push(statement);
+      continue;
+    }
+    if (options.refuseUnsupportedTopLevel) throw new Error(`Unsupported unindexed top-level ${statement.type} in added module ${path}.`);
+    filtered.push(statement);
   }
   ast.program.body = filtered; const output = `${generate(ast,{comments:true,compact:false,retainLines:false}).code}\n`; parseModule(output,path);
   for (const name of included) if (!findDeclarationRange(output,path,name)) throw new Error(`Included declaration ${name} is missing after reconstructing ${path}.`);

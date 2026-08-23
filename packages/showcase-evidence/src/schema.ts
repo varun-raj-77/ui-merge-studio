@@ -147,7 +147,7 @@ export function validatePublicShowcaseReport(value: unknown): PublicShowcaseRepo
     if (candidate.artifact.kind !== 'candidate' || candidate.artifact.commit !== candidate.candidateCommit) fail(`candidate ${candidate.key} artifact is mismatched`);
   }
   for (const artifact of [...report.artifacts, ...report.candidates.map(item => item.artifact)]) {
-    if (!artifact.path.startsWith('/showcase-runs/') || !sha256.test(artifact.sha256) || !commit.test(artifact.commit)) fail(`artifact ${artifact.id} is invalid`);
+    if (!artifact.path.startsWith('/showcase/') || !sha256.test(artifact.sha256) || !commit.test(artifact.commit)) fail(`artifact ${artifact.id} is invalid`);
   }
   if (!sha256.test(report.manifestSha256)) fail('manifest hash is invalid');
   const serialized = JSON.stringify(report);

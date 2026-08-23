@@ -18,6 +18,7 @@ fixtures/generated/
 .ums/
 
 apps/studio/dist/
+# Ephemeral preparation runs stay local; the promoted public/showcase package is tracked.
 apps/studio/public/showcase-runs/
 docs/codex-prompts/*
 !docs/codex-prompts/013-local-canonical-plan-causality.md

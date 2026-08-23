@@ -13,7 +13,7 @@
     <script>
       (async () => {
         const artifact = new URLSearchParams(location.search).get('ums-artifact');
-        const allowed = /^\/showcase-runs\/[a-f0-9]+\/(?:static\/(?:baseline|branch-a|branch-b)|candidates\/[a-z0-9_-]+)\/index\.html$/;
+        const allowed = /^\/showcase\/(?:static\/(?:baseline|branch-a|branch-b)|candidates\/[a-z0-9_-]+)\/index\.html$/;
         const routeRewrite = '<script>history.replaceState({}, "", "/catalogue")<\/script>';
 
         function fail(message) {

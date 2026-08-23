@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { PreviewCancelledError, PreviewController, type PreviewPhaseEvent, type PreviewSession } from './previewController';
+import { ExternalViteInstrumentationRefusal, type externalViteInstrumentationRefusalCode } from './viteInstrumentation';
 
 export type PreviewOperationState = 'pending' | 'running' | 'ready' | 'failed' | 'cancelled' | 'superseded';
 
@@ -15,6 +16,7 @@ export interface PreviewOperation {
   phases: PreviewPhaseEvent[];
   result: PreviewSession | null;
   error: string | null;
+  refusal: { code: typeof externalViteInstrumentationRefusalCode; evidence: string } | null;
   supersededBy: string | null;
 }
 
@@ -69,6 +71,7 @@ export class PreviewOperationManager {
       }],
       result: null,
       error: null,
+      refusal: null,
       supersededBy: null
     };
     this.operations.set(operation.operationId, operation);
@@ -133,6 +136,7 @@ export class PreviewOperationManager {
       if (this.operations.get(operation.operationId)?.state === 'superseded') return;
       operation.state = error instanceof PreviewCancelledError || controller.signal.aborted ? 'cancelled' : 'failed';
       operation.error = error instanceof Error ? error.message : String(error);
+      if (error instanceof ExternalViteInstrumentationRefusal) operation.refusal = { code: error.code, evidence: error.evidence };
       operation.completedAt = new Date().toISOString();
       operation.updatedAt = operation.completedAt;
     } finally {

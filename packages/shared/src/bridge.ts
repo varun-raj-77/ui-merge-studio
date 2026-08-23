@@ -45,7 +45,7 @@ export function isComparisonContext(value: unknown): value is ComparisonContext 
 function isViewport(value: unknown): value is ViewportContext { return isRecord(value) && (value.preset === 'desktop' || value.preset === 'tablet' || value.preset === 'mobile') && isPositiveInteger(value.width) && isPositiveInteger(value.height); }
 function isSelectionReceipt(value: unknown): value is string { return typeof value === 'string' && /^rendered-[A-Za-z0-9_-]{32}$/.test(value); }
 function isRenderedBoundary(value: unknown): value is RenderedBoundaryReference { return isRecord(value) && isSelectionReceipt(value.selectionReceipt) && Object.keys(value).length === 1; }
-function isSelection(value: unknown): value is RenderedBoundarySelection { return isRecord(value) && isSelectionReceipt(value.selectionReceipt) && Array.isArray(value.ancestorSelectionReceipts) && value.ancestorSelectionReceipts.every(isSelectionReceipt); }
+function isSelection(value: unknown): value is RenderedBoundarySelection { return isRecord(value) && Object.keys(value).length === 2 && isSelectionReceipt(value.selectionReceipt) && Array.isArray(value.ancestorSelectionReceipts) && value.ancestorSelectionReceipts.every(isSelectionReceipt); }
 function isRefusal(value: unknown): value is SelectionRefusal { return isRecord(value) && value.confidence === 'refused' && typeof value.reason === 'string' && typeof value.evidence === 'string' && typeof value.supportedAncestorAvailable === 'boolean'; }
 function hasOperationContext(value: unknown) { return isRecord(value) && (value.operationId === null || typeof value.operationId === 'string') && isComparisonContext(value.context); }
 function validPreviewPayload(type: PreviewMessageType, payload: unknown, preview: PreviewIdentity) {

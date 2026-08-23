@@ -29,6 +29,13 @@ describe('bounded local repository configuration', () => {
     expect(configuration).toMatchObject({ repositoryPath: 'C:/external', baseRef: 'base', previewPath: '/auth/login', preferredBranches: ['left', 'right'], candidateBranch: 'combined', verificationCommands: commands });
   });
 
+  test('accepts a local repository path from the command line with precedence over environment configuration', () => {
+    const configuration = loadRepositoryConfiguration('C:/studio', { UI_MERGE_REPOSITORY_PATH: 'C:/environment-repository' }, ['--repository', 'C:/command-line-repository']);
+    expect(configuration.repositoryPath).toBe('C:/command-line-repository');
+    expect(configuration.previewPath).toBe('/');
+    expect(() => loadRepositoryConfiguration('C:/studio', {}, ['--repository'])).toThrow('--repository requires');
+  });
+
   test('refuses malformed verification configuration', () => {
     expect(() => loadRepositoryConfiguration('C:/studio', { UI_MERGE_VERIFICATION_COMMANDS: '[{"name":"typecheck"}]' })).toThrow('UI_MERGE_VERIFICATION_COMMANDS');
   });

@@ -2,7 +2,9 @@
 
 - The hosted sample cannot access a visitor’s repository or perform Git, package-manager, source-mutation, branch-creation, or verification operations.
 - Hosted outcomes are bounded to committed controlled evidence. Arbitrary selected combinations must be evaluated locally.
-- Local repository support currently targets React + TypeScript + Vite with npm. Preview preparation and default candidate verification invoke npm; pnpm/yarn execution is not implemented or verified in this milestone despite older broader documentation.
+- Local preview support targets React + TypeScript + Vite repositories with a declared `dev` script. npm command resolution, real installation, and real Vite launch are verified. pnpm/yarn command and forwarded-argument resolution are implemented, but their real install and Vite execution paths are not verified; default candidate verification remains npm-specific.
+- Package-manager installs run inside a detached worktree and do not mutate the original checkout. They are ordinary mutable installs: network access and repository lifecycle scripts may run, and the result is not claimed to be immutable or reproducible.
+- Preview startup selects an available loopback port and then launches Vite with `--strictPort`. A bounded local check-then-use race remains; collisions are reported as failures and never silently redirect to a different port.
 - Next.js, arbitrary monorepos, server-component ownership, cloud execution, collaboration, and billing are unsupported.
 - Source analysis is conservative for dynamic imports, path aliases, factories, render props, class components, portals, CSS-in-JS, and inseparable mixed-file changes.
 - Test slicing supports conventional static test structure; unsupported dynamic factories or mixed setup are refused or marked partial.

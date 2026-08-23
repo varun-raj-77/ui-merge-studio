@@ -65,46 +65,19 @@ import {
   CategorySidebarConfigurationRefusal,
   type CategorySidebarConfiguration
 } from './categorySidebarConfiguration';
+import {
+  PublicLanding,
+  PublicProductGuide,
+  ShowcaseCausalityStrip,
+  ShowcaseResultSummary,
+  githubUrl
+} from './CataloguePublic';
 
 type View = 'landing' | 'compare';
 type ComparisonPreview = 'branch-a' | 'branch-b';
 type WorkspaceState = 'comparison' | 'combined';
 type EvidenceTab = 'source' | 'dependencies' | 'verification';
-const github = 'https://github.com/varun-raj-77/ui-merge-studio';
 const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
-
-function Landing({ open }: { open: () => void }) {
-  return <main className="catalogue-site">
-    <nav className="catalogue-nav">
-      <a href="#top" className="catalogue-wordmark"><span>UM</span>UI Merge Studio</a>
-      <a href={github} target="_blank" rel="noreferrer noopener">GitHub</a>
-    </nav>
-    <section className="catalogue-hero" id="top">
-      <div className="hero-copy">
-        <p className="eyebrow">Visual integration for React</p>
-        <h1>Combine the best parts of parallel React implementations.</h1>
-        <p>Compare working versions, pick visible features, and generate one verified branch.</p>
-        <div className="catalogue-actions">
-          <button onClick={open}>Try the interactive example</button>
-          <a href="#how">How it works</a>
-        </div>
-        <p className="hosted-truth">Hosted configured preview only—no Git operations run in your browser. The local tool performs verified branch delivery.</p>
-      </div>
-      <div className="outcome-illustration" aria-label="Compare two versions, pick visible features, and view the combined result">
-        <div className="outcome-frame compare-frame"><span>01</span><b>Compare two versions</b><i><em /><em /></i></div>
-        <div className="outcome-arrow" aria-hidden="true">→</div>
-        <div className="outcome-frame pick-frame"><span>02</span><b>Pick visible features</b><i><em>+</em></i></div>
-        <div className="outcome-arrow" aria-hidden="true">→</div>
-        <div className="outcome-frame result-frame"><span>03</span><b>View combined result</b><i><em>✓</em></i></div>
-      </div>
-    </section>
-    <section className="outcome-steps" id="how" aria-label="How it works">
-      <article><span>Compare</span><p>Open two working implementations side by side.</p></article>
-      <article><span>Choose</span><p>Add only the visible features you want to keep.</p></article>
-      <article><span>Combine</span><p>Inspect one exact, verified result.</p></article>
-    </section>
-  </main>;
-}
 
 interface ArtifactFrameProps {
   artifact: PublicArtifact;
@@ -217,16 +190,20 @@ function installContextualControls(
       }
       .ums-context-add:hover, .ums-context-add:focus-visible { opacity: 1; transform: translateY(-1px); }
       [data-ums-scope][data-ums-selected] {
-        outline: 2px solid #715ee8; outline-offset: 3px;
-        box-shadow: 0 0 0 6px #715ee818;
+        outline: 2px solid #ff6b3d; outline-offset: 3px;
+        box-shadow: 0 0 0 6px #ff6b3d1f;
       }
       .ums-context-add[data-selected] {
-        border-color: #715ee8; background: #715ee8;
+        border-color: #ff6b3d; background: #ff6b3d; color: #111315;
       }
       .ums-context-add[data-unsupported] {
         border-color: #9a6b29; background: #fff8e9; color: #69440e;
       }
-      .ums-context-add:focus-visible { outline: 3px solid #d8f27a; outline-offset: 2px; }
+      .ums-context-add:focus-visible, .ums-context-details:focus-visible { outline: 3px solid #ff6b3d; outline-offset: 2px; }
+      @media (max-width: 700px) {
+        .ums-contextual-selection-layer { position: absolute; overflow: visible; }
+        .ums-context-control-group { position: absolute; }
+      }
       @media (prefers-reduced-motion: reduce) {
         .ums-context-add { transition: none; }
       }
@@ -297,12 +274,16 @@ function installContextualControls(
     );
     control.title = capability.supported ? capability.label : capability.unsupportedReason ?? '';
     const rect = element.getBoundingClientRect();
-    const frameWidth = document.defaultView?.innerWidth ?? 0;
+    const frameWindow = document.defaultView;
+    const frameWidth = frameWindow?.innerWidth ?? 0;
     const frameHeight = document.defaultView?.innerHeight ?? 0;
     const offset = capability.kind === 'whole-feature' ? 196 : 182;
-    group.style.top = `${Math.max(8, rect.top + 9)}px`;
-    group.style.left = `${Math.max(8, Math.min(frameWidth - offset, rect.right - offset))}px`;
-    group.hidden = rect.bottom < 0 || rect.top > frameHeight;
+    const mobile = frameWidth <= 700;
+    const scrollX = mobile ? frameWindow?.scrollX ?? 0 : 0;
+    const scrollY = mobile ? frameWindow?.scrollY ?? 0 : 0;
+    group.style.top = `${mobile ? Math.max(8, rect.top + scrollY + 9) : Math.max(8, rect.top + 9)}px`;
+    group.style.left = `${Math.max(scrollX + 8, Math.min(scrollX + frameWidth - offset, rect.right + scrollX - offset))}px`;
+    group.hidden = mobile ? false : rect.bottom < 0 || rect.top > frameHeight;
     control.onclick = event => {
       event.preventDefault();
       event.stopPropagation();
@@ -327,12 +308,16 @@ function installContextualControls(
         : null;
       if (!element) return;
       const rect = element.getBoundingClientRect();
-      const frameWidth = document.defaultView?.innerWidth ?? 0;
-      const frameHeight = document.defaultView?.innerHeight ?? 0;
+      const frameWindow = document.defaultView;
+      const frameWidth = frameWindow?.innerWidth ?? 0;
+      const frameHeight = frameWindow?.innerHeight ?? 0;
       const offset = scope === 'category-sidebar' ? 196 : 182;
-      group.style.top = `${Math.max(8, rect.top + 9)}px`;
-      group.style.left = `${Math.max(8, Math.min(frameWidth - offset, rect.right - offset))}px`;
-      group.hidden = rect.bottom < 0 || rect.top > frameHeight;
+      const mobile = frameWidth <= 700;
+      const scrollX = mobile ? frameWindow?.scrollX ?? 0 : 0;
+      const scrollY = mobile ? frameWindow?.scrollY ?? 0 : 0;
+      group.style.top = `${mobile ? Math.max(8, rect.top + scrollY + 9) : Math.max(8, rect.top + 9)}px`;
+      group.style.left = `${Math.max(scrollX + 8, Math.min(scrollX + frameWidth - offset, rect.right + scrollX - offset))}px`;
+      group.hidden = mobile ? false : rect.bottom < 0 || rect.top > frameHeight;
     });
   };
   (layer as HTMLElement & { __umsReposition?: () => void }).__umsReposition = reposition;
@@ -581,10 +566,10 @@ function EvidenceDialog({ scope, candidate, opener, close }: {
   const dialog = useDialogFocus(close, opener);
   const evidence = evidenceForScope(scope);
   const product = scope.kind === 'feature-instance' ? catalogueProduct(scope.instanceId) : null;
-  const paths = [
+  const paths = [...new Set([
     ...evidence.supportingFiles.map(item => item.path),
     ...(evidence.configuration ? [evidence.configuration.path] : [])
-  ];
+  ])];
   const verification = [
     ['TypeScript', candidate.verification.some(gate => gate.id.includes('typecheck'))],
     ['Feature tests', candidate.verification.some(gate => gate.id.includes('test'))],
@@ -605,6 +590,8 @@ function EvidenceDialog({ scope, candidate, opener, close }: {
       {tab === 'source' && <div className="evidence-pane evidence-source">
         <p><span>Component</span><strong>{evidence.selectedBoundary}</strong></p>
         <p><span>Source file</span><code>{evidence.sourceFile}:{evidence.sourceLine}</code></p>
+        <p><span>Source version</span><strong>{evidence.branchLabel} · <code>{evidence.branch}</code></strong></p>
+        <p><span>Pinned commit</span><code>{evidence.branchCommit.slice(0, 12)}</code></p>
         <p><span>Selected scope</span><strong>{scopeLabel(scope)}</strong></p>
         {product && <p><span>Product ID</span><code>{product.id}</code></p>}
       </div>}
@@ -848,18 +835,19 @@ function ConflictDialog({ quickCount, close, remove, inspect, showingEvidence }:
   return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) close(); }}>
     <section ref={dialog} className="conflict-dialog" role="dialog" aria-modal="true" aria-labelledby="conflict-title">
       <header>
-        <div><span>Conflict in {quickCount + 1} selections</span><h2 id="conflict-title">Cannot combine these selections</h2></div>
+        <div><span>Safe refusal · {quickCount + 1} selections</span><h2 id="conflict-title">Cannot combine safely</h2></div>
         <button onClick={close} aria-label="Close conflict review">×</button>
       </header>
-      <p>The Product-ID change modifies the shared Product contract from string IDs to numeric IDs. The selected Quick View targets depend on stable string IDs.</p>
+      <p>UI Merge could not prove this selection can be transferred without also changing the shared Product contract that Quick View depends on. The selected Quick View targets use stable string IDs, while the incompatible change replaces them with numeric IDs.</p>
+      <p className="refusal-outcome">No combined result was produced.</p>
       <div className="affected-contract"><span>Affected contract</span><code>{recordedRefusal.contractPath}#{recordedRefusal.contractSymbol}</code></div>
       {showingEvidence && <div className="conflict-evidence">
         <strong>{recordedRefusal.selectedBoundary}</strong>
         <p>{recordedRefusal.reason}</p>
-        <small>The safe Integration Plan remains available; no result or source is generated from this refused plan.</small>
+        <small>{recordedRefusal.manualResolution}</small>
       </div>}
       <footer>
-        <button className="secondary-action" onClick={inspect}>{showingEvidence ? 'Hide evidence' : 'Inspect evidence'}</button>
+        <button className="secondary-action" onClick={inspect}>{showingEvidence ? 'Hide reason' : 'See why'}</button>
         <button className="danger-action" onClick={remove}>Remove incompatible change</button>
       </footer>
     </section>
@@ -961,7 +949,7 @@ function Comparison({ exit }: { exit: () => void }) {
   const [contextNotices, setContextNotices] = useState<Record<string, PreviewContextNotice[]>>({});
   const [mobilePreview, setMobilePreview] = useState<ComparisonPreview>('branch-a');
   const [workspaceState, setWorkspaceState] = useState<WorkspaceState>('comparison');
-  const [dockExpanded, setDockExpanded] = useState(() => window.innerWidth > 700);
+  const [dockExpanded, setDockExpanded] = useState(false);
   const [evidenceScope, setEvidenceScope] = useState<ShowcaseScope | null>(null);
   const [showConflict, setShowConflict] = useState(false);
   const [showConflictEvidence, setShowConflictEvidence] = useState(false);
@@ -979,6 +967,7 @@ function Comparison({ exit }: { exit: () => void }) {
   const evidenceSummary = useMemo(() => integrationPlanToEvidenceSummary(selection), [selection]);
   const verificationProjection = useMemo(() => integrationPlanToVerificationExpectations(selection), [selection]);
   const generationProjection = useMemo(() => previewModel.refused ? null : integrationPlanToGenerationRequest(selection), [selection, previewModel.refused]);
+  const activeCandidate = resolveCatalogueCandidate(candidateKey(selection));
   const planIdentity = cataloguePlanIdentity(selection);
   const refused = previewModel.refused;
   const branchAArtifact = catalogueManifest.artifacts.find(item => item.kind === 'branch-a')!;
@@ -1003,6 +992,13 @@ function Comparison({ exit }: { exit: () => void }) {
       previewContext,
       categoryConfigurationSelection?.identity
     ]);
+
+  useEffect(() => {
+    if (window.innerWidth > 700
+      && (selectionCount > 0 || selection.foundation.branchRef !== 'main')) {
+      setDockExpanded(true);
+    }
+  }, [selectionCount, selection.foundation.branchRef]);
 
   function performHistoryAction(action: 'undo' | 'redo') {
     const available = action === 'undo'
@@ -1280,7 +1276,8 @@ function Comparison({ exit }: { exit: () => void }) {
   >
     <header className="workspace-commandbar">
       <button onClick={exit} className="catalogue-wordmark"><span>UM</span><i>UI Merge Studio</i></button>
-      <span className="workspace-name">Product Catalogue example</span>
+      <div className="workspace-proof"><strong>Interactive example</strong><span><i />Controlled recorded proof</span></div>
+      <a className="workspace-github" href={githubUrl} target="_blank" rel="noreferrer noopener">GitHub</a>
       {workspaceState === 'comparison' && <button
         className={hasIncompatibleProductId(selection) ? 'experimental active' : 'experimental'}
         disabled={!hasQuickViewSelection(selection)}
@@ -1295,14 +1292,16 @@ function Comparison({ exit }: { exit: () => void }) {
 
     <section className="comparison-view" hidden={workspaceState !== 'comparison'}>
       <header className="workspace-heading">
-        <h1>Compare versions</h1>
-        <p>Preview context stays synchronized across versions and the configured result. The local tool creates the verified Git branch.</p>
+        <div><p className="eyebrow">Foundation · main</p><h1>Compare versions</h1></div>
+        <p>Use both controlled applications normally. Add a highlighted visible feature when it belongs in the result.</p>
+        <span>Browser-only replay · no repository access</span>
       </header>
       <FoundationControl value={selection.foundation.branchRef} change={changeFoundation} />
       <nav className="mobile-preview-tabs" aria-label="Preview versions">
         <button aria-pressed={mobilePreview === 'branch-a'} onClick={() => setMobilePreview('branch-a')}>Version A</button>
         <button aria-pressed={mobilePreview === 'branch-b'} onClick={() => setMobilePreview('branch-b')}>Version B</button>
       </nav>
+      <ShowcaseCausalityStrip selectionCount={selectionCount} combined={false} refused={refused} />
       <section className="preview-workspace">
         <PreviewPanel preview="branch-a" title="Version A" subtitle="Category navigation" artifact={branchAArtifact} active={mobilePreview === 'branch-a'} context={configuredPreview.context} categoryConfiguration={categoryConfigurationSelection?.configuration} selectedScopes={selectedScopeKeys} foundationBranch={selection.foundation.branchRef} onToggle={capability => toggleCapability('branch-a', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
         <PreviewPanel preview="branch-b" title="Version B" subtitle="Product Quick View" artifact={branchBArtifact} active={mobilePreview === 'branch-b'} context={previewContext} selectedScopes={selectedScopeKeys} foundationBranch={selection.foundation.branchRef} onToggle={capability => toggleCapability('branch-b', capability)} onUnsupportedCapability={setCapabilityNotice} onDetailsCapability={setDetailsCapability} onCustomizeCategories={openCategoryEditor} onHistoryShortcut={performHistoryAction} onContextMessage={handleContextMessage} />
@@ -1311,9 +1310,11 @@ function Comparison({ exit }: { exit: () => void }) {
     <section className="result-workspace" hidden={workspaceState !== 'combined'}>
       <header className="result-header">
         <button onClick={() => setWorkspaceState('comparison')}>← Back to comparison</button>
-        <div><span>Configured preview</span><h1>{previewModel.foundation.label} foundation · {scopes.length} explicit addition{scopes.length === 1 ? '' : 's'}</h1></div>
+        <div><span>Recorded convergence</span><h1>One verified combined result</h1><p>{previewModel.foundation.label} foundation · {scopes.length} explicit addition{scopes.length === 1 ? '' : 's'}</p></div>
         <div className="result-chips" aria-label="Integration Plan used"><span>Foundation · {previewModel.foundation.label}</span>{scopeSummary.map(label => <span key={label}>✓ {label}</span>)}</div>
       </header>
+      <ShowcaseResultSummary candidate={activeCandidate} selectionCount={selectionCount} />
+      <ShowcaseCausalityStrip selectionCount={selectionCount} combined refused={false} />
       <div className="combined-stage">
         <ConfiguredCatalogueFrame
           model={previewModel}
@@ -1394,7 +1395,7 @@ function Comparison({ exit }: { exit: () => void }) {
       <button className="clear-selections" onClick={clearSelections} disabled={selectionCount === 0}>Clear</button>
       {workspaceState === 'combined'
         ? <button className="view-combined" onClick={() => setWorkspaceState('comparison')}>Back to comparison</button>
-        : <button className={refused ? 'review-conflict' : 'view-combined'} onClick={viewCombined}>{refused ? 'Review conflict' : 'View combined'}</button>}
+        : <button className={refused ? 'review-conflict' : 'view-combined'} aria-label={refused ? 'Review conflict' : 'View combined'} onClick={viewCombined}>{refused ? 'Review refusal' : 'Review & combine'}</button>}
       {selectionHistory.undoPrompt && !historyOpen && <div className="history-feedback">
         <span>{selectionHistory.undoPrompt}</span>
         <button onClick={() => performHistoryAction('undo')}>Undo</button>
@@ -1425,6 +1426,7 @@ function Comparison({ exit }: { exit: () => void }) {
     {showConflict && <ConflictDialog quickCount={quickCount} close={() => setShowConflict(false)} remove={removeIncompatible} inspect={() => setShowConflictEvidence(value => !value)} showingEvidence={showConflictEvidence} />}
     {foundationEvidenceOpen && <FoundationEvidenceDialog summary={evidenceSummary} close={() => setFoundationEvidenceOpen(false)} />}
     {foundationRefusal && <FoundationRefusalDialog refusal={foundationRefusal} close={() => setFoundationRefusal(null)} />}
+    <PublicProductGuide />
   </main>;
 }
 
@@ -1439,5 +1441,5 @@ export function CatalogueShowcase() {
     addEventListener('popstate', listener);
     return () => removeEventListener('popstate', listener);
   }, []);
-  return view === 'landing' ? <Landing open={() => navigate('compare')} /> : <Comparison exit={() => navigate('landing')} />;
+  return view === 'landing' ? <PublicLanding open={() => navigate('compare')} /> : <Comparison exit={() => navigate('landing')} />;
 }

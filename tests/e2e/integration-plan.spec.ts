@@ -67,7 +67,7 @@ test('complete canonical plan drives grouped dock, configured result, history, a
 
   const combinedStarted = Date.now();
   await page.getByRole('button', { name: 'View combined' }).click();
-  await expect(page.getByText('Configured preview', { exact: true })).toBeVisible();
+  await expect(page.getByText('Recorded convergence', { exact: true })).toBeVisible();
   const frame = page.getByTitle('Combined result application');
   await expect(frame).not.toHaveAttribute('src');
   await expect(frame).toHaveAttribute('srcdoc', /<body><\/body>/);
@@ -155,7 +155,7 @@ test('mobile configured plan, refusal recovery, undo, and redo remain reachable 
   await page.getByRole('button', { name: 'Back to comparison', exact: true }).first().click();
   await page.getByRole('button', { name: '+ Experimental Product-ID change' }).click();
   await page.getByRole('button', { name: 'Review conflict' }).click();
-  await expect(page.getByRole('dialog', { name: 'Cannot combine these selections' })).toContainText('stable string IDs');
+  await expect(page.getByRole('dialog', { name: 'Cannot combine safely' })).toContainText('stable string IDs');
   await page.getByRole('button', { name: 'Remove incompatible change' }).click();
   await expect(page.getByRole('button', { name: 'View combined' })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);

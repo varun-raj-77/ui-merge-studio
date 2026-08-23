@@ -9,9 +9,10 @@ import type { SourceIdentity } from '../../packages/shared/src/sourceIdentity';
 import type { FeatureSliceArtifact, SliceStatus } from '../../packages/source-analysis/src/types';
 import type { PreviewOperation } from '../../packages/preview-runtime/src/previewOperations';
 import type { IntegrationFoundation } from '../../packages/integration-plan/src/integrationPlan';
+import { ResizableComparison } from '../../apps/studio/src/WorkspaceComponents';
 
 const capabilities: PreviewCapabilities = { routeSync: { version: 1, contract: 'catalogue-query-v1' }, fixtureContext: { version: 1, contract: 'product-catalogue-v1', entityType: 'product' }, sourceSelection: { version: 1 } };
-const session = (previewId: 'left' | 'right', branch: string, generation = 1) => ({ previewId, branch, generation, sessionId: `${previewId}-session-${generation}`, protocolVersion: bridgeVersion, branchCommit: `${branch}-commit`, url: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}/catalogue`, origin: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}`, port: previewId === 'left' ? 5001 : 5002, worktreePath: `C:/temp/${previewId}`, status: 'running' as const, failure: null });
+const session = (previewId: 'left' | 'right', branch: string, generation = 1) => ({ previewId, branch, generation, sessionId: `${previewId}-session-${generation}`, protocolVersion: bridgeVersion, repositoryPath: 'C:/test/repository', commit: `${branch}-commit`, branchCommit: `${branch}-commit`, packageManager: 'npm' as const, url: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}/catalogue`, origin: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}`, port: previewId === 'left' ? 5001 : 5002, processId: previewId === 'left' ? 5001 : 5002, worktreePath: `C:/temp/${previewId}`, status: 'running' as const, failure: null });
 function response(value: unknown, status = 200) { return Promise.resolve(new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } })); }
 function emit(frame: HTMLIFrameElement, preview: PreviewIdentity & { origin: string }, type: string, payload?: unknown) { window.dispatchEvent(new MessageEvent('message', { origin: preview.origin, source: frame.contentWindow, data: { version: bridgeVersion, preview, type, payload } })); }
 function sourceIdentity(preview: ReturnType<typeof session>, componentName: string): SourceIdentity { return { boundaryId: `${componentName}-definition`, instanceId: `${componentName}-instance`, repositoryRelativePath: `src/${componentName}.tsx`, line: 4, column: 8, componentName, exportName: componentName, branch: preview.branch, previewId: preview.previewId, sessionId: preview.sessionId, generation: preview.generation, confidence: 'exact' }; }
@@ -20,15 +21,27 @@ function artifact(selection: SourceIdentity, status: SliceStatus = 'resolved', a
   return { analysisId: `${selection.previewId === 'left' ? 'a' : 'b'}`.repeat(16), relativePath: '.ums/analysis/result/feature-slice.json', slice: { version: 2, repository: { baseRef: 'main', branchRef: selection.branch, mergeBaseCommit: '1'.repeat(40), branchCommit: '2'.repeat(40) }, selection, status, boundary: { original: selection.componentName!, analyzed, status: analyzed === selection.componentName ? 'selected-boundary-sufficient' : 'expanded-to-integration-boundary', reason: 'Supported integration evidence.' }, changedFiles: [], includedChanges: [{ path: selection.repositoryRelativePath, category: 'selected-definition', symbol: { name: selection.componentName!, kind: 'component', region: { startLine: 4, endLine: 8 } }, branchChangeId: `change-${selection.previewId}`, wholeFile: false, reason: 'Validated visual selection seed.', evidenceEdgeIds: ['edge-1'], confidence: 'exact' }], excludedChanges: [], unresolvedDependencies: [], testFileSlices: [], evidence: [] } };
 }
 const foundation: IntegrationFoundation = { repositoryId: 'test-repository', branchRef: 'main', commitSha: '1'.repeat(40), commonAncestorCommit: '1'.repeat(40), role: 'base' };
+const discovery = {
+  repositoryPath: 'C:/test/repository',
+  git: { detected: true as const, root: 'C:/test/repository' },
+  packageJsonPath: 'C:/test/repository/package.json',
+  packageName: 'test-product-workspace',
+  packageManager: { name: 'npm' as const, evidence: 'package-lock.json lockfile', lockFiles: ['package-lock.json'] },
+  entryPoints: ['src/main.tsx'],
+  sourceDirectories: ['src'],
+  scripts: { dev: 'vite' },
+  dependencies: { production: { react: '19.1.0' }, development: { typescript: '5.8.3', vite: '6.3.5' }, peer: {}, all: { react: '19.1.0', typescript: '5.8.3', vite: '6.3.5' } },
+  framework: { kind: 'react-typescript-vite' as const, react: { detected: true as const, version: '19.1.0', evidence: ['react dependency'] }, typescript: { detected: true as const, version: '5.8.3', configFiles: ['tsconfig.json'], evidence: ['typescript dependency'] }, vite: { detected: true as const, version: '6.3.5', configFiles: ['vite.config.ts'], evidence: ['vite dependency'] } }
+};
 function analysisEvidence(value: FeatureSliceArtifact) { return { artifact: value, foundation, selection: { capabilityId: `analyzed-selection:${value.analysisId}`, capabilityKind: 'whole-feature', sourceBranch: value.slice.repository.branchRef, sourceCommitSha: value.slice.repository.branchCommit, route: '/catalogue', pageId: '/catalogue', targetIds: [value.slice.selection.boundaryId] } }; }
 function readyOperation(previewId: 'left' | 'right', branch: string): PreviewOperation {
   const value = session(previewId, branch);
-  return { operationId: `${previewId}-operation`, previewId, branch, state: 'ready', requestedAt: '2026-01-01T00:00:00.000Z', startedAt: '2026-01-01T00:00:00.001Z', completedAt: '2026-01-01T00:00:00.002Z', updatedAt: '2026-01-01T00:00:00.002Z', phases: [], result: value, error: null, supersededBy: null };
+  return { operationId: `${previewId}-operation`, previewId, branch, state: 'ready', requestedAt: '2026-01-01T00:00:00.000Z', startedAt: '2026-01-01T00:00:00.001Z', completedAt: '2026-01-01T00:00:00.002Z', updatedAt: '2026-01-01T00:00:00.002Z', phases: [], result: value, error: null, refusal: null, supersededBy: null };
 }
 function appFetch(rightComponent = 'ProductQuickView') {
   return vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
     const url = String(input);
-    if (url === '/api/repository') return response({ repositoryId: foundation.repositoryId, foundation, branches: ['branch-a', 'branch-b', 'main'], clean: true, sessions: [] });
+    if (url === '/api/repository') return response({ repositoryId: foundation.repositoryId, discovery, foundation, branches: ['branch-a', 'branch-b', 'main'], clean: true, sessions: [] });
     if (url === '/api/previews/left' && init?.method === 'POST') return response({ operationId: 'left-operation', previewId: 'left', branch: 'branch-a', state: 'pending', requestedAt: '', coalesced: false }, 202);
     if (url === '/api/previews/right' && init?.method === 'POST') return response({ operationId: 'right-operation', previewId: 'right', branch: 'branch-b', state: 'pending', requestedAt: '', coalesced: false }, 202);
     if (url.endsWith('/left-operation')) return response(readyOperation('left', 'branch-a'));
@@ -40,42 +53,43 @@ function appFetch(rightComponent = 'ProductQuickView') {
   });
 }
 async function launch() {
-  const launchButton = await screen.findByRole('button', { name: /Try sample demo/i });
+  const launchButton = await screen.findByRole('button', { name: /Continue to comparison/i });
   await waitFor(() => expect(launchButton).toBeEnabled(), { timeout: 10_000 });
   fireEvent.click(launchButton);
   return {
-    left: await screen.findByTitle('Category sidebar branch live application', {}, { timeout: 5_000 }) as HTMLIFrameElement,
-    right: await screen.findByTitle('Quick-view branch live application', {}, { timeout: 5_000 }) as HTMLIFrameElement
+    left: await screen.findByTitle('Source A · branch-a live application', {}, { timeout: 5_000 }) as HTMLIFrameElement,
+    right: await screen.findByTitle('Source B · branch-b live application', {}, { timeout: 5_000 }) as HTMLIFrameElement
   };
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
-test('shares the homepage ink, ivory, stone, and signal-orange token system with Guided Mode', () => {
+test('uses the precision-instrument tokens and preserves reduced-motion communication', () => {
   const css = readFileSync('apps/studio/src/studio.css', 'utf8');
   for (const token of ['--ink: #111315', '--ivory: #f5f2eb', '--white: #ffffff', '--stone: #d9d4ca', '--light-stone: #ece8df', '--graphite: #686c70', '--signal: #ff6b3d', '--signal-dark: #e9562f']) expect(css).toContain(token);
-  expect(css).toContain('.studio { min-height: 100vh; padding: 0 18px 20px; color: var(--ink); background: var(--ivory); }');
+  expect(css).toContain('.studio-workspace { min-height: 100vh;');
   expect(css).toContain('.primary-action { color: var(--ink); background: var(--signal)');
-  expect(css).toContain('.combine-tray, .result-actions { position: sticky;');
-  expect(css).not.toContain('.combine-tray, .result-actions { position: fixed;');
+  expect(css).toContain('.selection-tray { position: sticky;');
+  expect(css).toContain('@media (prefers-reduced-motion: reduce)');
+  expect(css).toContain('animation-iteration-count: 1 !important');
 });
 
 test('renders an explicit analysis refusal in technical evidence', () => {
   render(<SlicePanel artifact={null} status="refused" error="Branch commit mismatch: restart and select again." />);
-  expect(screen.getByText('Analysis refused:')).toBeVisible();
+  expect(screen.getByText('Analysis refused')).toBeVisible();
   expect(screen.getByText(/Branch commit mismatch/)).toBeVisible();
 });
 
-test('explains the task and defaults to the intended named versions without technical jargon', async () => {
+test('renders real discovered repository metadata before comparison', async () => {
   appFetch();
   render(<App />);
-  expect(await screen.findByRole('heading', { name: 'UI Merge Studio' })).toBeVisible();
-  expect(screen.getByText(/Combine the best UI changes from different React branches/)).toBeVisible();
-  expect(screen.getByRole('button', { name: /Try sample demo/ })).toBeVisible();
-  expect(screen.getByText(/controlled local React \+ TypeScript \+ Vite Product Catalogue/)).toBeVisible();
-  expect(screen.getByText(/stable product data/)).toBeVisible();
-  expect(screen.getByText(/These are examples—not limits/)).toBeVisible();
-  expect(screen.queryByTitle(/Variant preview/)).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'How it works' })).toBeVisible();
+  expect(await screen.findByRole('heading', { name: 'test-product-workspace' })).toBeVisible();
+  expect(screen.getByText('C:/test/repository')).toBeVisible();
+  expect(screen.getByText('Repository ready')).toBeVisible();
+  expect(screen.getByText(/React/)).toBeVisible();
+  expect(screen.getByText(/TypeScript/)).toBeVisible();
+  expect(screen.getByText(/Vite/)).toBeVisible();
+  expect(screen.getByRole('button', { name: /Continue to comparison/ })).toBeVisible();
+  expect(screen.getByText(/npm run dev -- --repository/)).toBeInTheDocument();
   const text = document.body.textContent ?? '';
   for (const forbidden of ['Hovered boundary', 'Selected boundary', 'Eligible ancestors', 'Feature slice', 'Merge base', 'Runtime instance', 'Candidate preflight']) expect(text).not.toContain(forbidden);
 });
@@ -86,15 +100,15 @@ test('launches through acknowledged operations and keeps both runtime identities
   const frames = await launch();
   emit(frames.left, session('left', 'branch-a'), 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
   emit(frames.right, session('right', 'branch-b'), 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
-  expect(await screen.findByText('Both live apps are ready to compare')).toBeVisible();
-  expect(screen.getByText(/two live Git branches of the same React application/)).toBeVisible();
-  expect(screen.getAllByText('Category sidebar branch').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('Quick-view branch').length).toBeGreaterThan(0);
-  expect(screen.getByText('branch-a')).toBeVisible();
-  expect(screen.getByText('branch-b')).toBeVisible();
+  expect(await screen.findByText('Two running versions')).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Choose the parts worth keeping.' })).toBeVisible();
+  expect(screen.getByText('Foundation')).toBeVisible();
+  expect(screen.getByText('Source versions')).toBeVisible();
+  expect(screen.getAllByText('branch-a').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('branch-b').length).toBeGreaterThan(0);
   expect(screen.queryByRole('combobox', { name: /source/i })).not.toBeInTheDocument();
-  expect(document.querySelector('.studio')).not.toHaveTextContent('Version A');
-  expect(document.querySelector('.studio')).not.toHaveTextContent('Version B');
+  expect(document.querySelector('.studio-workspace')).not.toHaveTextContent('Version A');
+  expect(document.querySelector('.studio-workspace')).not.toHaveTextContent('Version B');
   expect(frames.left).toHaveAttribute('src', session('left', 'branch-a').url);
   expect(frames.right).toHaveAttribute('src', session('right', 'branch-b').url);
   fireEvent.change(screen.getByLabelText('Preview size'), { target: { value: 'mobile' } });
@@ -104,7 +118,37 @@ test('launches through acknowledged operations and keeps both runtime identities
   expect(frames.right).not.toHaveAttribute('style');
 });
 
-test('automatically understands two visual selections and prepares the single combine action', async () => {
+test('enters and exits selection mode with the real global control', async () => {
+  appFetch();
+  render(<App />);
+  const frames = await launch();
+  const left = session('left', 'branch-a');
+  const right = session('right', 'branch-b');
+  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.right, right, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  fireEvent.click(await screen.findByRole('button', { name: 'Select parts' }));
+  emit(frames.left, left, 'selection-mode-enabled');
+  emit(frames.right, right, 'selection-mode-enabled');
+  expect(screen.getByRole('button', { name: /Selecting · Esc to finish/ })).toBeVisible();
+  fireEvent.keyDown(window, { key: 'Escape' });
+  emit(frames.left, left, 'selection-mode-disabled');
+  emit(frames.right, right, 'selection-mode-disabled');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible());
+});
+
+test('updates comparison separator aria value after keyboard resizing without replacing previews', () => {
+  render(<ResizableComparison layout="both" left={<iframe title="left preview" />} right={<iframe title="right preview" />} />);
+  const separator = screen.getByRole('separator', { name: 'Resize source previews' });
+  const leftFrame = screen.getByTitle('left preview');
+  expect(separator).toHaveAttribute('aria-valuenow', '50');
+  separator.focus();
+  fireEvent.keyDown(separator, { key: 'ArrowRight' });
+  expect(separator).toHaveAttribute('aria-valuenow', '53');
+  expect(document.querySelector('.preview-comparison')).toHaveStyle({ '--left-pane': '53%' });
+  expect(screen.getByTitle('left preview')).toBe(leftFrame);
+});
+
+test('automatically resolves visual selections into the tray and real combine action', async () => {
   const fetchMock = appFetch();
   render(<App />);
   const frames = await launch();
@@ -116,9 +160,11 @@ test('automatically understands two visual selections and prepares the single co
   emit(frames.right, right, 'boundary-selected', { selectionReceipt: renderedReceipt('right'), ancestorSelectionReceipts: [] });
   expect((await screen.findAllByText('Category Sidebar')).length).toBeGreaterThanOrEqual(2);
   expect((await screen.findAllByText('Product Quick View')).length).toBeGreaterThanOrEqual(2);
-  for (const button of await screen.findAllByRole('button', { name: 'Confirm selection' })) fireEvent.click(button);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Create verified branch' })).toBeEnabled());
-  expect(screen.getByText('Both selections passed the compatibility check.')).toBeVisible();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled());
+  expect(screen.getByText('2 selected')).toBeVisible();
+  expect(screen.getByText('The selected source slices can be combined safely.')).toBeVisible();
+  const causality = screen.getByRole('list', { name: 'Selection to verification progress' });
+  for (const label of ['Selected', 'Source', 'Slice']) expect(within(causality).getByText(label).closest('li')).toHaveClass('causal-complete');
   expect(fetchMock.mock.calls.filter(call => String(call[0]).endsWith('/analysis'))).toHaveLength(2);
   for (const call of fetchMock.mock.calls.filter(call => String(call[0]).endsWith('/analysis'))) {
     const analysisBody = JSON.parse(String(call[1]?.body));
@@ -130,30 +176,34 @@ test('automatically understands two visual selections and prepares the single co
   expect(preflightBody).not.toHaveProperty('artifacts');
 });
 
-test('keeps detailed evidence in a keyboard-dismissible technical drawer', async () => {
+test('opens exact evidence from a real selection and closes it with Escape', async () => {
   appFetch();
   render(<App />);
-  await launch();
-  fireEvent.click(await screen.findByRole('button', { name: 'How are changes identified?' }));
-  const dialog = screen.getByRole('dialog', { name: 'Technical details' });
-  expect(within(dialog).getAllByText('Feature slice')).toHaveLength(2);
-  expect(screen.getByRole('button', { name: 'Close technical details' })).toHaveFocus();
+  const frames = await launch();
+  const left = session('left', 'branch-a');
+  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.left, left, 'boundary-selected', { selectionReceipt: renderedReceipt('left'), ancestorSelectionReceipts: [] });
+  await screen.findAllByText('Category Sidebar');
+  fireEvent.click(screen.getAllByRole('button', { name: 'Evidence' })[0]);
+  const dialog = screen.getByRole('dialog', { name: 'Evidence' });
+  expect(within(dialog).getByText('src/CategorySidebar.tsx:4:8')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Close evidence drawer' })).toHaveFocus();
   fireEvent.keyDown(window, { key: 'Escape' });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
 
-test('returns to the overview without duplicating active previews and resumes predictably', async () => {
+test('returns to project context without duplicating active previews and resumes predictably', async () => {
   const fetchMock = appFetch();
   render(<App />);
   await launch();
-  fireEvent.click(await screen.findByRole('button', { name: '← Back to overview' }));
-  expect(screen.getByRole('button', { name: /Resume sample demo/ })).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: /Resume sample demo/ }));
-  expect(await screen.findByRole('heading', { name: 'Compare branches' })).toBeVisible();
+  fireEvent.click(await screen.findByRole('button', { name: 'Return to project context' }));
+  expect(screen.getByRole('button', { name: /Continue to comparison/ })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: /Continue to comparison/ }));
+  expect(await screen.findByRole('heading', { name: 'Choose the parts worth keeping.' })).toBeVisible();
   expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/left')).toHaveLength(1);
   expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/right')).toHaveLength(1);
-  fireEvent.click(screen.getByRole('button', { name: /UI Merge Studio/ }));
-  expect(screen.getByRole('button', { name: /Resume sample demo/ })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Return to project context' }));
+  expect(screen.getByRole('button', { name: /Continue to comparison/ })).toBeVisible();
 });
 
 test('does not use a fixture-specific component allowlist before engine preflight', async () => {
@@ -167,8 +217,16 @@ test('does not use a fixture-specific component allowlist before engine prefligh
   emit(frames.left, left, 'boundary-selected', { selectionReceipt: renderedReceipt('left'), ancestorSelectionReceipts: [] });
   emit(frames.right, right, 'boundary-selected', { selectionReceipt: renderedReceipt('right'), ancestorSelectionReceipts: [] });
   expect((await screen.findAllByText('Inventory Summary')).length).toBeGreaterThan(0);
-  for (const button of screen.getAllByRole('button', { name: 'Confirm selection' })) {
-    fireEvent.click(button);
-  }
   await waitFor(() => expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/candidate/preflight')).toHaveLength(1));
+});
+
+test('opens a contextual real-action command menu with Ctrl+K', async () => {
+  appFetch();
+  render(<App />);
+  await launch();
+  fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+  const dialog = screen.getByRole('dialog', { name: 'Command menu' });
+  expect(within(dialog).getByRole('button', { name: /Select parts/ })).toBeVisible();
+  expect(within(dialog).getByRole('button', { name: /Restart Source A preview/ })).toBeVisible();
+  expect(within(dialog).queryByText(/checkout|commit history|open terminal/i)).not.toBeInTheDocument();
 });
