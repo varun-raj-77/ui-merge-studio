@@ -14,7 +14,7 @@ function open() {
 }
 
 function selectParts() {
-  fireEvent.click(screen.getByRole('button', { name: 'Select parts' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Pick parts' }));
 }
 
 function attachDocument(frame: HTMLIFrameElement) {
@@ -46,8 +46,8 @@ describe('public landing', () => {
     expect(screen.getByText('Compare parallel implementations, select the parts you prefer, and create one verified branch.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Try interactive demo' })).toBeVisible();
     const demo = screen.getByLabelText('Illustration of two source versions converging into one verified result');
-    expect(demo).toHaveTextContent('Sidebar A');
-    expect(demo).toHaveTextContent('Quick View B');
+    expect(demo).toHaveTextContent('Sidebar · A');
+    expect(demo).toHaveTextContent('Quick View · B');
     expect(demo).toHaveTextContent('Verified');
     expect(screen.queryByText(/candidate ID|AST|operation ID/i)).not.toBeInTheDocument();
   });
@@ -65,17 +65,27 @@ describe('public landing', () => {
 describe('three-act presentation', () => {
   it('opens in Compare with side-by-side canvases, explicit selection, and no premature evidence or island', () => {
     render(<CatalogueShowcase />); open();
-    expect(screen.getByRole('heading', { name: 'Compare versions' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Compare versions' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Compare versions' })).not.toBeInTheDocument();
     expect(screen.getByTitle('Version A live application')).toBeVisible();
     expect(screen.getByTitle('Version B live application')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Pick parts' })).toBeVisible();
     expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const compare = screen.getByRole('region', { name: 'Compare versions' });
     expect(within(compare).queryByText(/Pinned commit|Integration Plan|operation/i)).not.toBeInTheDocument();
   });
 
-  it('keeps app interaction normal until Select mode and exits Select with Escape', () => {
+  it('shows truthful host loading states until each preview iframe actually loads', async () => {
+    render(<CatalogueShowcase />); open();
+    expect(screen.getAllByText('Loading preview…')).toHaveLength(2);
+    fireEvent.load(screen.getByTitle('Version A live application'));
+    expect(screen.getAllByText('Loading preview…')).toHaveLength(1);
+    fireEvent.load(screen.getByTitle('Version B live application'));
+    await waitFor(() => expect(screen.queryByText('Loading preview…')).not.toBeInTheDocument());
+  });
+
+  it('keeps app interaction normal until Pick mode, intercepts the same region, and exits with Escape', () => {
     render(<CatalogueShowcase />); open();
     const appClick = vi.fn();
     const frame = screen.getByTitle('Version B live application') as HTMLIFrameElement;
@@ -88,11 +98,44 @@ describe('three-act presentation', () => {
     expect(screen.queryByRole('button', { name: 'Keep Quick View on Studio Speaker from Version B' })).not.toBeInTheDocument();
 
     selectParts();
-    expect(screen.getByRole('button', { name: /Selecting/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Keep Quick View on Studio Speaker from Version B' })).toBeInTheDocument();
+    const pickControl = screen.getByRole('button', { name: 'Return to Try mode' });
+    expect(pickControl).toHaveAttribute('aria-pressed', 'true');
+    expect(pickControl).toHaveAttribute('data-active');
+    expect(pickControl).not.toHaveClass('bg-iris');
+    const region = screen.getByRole('button', { name: 'Keep Quick View on Studio Speaker from Version B' });
+    expect(region).toHaveAttribute('data-source-version', 'B');
+    expect(region).toHaveTextContent('Quick View · Studio Speaker');
+    expect(document.querySelector('.ums-selection-layer[data-reveal]')).toBeInTheDocument();
+    expect(within(host).queryByRole('button', { name: /Keep/ })).not.toBeInTheDocument();
+    fireEvent.click(region);
+    expect(appClick).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Remove Quick View on Studio Speaker' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Pick parts' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Keep Quick View on Studio Speaker from Version B' })).not.toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('1 picked');
+  });
+
+  it('uses the measured whole-region geometry and supports keyboard pick, toggle, and retained decisions', async () => {
+    render(<CatalogueShowcase />); open();
+    const host = installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside><button>Collapse</button>Categories</aside>');
+    vi.spyOn(host.firstElementChild!, 'getBoundingClientRect').mockReturnValue({
+      x: 24, y: 88, top: 88, left: 24, right: 344, bottom: 248, width: 320, height: 160, toJSON: () => ({})
+    });
+    fireEvent.keyDown(window, { key: 'p' });
+    fireEvent.load(screen.getByTitle('Version A live application'));
+    const region = screen.getByRole('button', { name: 'Keep Category sidebar from Version A' });
+    expect(region).toHaveStyle({ top: '88px', left: '24px', width: '320px', height: '160px' });
+    expect(region).toHaveAttribute('data-label-placement', 'inside-bottom');
+    region.focus();
+    fireEvent.keyDown(region, { key: 'Enter' });
+    fireEvent.click(region);
+    expect(screen.getByRole('button', { name: 'Remove Category sidebar' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    selectParts();
+    expect(screen.getByRole('button', { name: 'Remove Category sidebar' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Category sidebar' }));
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Current selections' })).not.toBeInTheDocument());
   });
 
   it('creates the compact action island only after a real selection', () => {
@@ -100,9 +143,20 @@ describe('three-act presentation', () => {
     installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
     fireEvent.click(screen.getByRole('button', { name: 'Keep Category sidebar from Version A' }));
     const island = screen.getByRole('complementary', { name: 'Current selections' });
-    expect(island).toHaveTextContent('1 selected');
+    expect(island).toHaveTextContent('1 picked');
     expect(within(island).getByRole('button', { name: 'Combine 1 part' })).toBeInTheDocument();
     expect(screen.queryByText('FoundationMain')).not.toBeInTheDocument();
+  });
+
+  it('keeps both standard desktop selection names human-readable in the island', () => {
+    render(<CatalogueShowcase />); open(); selectParts();
+    installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
+    installScope('Version B live application', 'product-quick-view:p-103', 'Quick View on Task Lamp');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Category sidebar from Version A' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Quick View on Task Lamp from Version B' }));
+    const island = screen.getByRole('complementary', { name: 'Current selections' });
+    expect(within(island).getByRole('button', { name: 'Inspect Category sidebar selection' })).toHaveTextContent('Category sidebar');
+    expect(within(island).getByRole('button', { name: 'Inspect Quick View · Task Lamp selection' })).toHaveTextContent('Quick View · Task Lamp');
   });
 
   it('preserves selected state while switching narrow Version tabs', () => {
@@ -111,7 +165,7 @@ describe('three-act presentation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Keep Category sidebar from Version A' }));
     fireEvent.click(screen.getByRole('button', { name: /^Version B$/ }));
     expect(screen.getByRole('button', { name: /^Version B$/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('1 selected');
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('1 picked');
   });
 
   it('keeps category customization contextual and undoable', () => {
@@ -135,7 +189,7 @@ describe('three-act presentation', () => {
     render(<CatalogueShowcase />); open(); selectParts();
     openDropdown('More selection actions for Version B');
     fireEvent.click(screen.getByRole('menuitem', { name: 'Keep Quick View for all products' }));
-    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('5 selected');
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('5 picked');
     expect(screen.getByRole('button', { name: 'Combine 5 parts' })).toBeInTheDocument();
   });
 
@@ -172,7 +226,7 @@ describe('three-act presentation', () => {
     expect(screen.getByTitle('Combined result application')).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('data-workspace-state', 'combined');
     expect(screen.queryByText(/plan-v2|tree hash|operation ID/i)).not.toBeInTheDocument();
-    expect(screen.getByText('Preparing recorded candidate')).toBeInTheDocument();
+    expect(screen.getAllByText('Verified').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: /Compare again/ }));
     expect(screen.getByTitle('Version A live application')).toBeVisible();
   });
@@ -200,8 +254,8 @@ describe('three-act presentation', () => {
       addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn()
     }));
     render(<CatalogueShowcase />); open(); selectParts();
-    expect(screen.getByRole('button', { name: /Selecting/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Return to Try mode' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Pick parts' })).toBeVisible();
   });
 });

@@ -17,7 +17,7 @@ test('bulk Quick View uses one canonical plan transition and remains one undoabl
   await page.getByRole('button', { name: 'More selection actions for Version B' }).click();
   await page.getByRole('menuitem', { name: 'Keep Quick View for all products' }).click();
   const dock = page.getByRole('complementary', { name: 'Current selections' });
-  await expect(dock).toContainText('5 selected');
+  await expect(dock).toContainText('5 picked');
   await page.getByRole('button', { name: 'More workspace actions' }).click();
   await page.getByRole('menuitem', { name: 'Selection history' }).click();
   await expect(page.getByRole('dialog', { name: 'Selection history' })).toContainText(
@@ -47,11 +47,12 @@ test('bulk Quick View uses one canonical plan transition and remains one undoabl
   await expect(shell).toHaveAttribute('data-integration-plan-id', allProductsPlan ?? '');
   await expect(combinedFrame).not.toHaveAttribute('src');
   await page.getByRole('button', { name: 'Compare again' }).click();
-  await expect(dock).toContainText('5 selected');
+  await expect(dock).toContainText('5 picked');
 
-  await page.getByRole('button', { name: 'Select parts' }).click();
-  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
-  await expect(versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' })).toBeVisible();
+  await page.getByRole('button', { name: 'Pick parts' }).click();
+  const sidebarRegion = page.getByRole('button', { name: 'Keep Category sidebar from Version A' });
+  await sidebarRegion.hover();
+  await expect(sidebarRegion).toBeVisible();
 });
 
 test('mobile Review exposes atomic bulk Undo and Redo without overflow', async ({ page }) => {
@@ -62,13 +63,13 @@ test('mobile Review exposes atomic bulk Undo and Redo without overflow', async (
   await page.getByRole('menuitem', { name: 'Keep Quick View for all products' }).click();
 
   const dock = page.getByRole('complementary', { name: 'Current selections' });
-  await expect(dock).toContainText('5 selected');
+  await expect(dock).toContainText('5 picked');
   await page.getByRole('button', { name: 'More workspace actions' }).click();
   await page.getByRole('menuitem', { name: /Undo/ }).click();
   await expect(dock).toHaveCount(0);
   await page.getByRole('button', { name: 'More workspace actions' }).click();
   await page.getByRole('menuitem', { name: 'Redo' }).click();
-  await expect(dock).toContainText('5 selected');
+  await expect(dock).toContainText('5 picked');
   await expect.poll(() => page.evaluate(() => (
     document.documentElement.scrollWidth <= document.documentElement.clientWidth
   ))).toBe(true);

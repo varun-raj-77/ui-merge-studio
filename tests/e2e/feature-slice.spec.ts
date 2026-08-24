@@ -6,8 +6,7 @@ const versionB = (page: Page) => page.frameLocator('iframe[title="Version B live
 
 test('shows generated dependency and exclusion evidence for both selected features', async ({ page }) => {
   await page.goto(url);
-  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
-  await versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+  await page.getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
   await page.getByRole('button', { name: 'Inspect Category sidebar selection' }).click();
   await page.getByRole('button', { name: 'Inspect evidence' }).click();
   let evidence = page.getByRole('dialog', { name: 'Category sidebar' });
@@ -17,9 +16,8 @@ test('shows generated dependency and exclusion evidence for both selected featur
   await expect(evidence).toContainText('src/features/catalogue/CatalogueHeader.tsx');
   await evidence.getByRole('button', { name: 'Close technical evidence' }).click();
 
-  await versionB(page).getByRole('button', { name: 'Quick view Arc Headphones' }).evaluate(element => element.scrollIntoView({ block: 'center' }));
-  await versionB(page).getByRole('heading', { name: 'Arc Headphones' }).locator('xpath=ancestor::article').hover();
-  const addQuickView = versionB(page).getByRole('button', { name: 'Keep Quick View on Arc Headphones from Version B' });
+  await versionB(page).getByRole('heading', { name: 'Arc Headphones' }).locator('xpath=ancestor::article').evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const addQuickView = page.getByRole('button', { name: 'Keep Quick View on Arc Headphones from Version B' });
   await expect(addQuickView).toBeVisible();
   await addQuickView.click();
   await page.getByRole('button', { name: 'Inspect Quick View · Arc Headphones selection' }).click();

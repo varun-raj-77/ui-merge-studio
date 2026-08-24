@@ -11,15 +11,13 @@ async function previewAction(page: Page, version: 'A' | 'B', name: string | RegE
 }
 
 async function keepSidebar(page: Page) {
-  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
-  await versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
 }
 
 async function keepQuickView(page: Page, product: string) {
-  const card = versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article');
-  await card.scrollIntoViewIfNeeded();
-  await card.hover();
-  await versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
+  await versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article').evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
 }
 
 async function openCustomize(page: Page, selected: boolean) {
@@ -38,7 +36,7 @@ async function addAndConfigureSidebar(page: Page) {
 
 async function compareAgainInSelectMode(page: Page) {
   await page.getByRole('button', { name: 'Compare again' }).click();
-  await page.getByRole('button', { name: 'Select parts' }).click();
+  await page.getByRole('button', { name: 'Pick parts' }).click();
 }
 
 async function customizeBeforeAddJourney(page: Page, mobile: boolean) {
@@ -54,7 +52,7 @@ async function customizeBeforeAddJourney(page: Page, mobile: boolean) {
 
   if (mobile) await page.getByRole('button', { name: 'Version B', exact: true }).click();
   await keepQuickView(page, 'Arc Headphones');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 picked');
   await page.getByRole('button', { name: /Combine 2 parts/ }).click();
   await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toHaveCount(0);
   await expect(combined(page).getByRole('button', { name: 'Travel', exact: true })).toHaveCount(0);
@@ -70,9 +68,9 @@ async function customizeBeforeAddJourney(page: Page, mobile: boolean) {
   await dialog.getByRole('button', { name: 'Cancel' }).click();
 
   await page.keyboard.press('Control+Z');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 picked');
   await page.keyboard.press('Control+Shift+Z');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 picked');
 }
 
 for (const viewport of [
@@ -94,7 +92,7 @@ test('ordinary sidebar is updated in place by appearance-only customization', as
   await dialog.getByRole('checkbox', { name: 'Show “Categories” heading' }).uncheck();
   await dialog.getByRole('checkbox', { name: 'Show product counts' }).check();
   await dialog.getByRole('button', { name: 'Save customization' }).click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 picked');
   await expect(versionA(page).getByText('Categories', { exact: true })).toBeHidden();
   await expect(versionA(page).getByRole('button', { name: 'Audio', exact: true }).locator('[data-ums-product-count="audio"]')).toHaveText('2');
 });
@@ -184,7 +182,7 @@ test('mobile editor and configured result remain reachable without overflow', as
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(compareUrl);
   await addAndConfigureSidebar(page);
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 picked');
   await page.getByRole('button', { name: /Combine 1 part/ }).click();
   await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);

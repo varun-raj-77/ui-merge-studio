@@ -9,20 +9,18 @@ async function chooseFoundation(page: Page, name: RegExp) {
   await page.getByRole('button', { name: /^Foundation / }).click();
   await page.getByRole('radio', { name }).check();
   await page.keyboard.press('Escape');
-  const select = page.getByRole('button', { name: 'Select parts' });
+  const select = page.getByRole('button', { name: 'Pick parts' });
   if (await select.isVisible()) await select.click();
 }
 
 async function keepSidebar(page: Page) {
-  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
-  await versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
 }
 
 async function keepQuickView(page: Page, product: string) {
-  const card = versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article');
-  await card.scrollIntoViewIfNeeded();
-  await card.hover();
-  await versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
+  await versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article').evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
 }
 
 async function quickView(frame: FrameLocator, product: string, present: boolean) {
@@ -112,7 +110,7 @@ test('incompatible foundation is refused and the previous safe plan remains acti
   await expect(refusal).toContainText('replaces stable product IDs');
   await expect(page.locator('main.comparison-shell')).toHaveAttribute('data-integration-plan-id', safeIdentity!);
   await refusal.getByRole('button', { name: 'Keep previous foundation' }).click();
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 picked');
 });
 
 test('mobile foundation plan remains keyboard accessible, reversible, and overflow-free', async ({ page }) => {

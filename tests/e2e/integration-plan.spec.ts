@@ -26,10 +26,8 @@ async function configureSidebar(page: Page, options: {
 }
 
 async function keepQuickView(page: Page, product: string) {
-  const card = versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article');
-  await card.scrollIntoViewIfNeeded();
-  await card.hover();
-  await versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
+  await versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article').evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
 }
 
 async function expectQuickView(frame: FrameLocator, product: string, present: boolean) {
@@ -48,7 +46,7 @@ test('complete canonical plan drives configured result, history, and editor hydr
   await configureSidebar(page, { enabled: ['Audio', 'Desk', 'Travel'], defaultCategory: 'Desk', heading: false, counts: true });
   await keepQuickView(page, 'Desk Stand');
   await keepQuickView(page, 'Task Lamp');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 picked');
 
   const shell = page.locator('main.comparison-shell');
   const planIdentity = await shell.getAttribute('data-integration-plan-id');
@@ -63,7 +61,7 @@ test('complete canonical plan drives configured result, history, and editor hydr
   const frame = page.getByTitle('Combined result application');
   await expect(frame).not.toHaveAttribute('src');
   await expect(frame).toHaveAttribute('srcdoc', /<body><\/body>/);
-  await expect(combined(page).getByText('Configured Product Catalogue', { exact: true })).toBeVisible();
+  await expect(combined(page).getByText('Form & Field · Combined edit', { exact: true })).toBeVisible();
   await expect(combined(page).getByText('Categories', { exact: true })).toHaveCount(0);
   await expect(combined(page).getByRole('button', { name: 'Desk', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(combined(page).locator('[data-ums-product-count="audio"]')).toHaveText('2');
@@ -76,7 +74,7 @@ test('complete canonical plan drives configured result, history, and editor hydr
   await expect(combined(page).getByRole('button', { name: 'Quick view', exact: true })).toHaveCount(2);
 
   await page.getByRole('button', { name: 'Compare again' }).click();
-  await page.getByRole('button', { name: 'Select parts' }).click();
+  await page.getByRole('button', { name: 'Pick parts' }).click();
   await page.getByRole('button', { name: 'More selection actions for Version A' }).click();
   await page.getByRole('menuitem', { name: 'Edit category selection' }).click();
   const dialog = page.getByRole('dialog', { name: 'Category sidebar' });

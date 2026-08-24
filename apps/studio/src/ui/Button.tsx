@@ -3,12 +3,12 @@ import { motion, useReducedMotion, type HTMLMotionProps } from 'motion/react';
 import { cn } from './utils';
 
 export const buttonVariants = cva(
-  'inline-flex min-h-9 items-center justify-center gap-2 rounded-md px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-selection disabled:pointer-events-none',
+  'inline-flex min-h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md px-3.5 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-ink disabled:pointer-events-none',
   {
     variants: {
       variant: {
         primary: 'bg-ink text-white hover:bg-ink/88',
-        selection: 'bg-selection text-white hover:bg-selection/90',
+        iris: 'bg-iris text-white hover:bg-iris-hover',
         secondary: 'bg-raised text-ink shadow-[inset_0_0_0_1px_var(--color-hairline)] hover:bg-canvas',
         ghost: 'bg-transparent text-muted hover:bg-ink/[.05] hover:text-ink',
         danger: 'bg-danger text-white hover:bg-danger/90'

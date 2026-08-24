@@ -10,14 +10,13 @@ function productCard(frame: FrameLocator, name: string) {
 }
 
 async function keepSidebar(page: Page) {
-  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
-  await versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
 }
 
 async function keepQuickView(page: Page, product: string) {
-  await productCard(versionB(page), product).scrollIntoViewIfNeeded();
-  await productCard(versionB(page), product).hover();
-  await versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
+  await versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article').evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
 }
 
 async function workspaceAction(page: Page, name: string | RegExp) {
@@ -25,30 +24,41 @@ async function workspaceAction(page: Page, name: string | RegExp) {
   await page.getByRole('menuitem', { name }).click();
 }
 
+async function setTryMode(page: Page) {
+  const control = page.getByRole('button', { name: 'Return to Try mode' });
+  if (await control.isVisible()) await control.click();
+}
+
+async function setPickMode(page: Page) {
+  const control = page.getByRole('button', { name: 'Pick parts' });
+  if (await control.isVisible()) await control.click();
+}
+
 test('desktop selections support undo, redo, redo invalidation, and context exclusion', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
   const shell = page.locator('main.comparison-shell');
 
+  await setTryMode(page);
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
+  await setPickMode(page);
   await keepSidebar(page);
   await keepQuickView(page, 'Task Lamp');
   await keepQuickView(page, 'Desk Stand');
   await expect(shell).toHaveAttribute('data-history-past', '3');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 picked');
 
   await page.keyboard.press('Control+Z');
   await page.keyboard.press('Control+Z');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 picked');
   await expect(shell).toHaveAttribute('data-history-future', '2');
 
   await page.keyboard.press('Control+Shift+Z');
   await page.keyboard.press('Control+Shift+Z');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 picked');
   await page.keyboard.press('Control+Z');
-  await productCard(versionB(page), 'Task Lamp').hover();
-  await versionB(page).getByRole('button', { name: 'Remove Quick View on Task Lamp' }).click();
+  await page.getByRole('button', { name: 'Remove Quick View on Task Lamp' }).click();
   await expect(shell).toHaveAttribute('data-history-future', '0');
   await expect(versionA(page).getByRole('button', { name: 'Desk' })).toHaveAttribute('aria-pressed', 'true');
 });
@@ -56,7 +66,9 @@ test('desktop selections support undo, redo, redo invalidation, and context excl
 test('combined result removes a feature and Undo restores its exact candidate in place', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
+  await setTryMode(page);
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
+  await setPickMode(page);
   await keepSidebar(page);
   await keepQuickView(page, 'Desk Stand');
   await versionB(page).getByRole('button', { name: 'Quick view Desk Stand', exact: true }).press('Enter');
@@ -83,7 +95,7 @@ test('Clear selections is one reversible action and keyboard shortcuts respect t
   await workspaceAction(page, 'Clear selections');
   await expect(page.getByRole('complementary', { name: 'Current selections' })).toHaveCount(0);
   await page.keyboard.press('Control+Z');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 picked');
   await page.keyboard.press('Control+Shift+Z');
   await expect(page.getByRole('complementary', { name: 'Current selections' })).toHaveCount(0);
 
@@ -98,14 +110,16 @@ test('Clear selections is one reversible action and keyboard shortcuts respect t
 test('mobile overflow keeps history controls reachable without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(compareUrl);
+  await setTryMode(page);
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
   await page.getByRole('button', { name: 'Version B', exact: true }).click();
+  await setPickMode(page);
   await keepQuickView(page, 'Desk Stand');
 
   await workspaceAction(page, /Undo/);
   await expect(page.getByRole('complementary', { name: 'Current selections' })).toHaveCount(0);
   await workspaceAction(page, 'Redo');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('1 picked');
   await workspaceAction(page, 'Selection history');
   await expect(page.getByRole('dialog', { name: 'Selection history' })).toContainText('Added Quick View · Desk Stand');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);

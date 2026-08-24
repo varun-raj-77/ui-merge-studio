@@ -19,16 +19,25 @@ function productCard(frame: FrameLocator, name: string) {
 }
 
 async function addQuickView(page: Page, product: string) {
-  await versionB(page).getByRole('button', { name: `Quick view ${product}` }).evaluate(element => element.scrollIntoView({ block: 'center' }));
-  await productCard(versionB(page), product).hover();
-  const button = versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` });
+  await versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article').evaluate(element => element.scrollIntoView({ block: 'center' }));
+  const button = page.getByRole('button', { name: `Keep Quick View on ${product} from Version B` });
   await expect(button).toBeVisible();
   await button.click();
 }
 
 async function keepSidebar(page: Page) {
-  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
-  await versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+}
+
+async function setTryMode(page: Page) {
+  const control = page.getByRole('button', { name: 'Return to Try mode' });
+  if (await control.isVisible()) await control.click();
+}
+
+async function setPickMode(page: Page) {
+  const control = page.getByRole('button', { name: 'Pick parts' });
+  if (await control.isVisible()) await control.click();
 }
 
 function collectConsoleErrors(page: Page) {
@@ -45,6 +54,7 @@ test('desktop preserves Desk from Version A through the configured result and ba
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
 
+  await setTryMode(page);
   const deskButton = versionA(page).getByRole('button', { name: 'Desk' });
   await deskButton.focus();
   await deskButton.press('Enter');
@@ -53,10 +63,11 @@ test('desktop preserves Desk from Version A through the configured result and ba
   await expect(versionA(page).getByRole('article')).toHaveCount(2);
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
   await expect(versionB(page).getByRole('article')).toHaveCount(2);
+  await setPickMode(page);
   await keepSidebar(page);
   await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
   await addQuickView(page, 'Desk Stand');
-  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selected');
+  await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 picked');
   const deskQuickButton = versionB(page).getByRole('button', { name: 'Quick view Desk Stand', exact: true });
   await deskQuickButton.press('Enter');
   await expect(versionB(page).getByRole('dialog', { name: 'Desk Stand quick view' })).toBeVisible();
@@ -79,6 +90,7 @@ test('Version B becomes the latest context source and the combined result follow
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(compareUrl);
 
+  await setTryMode(page);
   const category = versionB(page).getByLabel('Browse category');
   await category.focus();
   await category.selectOption('audio');
@@ -86,6 +98,7 @@ test('Version B becomes the latest context source and the combined result follow
   await expect(versionA(page).getByRole('button', { name: 'Audio' })).toHaveAttribute('aria-pressed', 'true');
   await expect(versionA(page).getByRole('article')).toHaveCount(2);
 
+  await setPickMode(page);
   await productCard(versionB(page), 'Arc Headphones').scrollIntoViewIfNeeded();
   await addQuickView(page, 'Arc Headphones');
   await versionB(page).getByRole('button', { name: 'Quick view Arc Headphones', exact: true }).press('Enter');
@@ -99,7 +112,9 @@ test('configured-result incompatibility keeps compatible context and announces t
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(compareUrl);
 
+  await setTryMode(page);
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
+  await setPickMode(page);
   await keepSidebar(page);
   await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
   await addQuickView(page, 'Desk Stand');
@@ -122,9 +137,11 @@ test('changing the plan in combined view reapplies context and mobile tabs retai
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(compareUrl);
 
+  await setTryMode(page);
   await versionA(page).getByRole('button', { name: 'Desk' }).click();
   await page.getByRole('button', { name: 'Version B', exact: true }).click();
   await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
+  await setPickMode(page);
   await productCard(versionB(page), 'Desk Stand').scrollIntoViewIfNeeded();
   await addQuickView(page, 'Desk Stand');
   const deskStandLauncher = versionB(page).getByRole('button', { name: 'Quick view Desk Stand', exact: true });

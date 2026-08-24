@@ -8,7 +8,7 @@ export const localSetupUrl = `${githubUrl}#run-locally`;
 
 function BrandMark() {
   return <span className="relative grid size-7 place-items-center rounded-md bg-ink text-[10px] font-black tracking-[-.04em] text-white" aria-hidden="true">
-    UM<span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full border-2 border-canvas bg-selection" />
+    UM<span className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full border-2 border-canvas bg-white/75" />
   </span>;
 }
 
@@ -40,25 +40,25 @@ function HeroProductDemo() {
       <article className="grid min-w-0 grid-rows-[34px_1fr] overflow-hidden rounded-lg bg-canvas shadow-[inset_0_0_0_1px_var(--color-hairline)]">
         <div className="flex items-center justify-between px-3 text-[11px]"><strong>Version A</strong><span className="truncate text-muted">branch-sidebar</span></div>
         <div className="relative grid grid-cols-[28%_1fr] gap-2 overflow-hidden bg-white p-3">
-          <div className="rounded-md bg-ink p-2"><i className="mb-4 block h-2 w-10 max-w-full rounded bg-white/80" /><i className="mb-1.5 block h-5 rounded bg-selection" /><i className="mb-1.5 block h-5 rounded bg-white/10" /><i className="block h-5 rounded bg-white/10" /></div>
+          <div className="rounded-md bg-ink p-2"><i className="mb-4 block h-2 w-10 max-w-full rounded bg-white/80" /><i className="mb-1.5 block h-5 rounded bg-iris" /><i className="mb-1.5 block h-5 rounded bg-white/10" /><i className="block h-5 rounded bg-white/10" /></div>
           <div><i className="mb-3 block h-3 w-3/5 rounded bg-ink/80" /><div className="grid gap-2"><i className="h-16 rounded-md bg-canvas" /><i className="h-16 rounded-md bg-canvas" /><i className="h-16 rounded-md bg-canvas" /></div></div>
-          <span className="absolute bottom-3 left-3 right-[70%] rounded-md ring-2 ring-selection ring-offset-2 ring-offset-white" aria-label="Selected Category sidebar" />
-          <label className="absolute bottom-5 left-5 rounded-md bg-selection px-2 py-1 text-[10px] font-semibold text-white">Sidebar A</label>
+          <span className="absolute bottom-3 left-3 right-[70%] rounded-md ring-2 ring-iris ring-offset-2 ring-offset-white" aria-label="Selected Category sidebar" />
+          <label className="absolute bottom-5 left-5 rounded-md bg-ink px-2 py-1 text-[10px] font-semibold text-white">Sidebar · A</label>
         </div>
       </article>
       <article className="grid min-w-0 grid-rows-[34px_1fr] overflow-hidden rounded-lg bg-canvas shadow-[inset_0_0_0_1px_var(--color-hairline)]">
         <div className="flex items-center justify-between px-3 text-[11px]"><strong>Version B</strong><span className="truncate text-muted">branch-inspector</span></div>
         <div className="relative overflow-hidden bg-white p-3">
           <i className="mb-3 block h-3 w-1/2 rounded bg-ink/80" />
-          <div className="grid grid-cols-2 gap-2"><i className="h-20 rounded-md bg-canvas" /><i className="h-20 rounded-md bg-canvas" /><i className="h-20 rounded-md bg-canvas" /><i className="h-20 rounded-md bg-selection-soft ring-2 ring-selection ring-offset-2 ring-offset-white" /></div>
-          <label className="absolute bottom-5 right-5 rounded-md bg-selection px-2 py-1 text-[10px] font-semibold text-white">Quick View B</label>
+          <div className="grid grid-cols-2 gap-2"><i className="h-20 rounded-md bg-canvas" /><i className="h-20 rounded-md bg-canvas" /><i className="h-20 rounded-md bg-canvas" /><i className="h-20 rounded-md bg-iris-wash ring-2 ring-iris ring-offset-2 ring-offset-white" /></div>
+          <label className="absolute bottom-5 right-5 rounded-md bg-ink px-2 py-1 text-[10px] font-semibold text-white">Quick View · B</label>
         </div>
       </article>
     </div>
     <div className="ums-glass absolute bottom-16 left-1/2 flex max-w-[calc(100%-32px)] -translate-x-1/2 items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-semibold shadow-float sm:gap-4 sm:px-4">
-      <span className="flex whitespace-nowrap items-center gap-1.5"><Check size={13} className="text-selection" /> Sidebar A</span>
-      <span className="hidden whitespace-nowrap items-center gap-1.5 sm:flex"><Check size={13} className="text-selection" /> Quick View B</span>
-      <span className="text-muted">2 selected</span><span className="flex whitespace-nowrap items-center gap-1.5 text-selection">Combine 2 <ArrowRight size={13} /></span>
+      <span className="flex whitespace-nowrap items-center gap-1.5"><Check size={13} className="text-iris" /> Sidebar · A</span>
+      <span className="hidden whitespace-nowrap items-center gap-1.5 sm:flex"><Check size={13} className="text-iris" /> Quick View · B</span>
+      <span className="text-muted">2 picked</span><span className="flex whitespace-nowrap items-center gap-1.5 rounded-md bg-ink px-2 py-1 text-white">Combine 2 <ArrowRight size={13} /></span>
     </div>
     <div className="absolute inset-x-4 bottom-3 flex h-10 items-center justify-between rounded-lg bg-evidence px-3 text-xs text-white">
       <span className="flex items-center gap-2"><ShieldCheck size={15} className="text-[var(--color-success)]" />Combined result</span>
@@ -72,7 +72,7 @@ export function PublicHero({ open }: { open: () => void }) {
     <PublicNav open={open} />
     <section className="mx-auto grid min-h-[calc(100vh-56px)] w-full max-w-[1480px] items-center gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[.82fr_1.18fr] lg:gap-16 lg:py-16" id="top">
       <div className="max-w-[620px]">
-        <p className="mb-5 text-xs font-bold uppercase tracking-[.18em] text-selection">Visual integration for React</p>
+        <p className="mb-5 text-xs font-bold uppercase tracking-[.18em] text-muted">Visual integration for React</p>
         <h1 className="m-0 text-[clamp(3rem,5.5vw,4rem)] font-semibold leading-[.98] tracking-[-.055em] text-ink">Build the version<br />you actually want.</h1>
         <p className="mt-7 max-w-[570px] text-[17px] leading-7 text-muted">Compare parallel implementations, select the parts you prefer, and create one verified branch.</p>
         <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -97,7 +97,7 @@ function ProductGuide() {
   ];
   return <section className="mx-auto w-full max-w-[1360px] px-5 py-24 sm:px-8" id="how-it-works" aria-labelledby="how-title">
     <header className="mb-12 grid gap-5 lg:grid-cols-2 lg:items-end">
-      <div><p className="mb-3 text-xs font-bold uppercase tracking-[.18em] text-selection">How it works</p><h2 id="how-title" className="m-0 max-w-[560px] text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-.045em]">A visual decision with a verifiable path.</h2></div>
+      <div><p className="mb-3 text-xs font-bold uppercase tracking-[.18em] text-muted">How it works</p><h2 id="how-title" className="m-0 max-w-[560px] text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.05] tracking-[-.045em]">A visual decision with a verifiable path.</h2></div>
       <p className="m-0 max-w-[520px] text-[15px] leading-6 text-muted lg:justify-self-end">The hosted demo replays validated artifacts. The local Studio performs the real Git, worktree, generation, and verification operations on your machine.</p>
     </header>
     <ol className="m-0 grid list-none gap-3 p-0 md:grid-cols-12">
@@ -137,7 +137,7 @@ export function ShowcaseCausalityStrip({ selectionCount, combined, refused, expa
   };
   return <div className="flex items-center gap-1" aria-label="Controlled integration evidence state" role="status">
     {stages.map((stage, index) => <span key={stage} className="flex items-center gap-1" data-state={state(index)} title={stage}>
-      <i className={`grid size-3 place-items-center rounded-full border text-[7px] not-italic ${state(index) === 'complete' ? 'border-success bg-success text-white' : state(index) === 'active' ? 'border-selection bg-selection-soft text-selection' : state(index) === 'refused' ? 'border-danger bg-danger text-white' : 'border-hairline bg-transparent text-muted'}`}>{state(index) === 'complete' ? '✓' : state(index) === 'refused' ? '!' : ''}</i>
+      <i className={`grid size-3 place-items-center rounded-full border text-[7px] not-italic ${state(index) === 'complete' ? 'border-success bg-success text-white' : state(index) === 'active' ? 'border-ink bg-surface-subtle text-ink' : state(index) === 'refused' ? 'border-danger bg-danger text-white' : 'border-hairline bg-transparent text-muted'}`}>{state(index) === 'complete' ? '✓' : state(index) === 'refused' ? '!' : ''}</i>
       {expanded && <small className="text-[11px] text-muted">{stage}</small>}
       {index < stages.length - 1 && <b className="h-px w-2 bg-hairline" aria-hidden="true" />}
     </span>)}
@@ -146,16 +146,16 @@ export function ShowcaseCausalityStrip({ selectionCount, combined, refused, expa
 
 export function ShowcaseResultSummary({ candidate, selectionCount, onEvidence }: { candidate: PublicCandidate; selectionCount: number; onEvidence?: () => void }) {
   const gateLabel = (id: string) => ({
+    install: 'Dependencies',
     'locked-dependencies': 'Dependencies',
     typecheck: 'TypeScript',
+    tests: 'Tests',
     'focused-feature-tests': 'Tests',
     'production-build': 'Build'
   }[id] ?? id.replaceAll('-', ' '));
-  return <section className="ums-glass flex min-h-14 flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-4 py-2.5" aria-label="Recorded result convergence">
-    <strong className="flex items-center gap-2 text-[13px]"><ShieldCheck size={16} className="text-success" /> Verified</strong>
-    <span className="hidden h-5 w-px bg-hairline sm:block" />
-    <div className="flex flex-1 flex-wrap items-center gap-3" aria-label="Recorded verification gates">{candidate.verification.map(gate => <span key={gate.id} className="flex items-center gap-1.5 text-xs text-muted"><Check size={12} className="text-success" />{gateLabel(gate.id)}</span>)}</div>
-    <span className="text-xs text-muted">{selectionCount} part{selectionCount === 1 ? '' : 's'}</span>
+  return <section className="ums-result-verification flex min-h-12 flex-wrap items-center justify-center gap-x-5 gap-y-2 px-4 py-2" aria-label="Recorded result convergence">
+    <div className="flex flex-wrap items-center justify-center gap-4" aria-label="Recorded verification gates">{candidate.verification.filter(gate => gate.id !== 'install').map(gate => <span key={gate.id} className="flex items-center gap-1.5 text-xs text-muted"><Check size={12} className="text-success" />{gateLabel(gate.id)}</span>)}</div>
+    <span className="text-xs text-muted">{selectionCount} part{selectionCount === 1 ? '' : 's'} combined</span>
     {onEvidence && <button className="rounded-md px-2 py-1 text-xs font-semibold text-ink hover:bg-ink/[.05]" onClick={onEvidence}>Evidence</button>}
   </section>;
 }

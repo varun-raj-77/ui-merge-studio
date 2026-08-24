@@ -10,15 +10,23 @@ async function noOverflow(page: Page) {
 }
 
 async function keepQuickView(page: Page, product: string) {
-  const card = versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article');
-  await card.scrollIntoViewIfNeeded();
-  await card.hover();
-  await versionB(page).getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
+  await versionB(page).getByRole('heading', { name: product }).locator('xpath=ancestor::article').evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: `Keep Quick View on ${product} from Version B` }).click();
 }
 
 async function keepSidebar(page: Page) {
-  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).hover();
-  await versionA(page).getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+  await versionA(page).getByRole('complementary', { name: 'Category sidebar' }).evaluate(element => element.scrollIntoView({ block: 'center' }));
+  await page.getByRole('button', { name: 'Keep Category sidebar from Version A' }).click();
+}
+
+async function setTryMode(page: Page) {
+  const control = page.getByRole('button', { name: 'Return to Try mode' });
+  if (await control.isVisible()) await control.click();
+}
+
+async function setPickMode(page: Page) {
+  const control = page.getByRole('button', { name: 'Pick parts' });
+  if (await control.isVisible()) await control.click();
 }
 
 async function cardHasQuickView(frame: FrameLocator, product: string, expected: boolean) {
@@ -48,17 +56,18 @@ test.describe('mode-free comparison workspace', () => {
     await expect(page.getByTitle('Version B live application')).toBeVisible();
     await expect(page.getByTitle('Combined result application')).not.toBeVisible();
 
+    await setTryMode(page);
     await versionA(page).getByRole('button', { name: 'Desk' }).click();
     await expect(versionB(page).getByLabel('Browse category')).toHaveValue('desk');
     await versionA(page).getByRole('button', { name: 'All' }).click();
+    await setPickMode(page);
     await keepQuickView(page, 'Studio Speaker');
     await keepQuickView(page, 'Carry Case');
     await keepSidebar(page);
-    await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 selected');
+    await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('3 picked');
 
-    await versionB(page).getByRole('heading', { name: 'Studio Speaker' }).locator('xpath=ancestor::article').hover();
-    await versionB(page).getByRole('button', { name: 'Remove Quick View on Studio Speaker' }).click();
-    await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 selected');
+    await page.getByRole('button', { name: 'Remove Quick View on Studio Speaker' }).click();
+    await expect(page.getByRole('complementary', { name: 'Current selections' })).toContainText('2 picked');
     await page.getByRole('button', { name: /Combine 2 parts/ }).click();
     await expect(page.getByRole('heading', { name: 'Combined result' })).toBeVisible();
     await expect(page.getByTitle('Version A live application')).not.toBeVisible();
@@ -100,10 +109,12 @@ test.describe('mode-free comparison workspace', () => {
     await page.getByRole('button', { name: 'Version B', exact: true }).click();
     await expect(page.getByTitle('Version B live application')).toBeVisible();
 
+    await setTryMode(page);
     const arcLauncher = versionB(page).getByRole('button', { name: 'Quick view Arc Headphones', exact: true });
     await arcLauncher.press('Enter');
     await expect(versionB(page).getByRole('dialog', { name: 'Arc Headphones quick view' })).toBeVisible();
     await versionB(page).getByRole('button', { name: 'Close quick view' }).click();
+    await setPickMode(page);
     await keepQuickView(page, 'Arc Headphones');
     await keepQuickView(page, 'Task Lamp');
 
@@ -112,7 +123,8 @@ test.describe('mode-free comparison workspace', () => {
     await expect(page.getByRole('dialog', { name: 'Quick View · Task Lamp' })).toBeVisible();
     await page.keyboard.press('Escape');
 
-    await versionB(page).getByRole('button', { name: 'Remove Quick View on Arc Headphones' }).click();
+    await versionB(page).getByRole('heading', { name: 'Arc Headphones' }).locator('xpath=ancestor::article').evaluate(element => element.scrollIntoView({ block: 'center' }));
+    await page.getByRole('button', { name: 'Remove Quick View on Arc Headphones' }).click();
     await page.getByRole('button', { name: /Combine 1 part/ }).click();
     await expect(combined(page).getByRole('button', { name: 'Quick view' })).toHaveCount(1);
     await cardHasQuickView(combined(page), 'Task Lamp', true);
