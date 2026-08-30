@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'node:path';
 
 function artifactReplayRoute() {
@@ -23,7 +24,7 @@ function artifactReplayRoute() {
 
 export default defineConfig({
   root: import.meta.dirname,
-  plugins: [artifactReplayRoute(), react()],
+  plugins: [artifactReplayRoute(), react(), tailwindcss()],
   build: { outDir: resolve(import.meta.dirname, 'dist'), emptyOutDir: true },
   test: {
     environment: 'jsdom',

@@ -416,7 +416,7 @@ button:focus-visible, a:focus-visible {
   background: var(--cat-accent);
 }
 
-.preview-dot.branch-a { background: #e76f58; }
+.preview-dot.branch-a { background: #303037; }
 .workspace-preview h2 { margin: 0; font-size: 13px; letter-spacing: -.01em; }
 .workspace-preview header p { margin: 2px 0 0; color: var(--cat-muted); font-size: 10px; }
 .preview-capability-actions { justify-content: flex-end; }

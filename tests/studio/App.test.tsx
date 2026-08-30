@@ -65,9 +65,9 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 test('uses the precision-instrument tokens and preserves reduced-motion communication', () => {
   const css = readFileSync('apps/studio/src/studio.css', 'utf8');
-  for (const token of ['--ink: #111315', '--ivory: #f5f2eb', '--white: #ffffff', '--stone: #d9d4ca', '--light-stone: #ece8df', '--graphite: #686c70', '--signal: #ff6b3d', '--signal-dark: #e9562f']) expect(css).toContain(token);
+  for (const token of ['--ink: #111315', '--ivory: #f5f2eb', '--white: #ffffff', '--stone: #d9d4ca', '--light-stone: #ece8df', '--graphite: #686c70', '--signal: #665cf6', '--signal-dark: #574cdb']) expect(css).toContain(token);
   expect(css).toContain('.studio-workspace { min-height: 100vh;');
-  expect(css).toContain('.primary-action { color: var(--ink); background: var(--signal)');
+  expect(css).toContain('.primary-action { color: var(--white); background: var(--ink)');
   expect(css).toContain('.selection-tray { position: sticky;');
   expect(css).toContain('@media (prefers-reduced-motion: reduce)');
   expect(css).toContain('animation-iteration-count: 1 !important');

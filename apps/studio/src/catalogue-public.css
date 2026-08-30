@@ -65,7 +65,7 @@ html { scroll-behavior: smooth; }
 .public-hero-actions a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 17px; padding: 0 15px; border: 1px solid var(--stone-strong); border-radius: 6px; color: var(--ink); background: var(--white); font-size: 11px; font-weight: 780; text-decoration: none; }
 .public-hero-actions button { border-color: var(--ink); background: var(--ink); color: var(--white); cursor: pointer; box-shadow: var(--small-shadow); }
 .public-hero-actions button span { color: var(--signal); font-size: 15px; }
-.public-hero-actions a:last-child { border-color: transparent; background: transparent; text-decoration: underline; text-decoration-color: #ff6b3d88; text-underline-offset: 4px; }
+.public-hero-actions a:last-child { border-color: transparent; background: transparent; text-decoration: underline; text-decoration-color: #15151855; text-underline-offset: 4px; }
 .public-truth-line { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 23px; color: var(--graphite); font: 9px/1.4 "SFMono-Regular", Consolas, monospace; }
 .public-truth-line span { display: inline-flex; align-items: center; gap: 7px; }
 .public-truth-line i { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
@@ -103,7 +103,7 @@ html { scroll-behavior: smooth; }
 .hero-causality li:last-child::after { display: none; }
 .hero-causality i { width: 19px; height: 19px; position: relative; z-index: 1; display: grid; place-items: center; border: 1px solid var(--stone-strong); border-radius: 50%; background: var(--white); font-size: 7px; font-style: normal; }
 .hero-causality .complete i { border-color: var(--success); color: var(--white); background: var(--success); }
-.hero-causality .active i { border-color: var(--signal); color: var(--ink); background: var(--signal); box-shadow: 0 0 0 4px #ff6b3d1a; }
+.hero-causality .active i { border-color: var(--ink); color: #fff; background: var(--ink); box-shadow: 0 0 0 4px #15151812; }
 .hero-result-line { min-height: 57px; display: grid; grid-template-columns: auto auto 30px minmax(0, 1fr); align-items: center; gap: 7px; padding: 10px 14px; background: #f3f0e9; }
 .hero-result-line > span { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid var(--stone-strong); border-radius: 4px; background: var(--white); font-size: 9px; font-weight: 850; }
 .hero-result-line > span i { display: none; }
@@ -189,7 +189,7 @@ html { scroll-behavior: smooth; }
 .showcase-causality-panel li:last-child::after { display: none; }
 .showcase-causality-panel li i { width: 21px; height: 21px; position: relative; z-index: 1; display: grid; place-items: center; border: 1px solid var(--stone-strong); border-radius: 50%; color: var(--graphite); background: var(--white); font-size: 7px; font-style: normal; }
 .showcase-causality-panel li[data-state="complete"] i { border-color: var(--success); color: var(--white); background: var(--success); }
-.showcase-causality-panel li[data-state="active"] i { border-color: var(--signal); color: var(--ink); background: var(--signal); box-shadow: 0 0 0 4px #ff6b3d1a; }
+.showcase-causality-panel li[data-state="active"] i { border-color: var(--ink); color: #fff; background: var(--ink); box-shadow: 0 0 0 4px #15151812; }
 .showcase-causality-panel li[data-state="refused"] i { border-color: var(--failure); color: var(--white); background: var(--failure); }
 
 .selection-dock { right: 12px; bottom: 8px; left: 12px; min-height: 78px; grid-template-columns: auto minmax(0, 1fr) auto auto auto; border: 1px solid var(--technical-line); border-top: 3px solid var(--signal); border-radius: 7px; color: #f3f0e9; background: #1b1d1eee; box-shadow: 0 16px 48px #11131533; }
