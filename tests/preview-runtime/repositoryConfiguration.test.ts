@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { loadRepositoryConfiguration } from '../../apps/studio/repositoryConfig';
+import { loadRepositoryConfiguration, resolveStudioOrigin } from '../../apps/studio/repositoryConfig';
 
 describe('bounded local repository configuration', () => {
   test('preserves the controlled defaults', () => {
@@ -34,6 +34,11 @@ describe('bounded local repository configuration', () => {
     expect(configuration.repositoryPath).toBe('C:/command-line-repository');
     expect(configuration.previewPath).toBe('/');
     expect(() => loadRepositoryConfiguration('C:/studio', {}, ['--repository'])).toThrow('--repository requires');
+  });
+
+  test('derives the preview instrumentation origin from the actual Studio port unless explicitly overridden', () => {
+    expect(resolveStudioOrigin('127.0.0.1', 5000, {})).toBe('http://127.0.0.1:5000');
+    expect(resolveStudioOrigin('127.0.0.1', 5000, { UI_MERGE_STUDIO_ORIGIN: 'http://localhost:7777' })).toBe('http://localhost:7777');
   });
 
   test('refuses malformed verification configuration', () => {
