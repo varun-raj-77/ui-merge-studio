@@ -10,7 +10,7 @@ import { FeatureSliceAnalyzer, FeatureSliceRefusal } from '../../packages/source
 import type { InstrumentedBoundaryMapping } from '../../packages/source-instrumentation/src/instrumentReactSource';
 import { isPreviewIdentity } from '../../packages/shared/src/bridge';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
-import { loadRepositoryConfiguration } from './repositoryConfig';
+import { loadRepositoryConfiguration, resolveStudioOrigin } from './repositoryConfig';
 import { LocalPlanAuthority, localPlanErrorStatus, localRepositoryId } from './localPlanAuthority';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
@@ -20,8 +20,9 @@ const { repositoryPath, baseRef, previewPath, preferredBranches, candidateBranch
 const externalFeatureSlices = Boolean(process.env.UI_MERGE_REPOSITORY_PATH || process.argv.some(argument => argument === '--repository' || argument.startsWith('--repository=')));
 const host = '127.0.0.1';
 const port = Number(process.env.UI_MERGE_STUDIO_PORT ?? 4310);
+const studioOrigin = resolveStudioOrigin(host, port);
 const repository = new RepositoryController(repositoryPath);
-const previews = new PreviewController(repository, resolve(import.meta.dirname, 'preview.vite.config.ts'), previewPath);
+const previews = new PreviewController(repository, resolve(import.meta.dirname, 'preview.vite.config.ts'), previewPath, { studioOrigin });
 const previewOperations = new PreviewOperationManager(previews);
 const analyzer = new FeatureSliceAnalyzer(repositoryPath, workspaceRoot);
 const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(repositoryPath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions(), externalFeatureSlices ? 'external-react-vite' : 'phase0');
