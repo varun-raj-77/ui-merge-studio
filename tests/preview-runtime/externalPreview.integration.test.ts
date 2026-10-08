@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from '
 import { createServer } from 'node:http';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { PreviewController, isProcessAlive } from '../../packages/preview-runtime/src/previewController';
 import { stopProcessTree } from '../../packages/preview-runtime/src/processRuntime';
