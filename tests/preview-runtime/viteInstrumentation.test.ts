@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import {
   ExternalViteInstrumentationRefusal,
+  instrumentationModuleSpecifier,
   nativeViteConfigPath,
   writeExternalViteInstrumentationConfig
 } from '../../packages/preview-runtime/src/viteInstrumentation';
@@ -43,6 +44,22 @@ describe('external Vite instrumentation composition', () => {
     expect(wrapper).toContain("import { loadConfigFromFile } from 'vite'");
     expect(wrapper).toContain('plugins: [instrumentation, ...(nativeConfig.plugins ?? [])]');
     expect(wrapper).not.toMatch(/DashboardPage|src\/views\/dashboard/);
+  });
+
+  test('keeps cross-drive Windows instrumentation imports absolute instead of prefixing an invalid relative marker', () => {
+    expect(instrumentationModuleSpecifier(
+      'C:\\Temp\\preview\\.ums\\ui-merge.preview.vite.config.ts',
+      'D:\\workspace\\packages\\source-instrumentation\\src\\vitePlugin.ts',
+      'win32'
+    )).toBe('D:/workspace/packages/source-instrumentation/src/vitePlugin.ts');
+  });
+
+  test('keeps same-drive Windows instrumentation imports relative', () => {
+    expect(instrumentationModuleSpecifier(
+      'C:\\workspace\\preview\\.ums\\ui-merge.preview.vite.config.ts',
+      'C:\\workspace\\packages\\source-instrumentation\\src\\vitePlugin.ts',
+      'win32'
+    )).toBe('../../../packages/source-instrumentation/src/vitePlugin.ts');
   });
 
   test('supports Vite defaults when no native config exists', () => {
