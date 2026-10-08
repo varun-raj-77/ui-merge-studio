@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, relative, resolve, sep } from 'node:path';
+import { posix, resolve, win32 } from 'node:path';
 import type { RepositoryDiscovery } from '../../repository-controller/src/repositoryDiscovery';
 import type { PreviewCapabilities, PreviewIdentity } from '../../shared/src/bridge';
 import { PreviewRuntimeCommandError } from './runtimeCommands';
@@ -16,6 +16,13 @@ export class ExternalViteInstrumentationRefusal extends PreviewRuntimeCommandErr
 }
 
 type ExternalViteMetadata = Pick<RepositoryDiscovery, 'scripts' | 'framework'>;
+
+export function instrumentationModuleSpecifier(wrapperPath: string, instrumentationPath: string, platform: NodeJS.Platform = process.platform) {
+  const pathApi = platform === 'win32' ? win32 : posix;
+  const relativePath = pathApi.relative(pathApi.dirname(wrapperPath), instrumentationPath).replaceAll('\\', '/');
+  if (pathApi.isAbsolute(relativePath)) return relativePath;
+  return relativePath.startsWith('.') ? relativePath : `./${relativePath}`;
+}
 
 export function nativeViteConfigPath(repositoryRoot: string, metadata: ExternalViteMetadata) {
   const configFiles = metadata.framework.vite.configFiles;
@@ -43,8 +50,7 @@ export async function writeExternalViteInstrumentationConfig(options: {
   const nativeConfigPath = nativeViteConfigPath(options.repositoryRoot, options.metadata);
   const wrapperPath = resolve(options.repositoryRoot, '.ums', 'ui-merge.preview.vite.config.ts');
   const instrumentationPath = resolve(import.meta.dirname, '../../source-instrumentation/src/vitePlugin.ts');
-  const relativeInstrumentationPath = relative(dirname(wrapperPath), instrumentationPath).split(sep).join('/');
-  const instrumentationModule = relativeInstrumentationPath.startsWith('.') ? relativeInstrumentationPath : `./${relativeInstrumentationPath}`;
+  const instrumentationModule = instrumentationModuleSpecifier(wrapperPath, instrumentationPath);
   const source = `import { loadConfigFromFile } from 'vite';
 import { reactSourceInstrumentation } from ${JSON.stringify(instrumentationModule)};
 
