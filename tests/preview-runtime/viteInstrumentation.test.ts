@@ -59,7 +59,7 @@ describe('external Vite instrumentation composition', () => {
       'C:\\workspace\\preview\\.ums\\ui-merge.preview.vite.config.ts',
       'C:\\workspace\\packages\\source-instrumentation\\src\\vitePlugin.ts',
       'win32'
-    )).toBe('../../../packages/source-instrumentation/src/vitePlugin.ts');
+    )).toBe('../../packages/source-instrumentation/src/vitePlugin.ts');
   });
 
   test('supports Vite defaults when no native config exists', () => {
