@@ -1,0 +1,28 @@
+name: Pre-interview hardening validation
+
+on:
+  push:
+    branches:
+      - codex/preinterview-hardening
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - name: Focused regression suites
+        run: npx vitest run tests/source-analysis tests/preview-runtime tests/studio --maxWorkers=1
+      - name: Full Vitest suite
+        run: npm test -- --maxWorkers=1
+      - run: npm run fixture:verify
+      - run: npm run build
+      - run: npx playwright install chromium
+      - run: npm run test:e2e
