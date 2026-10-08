@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -58,14 +58,13 @@ export default {
   return root;
 }
 
-function canonicalPath(path: string) { try { return resolve(realpathSync(path)); } catch { return resolve(path); } }
-
 function worktreePaths(root: string) {
   return execFileSync('git', ['-C', root, 'worktree', 'list', '--porcelain'], { encoding: 'utf8' })
     .split(/\r?\n/)
     .filter(line => line.startsWith('worktree '))
-    .map(line => canonicalPath(line.slice('worktree '.length)));
+    .map(line => resolve(line.slice('worktree '.length)));
 }
+function worktreeNames(root: string) { return worktreePaths(root).map(path => basename(path)); }
 
 async function eventually(check: () => boolean | Promise<boolean>, timeoutMs = 8_000) {
   const deadline = Date.now() + timeoutMs;
@@ -159,7 +158,7 @@ describe('external React TypeScript Vite preview lifecycle', () => {
       expect(leftVitePid).not.toBe(left.processId);
       expect(rightVitePid).not.toBe(right.processId);
       expect(startingStatuses).toEqual(new Set(['left', 'right']));
-      expect(worktreePaths(root)).toEqual(expect.arrayContaining([canonicalPath(left.worktreePath), canonicalPath(right.worktreePath)]));
+      expect(worktreeNames(root)).toEqual(expect.arrayContaining([basename(left.worktreePath), basename(right.worktreePath)]));
       expect(existsSync(left.worktreePath)).toBe(true);
       expect(controller.isAlive('left')).toBe(true);
       expect(controller.isAlive('right')).toBe(true);
@@ -175,7 +174,7 @@ describe('external React TypeScript Vite preview lifecycle', () => {
       expect(controller.session('left')).toMatchObject({ status: 'failed' });
       expect(isProcessAlive(leftVitePid)).toBe(true);
       expect(existsSync(left.worktreePath)).toBe(true);
-      expect(worktreePaths(root)).toContain(canonicalPath(left.worktreePath));
+      expect(worktreeNames(root)).toContain(basename(left.worktreePath));
       await expect(fetch(left.url)).resolves.toMatchObject({ ok: true });
 
       repository.failNextRemovalPath = left.worktreePath;
@@ -183,13 +182,13 @@ describe('external React TypeScript Vite preview lifecycle', () => {
       await eventually(() => !isProcessAlive(left.processId) && !isProcessAlive(leftVitePid));
       await eventually(() => portIsClosed(left.url));
       expect(existsSync(left.worktreePath)).toBe(true);
-      expect(worktreePaths(root)).toContain(canonicalPath(left.worktreePath));
+      expect(worktreeNames(root)).toContain(basename(left.worktreePath));
       expect(controller.session('left')).toMatchObject({ status: 'failed' });
 
       await controller.stop('left');
       await controller.stop('left');
       expect(existsSync(left.worktreePath)).toBe(false);
-      expect(worktreePaths(root)).not.toContain(canonicalPath(left.worktreePath));
+      expect(worktreeNames(root)).not.toContain(basename(left.worktreePath));
       expect(controller.session('left')).toMatchObject({ status: 'stopped', failure: null });
       expect(controller.isAlive('right')).toBe(true);
 
