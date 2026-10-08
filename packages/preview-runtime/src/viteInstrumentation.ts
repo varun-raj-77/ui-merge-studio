@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { posix, resolve, win32 } from 'node:path';
+import { dirname, posix, resolve, win32 } from 'node:path';
 import type { RepositoryDiscovery } from '../../repository-controller/src/repositoryDiscovery';
 import type { PreviewCapabilities, PreviewIdentity } from '../../shared/src/bridge';
 import { PreviewRuntimeCommandError } from './runtimeCommands';
