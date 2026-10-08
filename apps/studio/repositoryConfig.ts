@@ -3,6 +3,11 @@ import type { VerificationCommand } from '../../packages/candidate-generation/sr
 
 type Environment = Record<string, string | undefined>;
 
+export function resolveStudioOrigin(host: string, port: number, environment: Environment = process.env) {
+  const explicit = environment.UI_MERGE_STUDIO_ORIGIN?.trim();
+  return explicit || `http://${host}:${port}`;
+}
+
 function verificationCommands(value: string | undefined): VerificationCommand[] | undefined {
   if (!value) return undefined;
   const parsed = JSON.parse(value) as unknown;
