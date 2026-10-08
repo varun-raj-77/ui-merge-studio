@@ -10,12 +10,18 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: UI merge studio
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: UI merge studio
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: UI merge studio/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run fixture:create
