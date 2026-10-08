@@ -18,3 +18,16 @@ test('refuses an unchanged selection with no changed supported dependency or int
   expect(result.status).toBe('refused'); expect(result.includedChanges).toEqual([]); expect(result.boundary.status).toBe('unresolved'); expect(result.unresolvedDependencies[0].reason).toContain('selected definition is unchanged');
   expect(result.excludedChanges).toEqual([expect.objectContaining({ path: 'src/Other.ts', proof: 'unproven' })]);
 });
+
+
+test('does not treat a surviving component as changed when the branch only deletes a following line', async () => {
+  const root = createRepository({ 'src/App.tsx': "export function App(){return <main>stable</main>}\nexport const removed='delete-me';\n" });
+  git(root,['switch','-c','feature']);
+  writeFiles(root,{ 'src/App.tsx': "export function App(){return <main>stable</main>}\n" });
+  const branchCommit = commit(root);
+  const selection: SourceIdentity = { boundaryId:'app',instanceId:'app-1',repositoryRelativePath:'src/App.tsx',line:1,column:8,componentName:'App',exportName:'App',branch:'feature',previewId:'left',sessionId:'session',generation:1,confidence:'exact' };
+  const result = (await new FeatureSliceAnalyzer(root).analyze({ baseRef:'main',branchRef:'feature',expectedBranchCommit:branchCommit,selection })).slice;
+  expect(result.status).toBe('refused');
+  expect(result.includedChanges).toEqual([]);
+  expect(result.unresolvedDependencies[0].reason).toContain('selected definition is unchanged');
+});
