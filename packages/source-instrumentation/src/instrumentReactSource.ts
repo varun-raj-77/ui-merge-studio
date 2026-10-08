@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { realpathSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 import generate from '@babel/generator';
 import { parse } from '@babel/parser';
@@ -62,13 +63,15 @@ function instrumentFunction(path: NodePath<t.FunctionDeclaration | t.FunctionExp
   path.traverse({ ReturnStatement(returnPath) { if (returnPath.getFunctionParent() !== path || !returnPath.node.argument) return; count += instrumentExpression(returnPath.node.argument, metadata, selectionReceipt, record); } });
   return count;
 }
-function pathFor(repositoryRoot: string, id: string) { return relative(resolve(repositoryRoot), resolve(id)).split(sep).join('/'); }
+function canonicalPath(value: string) { const resolved = resolve(value); try { return resolve(realpathSync.native(resolved)); } catch { return resolved; } }
+function pathFor(repositoryRoot: string, id: string) { return relative(canonicalPath(repositoryRoot), canonicalPath(id)).split(sep).join('/'); }
 export function staticBoundaryId(relativePath: string, line: number, column: number, name: string | null) { return createHash('sha256').update(`${relativePath}:${line}:${column}:${name ?? 'anonymous'}`).digest('hex').slice(0, 16); }
 
 export function isProjectOwnedReactSource(id: string, repositoryRoot: string) {
   const clean = id.split('?')[0];
-  const relativePath = pathFor(repositoryRoot, clean);
-  return !clean.includes(`${sep}node_modules${sep}`) && !relativePath.startsWith('../') && relativePath !== '..' && /\.[jt]sx$/.test(clean);
+  const canonical = canonicalPath(clean);
+  const relativePath = pathFor(repositoryRoot, canonical);
+  return !canonical.includes(`${sep}node_modules${sep}`) && !relativePath.startsWith('../') && relativePath !== '..' && /\.[jt]sx$/.test(canonical);
 }
 
 export function instrumentReactSource(code: string, id: string, options: InstrumentationOptions) {
