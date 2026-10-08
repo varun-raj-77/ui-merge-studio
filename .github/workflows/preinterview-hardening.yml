@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate:
+  windows-regressions:
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,10 +18,28 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
-      - name: Focused regression suites
-        run: npx vitest run tests/source-analysis tests/preview-runtime tests/studio --maxWorkers=1
-      - name: Full Vitest suite
-        run: npm test -- --maxWorkers=1
+      - run: npx vitest run tests/source-analysis/gitModel.test.ts tests/source-analysis/featureSlice.failure.test.ts tests/preview-runtime/repositoryConfiguration.test.ts tests/preview-runtime/viteInstrumentation.test.ts tests/studio/candidateGenerationGate.test.ts --maxWorkers=1
+      - run: npx vitest run tests/preview-runtime/externalPreview.integration.test.ts --maxWorkers=1
+
+  full-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: UI merge studio
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: UI merge studio
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: UI merge studio/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run fixture:create
+      - run: npm run typecheck
+      - run: npm test -- --maxWorkers=1
       - run: npm run fixture:verify
       - run: npm run build
       - run: npx playwright install chromium
