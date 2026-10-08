@@ -11,5 +11,16 @@ describe('Git change model', () => {
     expect(await repository.mergeBase('main','feature')).toBe(base); expect(await repository.resolveRef('feature')).toBe(branch);
     const changes = await repository.changedFiles(base, branch); expect(changes.find(item => item.path === 'src/a.ts')).toMatchObject({ status: 'modified', hunks: [{ startLine: 1, endLine: 2 }] }); expect(changes.find(item => item.path === 'src/new.ts')?.status).toBe('added'); expect(changes.find(item => item.path === 'src/renamed.ts')).toMatchObject({ status: 'renamed', previousPath: 'src/old.ts' }); expect(changes.find(item => item.path === 'src/data.png')?.status).toBe('binary');
   });
+  test('does not invent a branch-side changed region for pure deletions', async () => {
+    const root = createRepository({ 'src/a.ts': 'export const keep = 1;\nexport const removed = 2;\n' });
+    git(root, ['switch','-c','feature']);
+    writeFiles(root, { 'src/a.ts': 'export const keep = 1;\n' });
+    const branch = commit(root);
+    const repository = new GitSourceRepository(root);
+    const base = await repository.resolveRef('main');
+    const change = (await repository.changedFiles(base, branch)).find(item => item.path === 'src/a.ts');
+    expect(change).toMatchObject({ status: 'modified', hunks: [] });
+  });
+
   test('rejects path traversal and unsafe refs', async () => { expect(() => validateRepositoryPath('../outside.ts')).toThrow('Unsafe'); const repository = new GitSourceRepository(createRepository({ 'a.ts': 'export{}' })); await expect(repository.resolveRef('--all')).rejects.toThrow('Unsafe'); });
 });
