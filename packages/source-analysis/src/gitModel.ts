@@ -34,7 +34,16 @@ export class GitSourceRepository {
     const patch = await this.git(['diff', '--unified=0', '--no-color', baseCommit, branchCommit, '--', validateRepositoryPath(path)]);
     if (/^Binary files /m.test(patch)) return [];
     const regions: SourceRegion[] = [];
-    for (const line of patch.split(/\r?\n/)) { const match = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/); if (match) { const startLine = Number(match[1]); const count = Number(match[2] ?? 1); regions.push({ startLine, endLine: count === 0 ? startLine : startLine + count - 1 }); } }
+    for (const line of patch.split(/\r?\n/)) {
+      const match = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+      if (!match) continue;
+      const startLine = Number(match[1]);
+      const count = Number(match[2] ?? 1);
+      // A new-side count of zero is a pure deletion: there is no branch-side
+      // source region to overlap a surviving declaration.
+      if (count === 0) continue;
+      regions.push({ startLine, endLine: startLine + count - 1 });
+    }
     return regions;
   }
 }
