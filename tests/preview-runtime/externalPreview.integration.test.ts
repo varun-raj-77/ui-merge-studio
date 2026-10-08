@@ -119,12 +119,12 @@ describe('external React TypeScript Vite preview lifecycle', () => {
     await new Promise<void>(accept => instrumentationServer.listen(0, '127.0.0.1', accept));
     const address = instrumentationServer.address();
     if (!address || typeof address === 'string') throw new Error('Instrumentation test server did not allocate a port.');
-    const previousOrigin = process.env.UI_MERGE_STUDIO_ORIGIN;
-    process.env.UI_MERGE_STUDIO_ORIGIN = `http://127.0.0.1:${address.port}`;
+    const studioOrigin = `http://127.0.0.1:${address.port}`;
 
     const repository = new RetryRemovalRepositoryController(root);
     let failProcessCleanupFor = 0;
     const controller = new PreviewController(repository, resolve(root, 'unused-controlled-fixture-config.ts'), '/', {
+      studioOrigin,
       stopProcessTree: async handle => {
         if (handle.pid === failProcessCleanupFor) {
           failProcessCleanupFor = 0;
@@ -216,8 +216,6 @@ describe('external React TypeScript Vite preview lifecycle', () => {
       failProcessCleanupFor = 0;
       repository.failNextRemovalPath = null;
       await controller.stopAll();
-      if (previousOrigin === undefined) delete process.env.UI_MERGE_STUDIO_ORIGIN;
-      else process.env.UI_MERGE_STUDIO_ORIGIN = previousOrigin;
       await new Promise<void>((accept, reject) => instrumentationServer.close(error => error ? reject(error) : accept()));
     }
 
