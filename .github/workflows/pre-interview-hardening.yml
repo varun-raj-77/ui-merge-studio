@@ -18,11 +18,11 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
+      - run: npm run fixture:create
       - run: npm run test:source-analysis
       - run: npm run test:preview-runtime
       - run: npm run test:studio
       - run: npm test
-      - run: npm run fixture:create
       - run: npm run fixture:verify
       - run: npm run build
       - run: git diff --check
