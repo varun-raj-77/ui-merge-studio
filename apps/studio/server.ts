@@ -10,8 +10,9 @@ import { FeatureSliceAnalyzer, FeatureSliceRefusal } from '../../packages/source
 import type { InstrumentedBoundaryMapping } from '../../packages/source-instrumentation/src/instrumentReactSource';
 import { isPreviewIdentity } from '../../packages/shared/src/bridge';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
-import { loadRepositoryConfiguration } from './repositoryConfig';
+import { loadRepositoryConfiguration, resolveStudioOrigin } from './repositoryConfig';
 import { LocalPlanAuthority, localPlanErrorStatus, localRepositoryId } from './localPlanAuthority';
+import { CandidateGenerationGate } from './candidateGenerationGate';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
 const configuration = loadRepositoryConfiguration(workspaceRoot);
@@ -20,13 +21,15 @@ const { repositoryPath, baseRef, previewPath, preferredBranches, candidateBranch
 const externalFeatureSlices = Boolean(process.env.UI_MERGE_REPOSITORY_PATH || process.argv.some(argument => argument === '--repository' || argument.startsWith('--repository=')));
 const host = '127.0.0.1';
 const port = Number(process.env.UI_MERGE_STUDIO_PORT ?? 4310);
+const studioOrigin = resolveStudioOrigin(host, port);
 const repository = new RepositoryController(repositoryPath);
-const previews = new PreviewController(repository, resolve(import.meta.dirname, 'preview.vite.config.ts'), previewPath);
+const previews = new PreviewController(repository, resolve(import.meta.dirname, 'preview.vite.config.ts'), previewPath, { studioOrigin });
 const previewOperations = new PreviewOperationManager(previews);
 const analyzer = new FeatureSliceAnalyzer(repositoryPath, workspaceRoot);
 const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(repositoryPath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions(), externalFeatureSlices ? 'external-react-vite' : 'phase0');
 let candidateProgress: { status: 'idle' | 'running' | 'succeeded' | 'refused' | 'failed'; stage: string | null; message: string; planIdentity?: string; sliceId?: string; path?: string; verification?: string } = { status:'idle',stage:null,message:'No candidate generation is running.' };
-const candidateGenerator = new CandidateGenerator(repositoryPath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',planIdentity:candidateProgress.planIdentity,...event};}});
+const candidateGenerationGate = new CandidateGenerationGate();
+const candidateGenerator = new CandidateGenerator(repositoryPath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',planIdentity:candidateGenerationGate.planIdentity ?? candidateProgress.planIdentity,...event};}});
 const vite = await createViteServer({ configFile: resolve(import.meta.dirname, 'vite.config.ts'), server: { middlewareMode: true }, appType: 'spa' });
 
 async function body(request: import('node:http').IncomingMessage) { const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown; }
@@ -65,7 +68,7 @@ const server = createServer(async (request, response) => {
     const analysisId = artifactRoute(request.url);
     if (analysisId && request.method === 'GET') { const artifact = await readFile(resolve(workspaceRoot, '.ums', 'analysis', analysisId, 'feature-slice.json')); response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="feature-slice-${analysisId}.json"` }); return response.end(artifact); }
     if(request.url==='/api/candidate/preflight'&&request.method==='POST'){const projected=await planAuthority.project(await body(request));const result=await candidateGenerator.preflight(projected.request);candidateProgress={status:result.plan.status==='ready'?'idle':'refused',stage:'plan',message:result.plan.status==='ready'?'Candidate plan is ready.':'Candidate plan was refused.',planIdentity:projected.planIdentity};return json(response,200,result);}
-    if(request.url==='/api/candidate/generate'&&request.method==='POST'){const projected=await planAuthority.project(await body(request));candidateProgress={status:'running',stage:'validate',message:'Candidate generation is running: validate.',planIdentity:projected.planIdentity};const report=await candidateGenerator.generate(projected.request);candidateProgress={status:report.status,stage:report.stage,message:report.message,planIdentity:projected.planIdentity};return json(response,200,report);}
+    if(request.url==='/api/candidate/generate'&&request.method==='POST'){if(!candidateGenerationGate.acquire())return json(response,409,{error:'Candidate generation is already running. Wait for the active generation to finish before starting another.'});try{const projected=await planAuthority.project(await body(request));candidateGenerationGate.bind(projected.planIdentity);candidateProgress={status:'running',stage:'validate',message:'Candidate generation is running: validate.',planIdentity:projected.planIdentity};const report=await candidateGenerator.generate(projected.request);candidateProgress={status:report.status,stage:report.stage,message:report.message,planIdentity:projected.planIdentity};return json(response,200,report);}finally{candidateGenerationGate.release();}}
     if(request.url==='/api/candidate/status'&&request.method==='GET')return json(response,200,candidateProgress);
     const generationId=generationArtifactRoute(request.url);if(generationId&&request.method==='GET'){const artifact=await readFile(resolve(workspaceRoot,'.ums','generation',generationId,'candidate-report.json'));response.writeHead(200,{'Content-Type':'application/json','Content-Disposition':`attachment; filename="candidate-report-${generationId}.json"`});return response.end(artifact);}
     const previewOperationId = previewOperationRoute(request.url);

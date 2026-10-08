@@ -78,6 +78,7 @@ interface ProcessOwnership {
 
 export interface PreviewControllerDependencies {
   stopProcessTree?: (handle: ManagedProcessHandle) => Promise<void>;
+  studioOrigin?: string;
 }
 
 export class PreviewCancelledError extends Error {
@@ -156,6 +157,7 @@ export class PreviewController {
   private instrumentationChannels = new Map<string, { identity: PreviewIdentity; branchCommit: string; token: string }>();
   private lifecycleChains = new Map<string, Promise<void>>();
   private readonly stopOwnedProcess: (handle: ManagedProcessHandle) => Promise<void>;
+  private readonly studioOrigin: string;
 
   constructor(
     private repository: RepositoryController,
@@ -164,6 +166,7 @@ export class PreviewController {
     dependencies: PreviewControllerDependencies = {}
   ) {
     this.stopOwnedProcess = dependencies.stopProcessTree ?? stopProcessTree;
+    this.studioOrigin = dependencies.studioOrigin ?? process.env.UI_MERGE_STUDIO_ORIGIN ?? 'http://127.0.0.1:4310';
   }
 
   async branches() { return (await this.repository.inspect()).branches; }
@@ -311,7 +314,7 @@ export class PreviewController {
       const origin = `http://127.0.0.1:${port}`;
       const capabilities = await detectFixtureCapabilities(prepared.worktreePath);
       const controlledFixture = capabilities.fixtureContext?.contract === 'product-catalogue-v1';
-      const studioOrigin = process.env.UI_MERGE_STUDIO_ORIGIN ?? 'http://127.0.0.1:4310';
+      const studioOrigin = this.studioOrigin;
       const instrumentationConfig = controlledFixture
         ? this.previewViteConfig
         : (await writeExternalViteInstrumentationConfig({
