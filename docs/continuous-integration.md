@@ -11,13 +11,13 @@ The workflow uses Ubuntu 24.04 and Node.js 24 to match the currently configured 
 3. `npm run typecheck` and `npm test`.
 4. `npm run fixture:verify` to assert controlled branch topology and relevant negative/inclusion/exclusion contracts.
 5. `npm run showcase:validate` and `npm run build` to check the committed hosted evidence and bundle.
-6. A Chromium Playwright smoke test limited to `tests/e2e/guided-experience.spec.ts` for the hosted/local boundary and keyboard/mobile entry journey.
+6. A bounded Chromium Playwright product-journey suite from four existing specs: `guided-experience.spec.ts` (hosted/local boundary and keyboard entry), `showcase-evidence.spec.ts` (desktop/mobile selection → combine → evidence, negative refusal and recovery), `integration-plan.spec.ts` (canonical plan identity, configured runtime, history, and non-matrix combinations), and `foundation-support.spec.ts` (pinned Main/A/B foundation semantics, incompatible-foundation refusal, mobile keyboard and undo). This is **13 tests** at the time of UMS-02; runner selection is by exact filename, not a wildcard that can accidentally include external tests.
 7. `git diff --exit-code` to detect unexpected tracked-source modifications.
 
-A green run proves only that these exact checks passed for the reported commit. It is **not** proof of arbitrary React repository support, external dependency isolation, all Playwright journeys, a live deployment, or production candidate generation.
+A green run proves only that these exact checks passed for the reported commit. It is **not** proof of arbitrary React repository support, external dependency isolation, all Playwright journeys outside the four named specs, a live deployment, or production candidate generation.
 
 ## Deliberate exclusions
 
-The `external:prepare` and `test:e2e:external` families are **not** part of automatic CI. They may clone/install/execute unrelated repositories and require separate review of network, lifecycle scripts, and isolation. The complete local engine browser suite is also not silently treated as covered by the bounded hosted-boundary smoke.
+The `external:prepare` and `test:e2e:external` families are **not** part of automatic CI. They may clone/install/execute unrelated repositories and require separate review of network, lifecycle scripts, and isolation. The full local-engine/browser suite and external-adapter journeys are also **not** silently treated as covered by the bounded Showcase journey suite.
 
 This workflow does not set GitHub branch protection or make checks mandatory for merging; that is a separate repository-policy decision. PR merge and production changes still require explicit authorization.
