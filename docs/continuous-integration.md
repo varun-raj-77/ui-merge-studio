@@ -16,7 +16,7 @@ The workflow uses Ubuntu 24.04 and Node.js 24 to match the currently configured 
 8. Repeat `npm run fixture:verify` after both tests to confirm the fixture is still clean and satisfies all base/branch contracts.
 9. `git diff --exit-code` to detect unexpected tracked-source modifications.
 
-A green run proves only that these exact checks passed for the reported commit. It is **not** proof of arbitrary React repository support, external dependency isolation, all Playwright journeys outside the four named specs, a live deployment, arbitrary local-repository candidate generation, or production candidate generation.
+A green run proves only that these exact checks passed for the reported commit. It is **not** proof of arbitrary React repository support, external dependency isolation, other Playwright journeys outside the six explicitly named specs, a live deployment, arbitrary local-repository candidate generation, or production candidate generation.
 
 ## Deliberate exclusions
 
