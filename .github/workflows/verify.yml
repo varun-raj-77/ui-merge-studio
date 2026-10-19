@@ -69,5 +69,16 @@ jobs:
           tests/e2e/integration-plan.spec.ts
           tests/e2e/foundation-support.spec.ts
 
+      # Controlled local fixture only. Both tests are hermetic with explicit
+      # preview and candidate-branch cleanup; no unrelated repositories run.
+      - name: Verify real local plan to Git candidate and provenance refusal
+        run: >-
+          npx playwright test -c apps/studio/playwright.config.ts
+          tests/e2e/local-canonical-plan.spec.ts
+          tests/e2e/local-selection-provenance.spec.ts
+
+      - name: Recheck generated fixture after real candidate cleanup
+        run: npm run fixture:verify
+
       - name: Confirm checks did not change tracked source files
         run: git diff --exit-code
