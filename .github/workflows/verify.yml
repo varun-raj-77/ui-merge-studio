@@ -19,15 +19,23 @@ jobs:
     name: Typecheck, tests, build, and browser smoke
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    # Keep a space in the checkout path: the preview-runtime integration
+    # regression exercises Vite instrumentation under spaced workspaces.
+    defaults:
+      run:
+        working-directory: UI merge studio
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
+        with:
+          path: UI merge studio
 
       - name: Configure Node (matches Vercel)
         uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
+          cache-dependency-path: UI merge studio/package-lock.json
 
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
