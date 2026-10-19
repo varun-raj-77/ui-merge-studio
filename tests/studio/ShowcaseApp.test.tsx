@@ -76,6 +76,23 @@ describe('three-act presentation', () => {
     expect(within(compare).queryByText(/Pinned commit|Integration Plan|operation/i)).not.toBeInTheDocument();
   });
 
+  it('guides the Try to Pick transition and keeps the choice when exploring again', () => {
+    render(<CatalogueShowcase />); open();
+    const guide = screen.getByRole('note', { name: 'Comparison guidance' });
+    expect(guide).toHaveTextContent('Explore both versions');
+    expect(guide).toHaveTextContent('Interact with each demo version');
+    fireEvent.click(within(guide).getByRole('button', { name: 'Start selecting' }));
+    expect(guide).toHaveTextContent('Choose what to keep');
+    expect(guide).toHaveTextContent('This does not create a Git branch');
+
+    installScope('Version A live application', 'category-sidebar', 'Category sidebar', '<aside>Categories</aside>');
+    fireEvent.click(screen.getByRole('button', { name: 'Keep Category sidebar from Version A' }));
+    expect(guide).toHaveTextContent('1 part picked');
+    fireEvent.click(screen.getByRole('button', { name: 'Return to Try mode' }));
+    expect(guide).toHaveTextContent('Explore both versions');
+    expect(screen.getByRole('complementary', { name: 'Current selections' })).toHaveTextContent('1 picked');
+  });
+
   it('shows truthful host loading states until each preview iframe actually loads', async () => {
     render(<CatalogueShowcase />); open();
     expect(screen.getAllByText('Loading preview…')).toHaveLength(2);
