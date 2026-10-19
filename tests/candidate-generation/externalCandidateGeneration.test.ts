@@ -76,6 +76,67 @@ describe('bounded external React/Vite candidate generation',()=>{
     expect(git(root,['show','-s','--format=%B','combined-result'])).toContain('UI-Merge-Profile: external-react-vite');
   });
 
+  test('preserves a nested Vite layout when adding one uniquely anchored child',async()=>{
+    const originalApp='export function App(){return <main><header><h1>Dashboard</h1></header><section aria-label="Overview"><p>Baseline metrics</p></section><footer>Stable footer</footer></main>}\n';
+    const root=createRepository({
+      'package.json':'{"scripts":{"typecheck":"tsc --noEmit","test":"echo ok","build":"vite build"}}\n',
+      'src/App.tsx':originalApp
+    });
+    git(root,['switch','-c','prompt020-revenue-pulse']);
+    writeRevenueFeature(root,
+      "import { RevenuePulseBadge } from './features/revenue/RevenuePulseBadge';\n"
+      + 'export function App(){return <main><header><h1>Dashboard</h1></header><section aria-label="Overview"><RevenuePulseBadge/><p>Baseline metrics</p></section><footer>Stable footer</footer></main>}\n'
+    );
+    const {artifact,request}=await artifactFromRenderedSelection(root,commit(root,'feat: add a nested overview metric'));
+    expect(artifact.slice.status).toBe('resolved');
+    const generator=new CandidateGenerator(root,{artifactRoot:resolve(process.cwd()),verificationCommands:noOpVerification});
+    const preflight=await generator.preflight(request);
+    expect(preflight.plan.status,JSON.stringify(preflight.plan.unresolved)).toBe('ready');
+    const insertions=preflight.plan.operations.filter(operation=>operation.kind==='replace-jsx-region');
+    expect(insertions).toHaveLength(1);
+    expect(insertions[0].jsxProjection).toMatchObject({
+      mode:'insert-child',
+      integrationBoundary:{path:'src/App.tsx',symbol:'App'},
+      baseParent:{name:'section'},
+      anchor:{side:'before'}
+    });
+    const first=await generator.generate(request);
+    const repeat=await generator.generate(request);
+    expect(first.status,first.message).toBe('succeeded');
+    expect(repeat).toMatchObject({status:'succeeded',repository:{idempotent:true,candidateTree:first.repository.candidateTree}});
+    const finalApp=git(root,['show','combined-result:src/App.tsx']);
+    expect(finalApp).toContain('<header><h1>Dashboard</h1></header>');
+    expect(finalApp).toContain('<section aria-label="Overview"><RevenuePulseBadge/><p>Baseline metrics</p></section>');
+    expect(finalApp).toContain('<footer>Stable footer</footer>');
+    expect(finalApp).not.toContain('FooterExperiment');
+    expect(git(root,['diff','--name-only','main..combined-result']).split(/\r?\n/)).toEqual([
+      'src/App.tsx','src/features/revenue/RevenuePulseBadge.tsx','src/features/revenue/pulse.svg','src/features/revenue/revenueState.ts','src/features/revenue/useRevenuePulse.ts'
+    ]);
+    expect(()=>git(root,['grep','-n','Unrelated footer experiment','combined-result'])).toThrow();
+    expect(()=>git(root,['grep','-n','Unrelated module export','combined-result'])).toThrow();
+    expect(git(root,['status','--porcelain'])).toBe('');
+    expect(git(root,['worktree','list','--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+  });
+
+  test('refuses duplicate matching JSX parent shells before candidate mutation',async()=>{
+    const root=createRepository({
+      'package.json':'{"scripts":{"typecheck":"tsc --noEmit","test":"echo ok","build":"vite build"}}\n',
+      'src/App.tsx':'export function App(){return <main><section className="metric"><p>Primary</p></section><section className="metric"><p>Secondary</p></section></main>}\n'
+    });
+    git(root,['switch','-c','prompt020-revenue-pulse']);
+    writeRevenueFeature(root,
+      "import { RevenuePulseBadge } from './features/revenue/RevenuePulseBadge';\n"
+      + 'export function App(){return <main><section className="metric"><RevenuePulseBadge/><p>Primary</p></section><section className="metric"><p>Secondary</p></section></main>}\n'
+    );
+    const {artifact,request}=await artifactFromRenderedSelection(root,commit(root,'feat: ambiguous metric placement'));
+    const preflight=await new CandidateGenerator(root).preflight(request);
+    expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.unresolved.map(item=>item.reason).join(' ')).toMatch(/exactly one structural parent|multiple matching parents|ambiguous/i);
+    expect(()=>git(root,['rev-parse','combined-result'])).toThrow();
+    expect(git(root,['status','--porcelain'])).toBe('');
+    expect(git(root,['worktree','list','--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+  });
+
   test('refuses an added source module with unrelated unindexed top-level content',async()=>{
     const root=baseRepository();git(root,['switch','-c','prompt020-revenue-pulse']);
     writeRevenueFeature(root,"import { RevenuePulseBadge } from './features/revenue/RevenuePulseBadge';\nexport function App(){return <main><RevenuePulseBadge/><h1>Dashboard</h1></main>}\n",{
