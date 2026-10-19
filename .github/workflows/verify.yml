@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Typecheck, tests, build, and browser smoke
+    name: Typecheck, tests, build, and browser journeys
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     # Keep a space in the checkout path: the preview-runtime integration
@@ -58,7 +58,7 @@ jobs:
       - name: Build hosted Showcase
         run: npm run build
 
-      - name: Install Chromium for bounded browser smoke
+      - name: Install Chromium for bounded browser journeys
         run: npx playwright install --with-deps chromium
 
       - name: Check real Showcase journeys, configured plans, and safe refusal in browser
