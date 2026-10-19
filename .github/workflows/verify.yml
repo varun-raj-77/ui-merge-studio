@@ -61,8 +61,13 @@ jobs:
       - name: Install Chromium for bounded browser smoke
         run: npx playwright install --with-deps chromium
 
-      - name: Check hosted/local boundary and keyboard navigation in browser
-        run: npx playwright test -c apps/studio/playwright.config.ts tests/e2e/guided-experience.spec.ts
+      - name: Check real Showcase journeys, configured plans, and safe refusal in browser
+        run: >-
+          npx playwright test -c apps/studio/playwright.config.ts
+          tests/e2e/guided-experience.spec.ts
+          tests/e2e/showcase-evidence.spec.ts
+          tests/e2e/integration-plan.spec.ts
+          tests/e2e/foundation-support.spec.ts
 
       - name: Confirm checks did not change tracked source files
         run: git diff --exit-code
