@@ -43,14 +43,19 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   await expect(rightCard).toContainText('Running', { timeout: 120_000 });
 
   await page.getByRole('button', { name: 'Select parts' }).click();
-  const leftAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/left/analysis') && request.method() === 'POST');
+  const leftAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/left/analysis') && request.method() === 'POST', { timeout: 90_000 });
+  const leftAnalysisResponsePromise = page.waitForResponse(response => response.url().endsWith('/api/previews/left/analysis') && response.request().method() === 'POST', { timeout: 90_000 });
   await branchA.getByRole('complementary', { name: 'Category sidebar' }).click();
   const leftAnalysisBody = (await leftAnalysisRequestPromise).postDataJSON();
   expect(leftAnalysisBody).toEqual({ selectionReceipt: expect.stringMatching(/^rendered-[A-Za-z0-9_-]{32}$/) });
   expect(JSON.stringify(leftAnalysisBody)).not.toMatch(/repositoryRelativePath|componentName|SourceIdentity|\.tsx/);
+  // Do not race the second selection against the first source-analysis write.
+  const leftAnalysisResponse = await leftAnalysisResponsePromise;
+  expect(leftAnalysisResponse.status(), await leftAnalysisResponse.text()).toBe(200);
   const renderedQuickView = branchB.locator('[data-ums-scope="product-quick-view:p-105"]');
+  await expect(renderedQuickView).toBeVisible({ timeout: 30_000 });
   const preflightResponsePromise = page.waitForResponse(response => response.url().endsWith('/api/candidate/preflight') && response.request().method() === 'POST');
-  const rightAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/right/analysis') && request.method() === 'POST');
+  const rightAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/right/analysis') && request.method() === 'POST', { timeout: 90_000 });
   await renderedQuickView.click({ position: { x: 2, y: 2 } });
   const rightAnalysisBody = (await rightAnalysisRequestPromise).postDataJSON();
   expect(rightAnalysisBody).toEqual({ selectionReceipt: expect.stringMatching(/^rendered-[A-Za-z0-9_-]{32}$/) });

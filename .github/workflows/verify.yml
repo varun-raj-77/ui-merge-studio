@@ -77,6 +77,14 @@ jobs:
           tests/e2e/local-canonical-plan.spec.ts
           tests/e2e/local-selection-provenance.spec.ts
 
+      # Local Chromium, first-party synthesized React/Vite branches only.
+      # The candidate is created, verified and browsed in a disposable Git
+      # worktree; no production traffic or external repository execution.
+      - name: Verify two-feature Git candidate in real Chromium
+        run: >-
+          npx playwright test -c apps/studio/playwright.config.ts
+          tests/e2e/two-feature-candidate-browser.spec.ts
+
       - name: Recheck generated fixture after real candidate cleanup
         run: npm run fixture:verify
 
