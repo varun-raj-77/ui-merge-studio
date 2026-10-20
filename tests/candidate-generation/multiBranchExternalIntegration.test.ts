@@ -55,7 +55,7 @@ function branchFiles(choice: Choice, sharedParent: boolean, brokenRight = false)
 
 async function createTwoBranchPlan(sharedParent = false, runnable = false, brokenRight = false) {
   const root = createRepository({
-    '.gitignore': '.ums/\nnode_modules/\ndist/\n',
+    '.gitignore': '.ums/\nnode_modules\ndist/\n',
     'package.json': '{"name":"ums-multibranch-proof","private":true,"scripts":{"dev":"vite","build":"vite build"}}\n',
     'src/App.tsx': sharedParent
       ? 'export function App(){return <main><h1>Dashboard</h1></main>}\n'
