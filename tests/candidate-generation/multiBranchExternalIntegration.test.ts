@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { symlinkSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createElement } from 'react';
