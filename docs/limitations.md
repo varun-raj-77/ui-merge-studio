@@ -34,4 +34,6 @@
 
 - UMS-07 adds a two-feature failure-atomicity regression for the bounded external profile: a second-slice worktree content-hash mismatch must refuse before candidate registration, and a failed post-transform verification command must mark the attempt failed without committing a branch. Both cases preserve base/source refs and remove temporary candidate worktrees. This is a first-party fixture test, not a guarantee about arbitrary external code or OS-level crashes.
 
+- UMS-08 adds controlled **real TypeScript typecheck, Vite production build and React server-rendered runtime assertions** for the merged candidate of two disjoint first-party feature branches, using only the CI workspace's already-installed locked toolchain (no npm install or lifecycle scripts in the disposable candidate). A second test deliberately introduces an invalid TypeScript assignment in one selected feature and requires verification failure without candidate registration. SSR confirms that both actual components execute and render; it does **not** prove browser hydration, a live preview server, arbitrary external repositories, or production framework compatibility.
+
 Correct refusal is a product capability, not a failure to be hidden.
