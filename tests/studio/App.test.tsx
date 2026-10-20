@@ -85,9 +85,10 @@ test('renders real discovered repository metadata before comparison', async () =
   expect(await screen.findByRole('heading', { name: 'test-product-workspace' })).toBeVisible();
   expect(screen.getByText('C:/test/repository')).toBeVisible();
   expect(screen.getByText('Repository ready')).toBeVisible();
-  expect(screen.getByText(/React/)).toBeVisible();
-  expect(screen.getByText(/TypeScript/)).toBeVisible();
-  expect(screen.getByText(/Vite/)).toBeVisible();
+  const capabilities = within(screen.getByLabelText('Discovered project capabilities'));
+  expect(capabilities.getByText(/React/)).toBeVisible();
+  expect(capabilities.getByText(/TypeScript/)).toBeVisible();
+  expect(capabilities.getByText(/Vite/)).toBeVisible();
   expect(screen.getByRole('button', { name: /Continue to comparison/ })).toBeVisible();
   expect(screen.getByText(/npm run dev -- --repository/)).toBeInTheDocument();
   const text = document.body.textContent ?? '';
