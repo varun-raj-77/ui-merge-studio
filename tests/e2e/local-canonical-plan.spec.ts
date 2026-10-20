@@ -41,8 +41,16 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   const branchB = page.frameLocator('iframe[title="Source B · branch-b live application"]');
   await expect(leftCard).toContainText('Running', { timeout: 120_000 });
   await expect(rightCard).toContainText('Running', { timeout: 120_000 });
-
+  // "Running" confirms the HTTP preview, not that its browser bridge has
+  // mounted. Ensure both actual iframe UIs exist before enabling selection.
+  const renderedQuickView = branchB.locator('[data-ums-scope="product-quick-view:p-105"]');
+  await expect(branchA.getByRole('complementary', { name: 'Category sidebar' })).toBeVisible({ timeout: 30_000 });
+  await expect(renderedQuickView).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Select parts' }).click();
+  // Acknowledgements, not elapsed time, prove both frames accepted the
+  // selection-mode command before the first click can disable its own frame.
+  await expect(leftCard.locator('.selection-mode-banner')).toBeVisible({ timeout: 30_000 });
+  await expect(rightCard.locator('.selection-mode-banner')).toBeVisible({ timeout: 30_000 });
   const leftAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/left/analysis') && request.method() === 'POST', { timeout: 90_000 });
   const leftAnalysisResponsePromise = page.waitForResponse(response => response.url().endsWith('/api/previews/left/analysis') && response.request().method() === 'POST', { timeout: 90_000 });
   await branchA.getByRole('complementary', { name: 'Category sidebar' }).click();
@@ -52,8 +60,7 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   // Do not race the second selection against the first source-analysis write.
   const leftAnalysisResponse = await leftAnalysisResponsePromise;
   expect(leftAnalysisResponse.status(), await leftAnalysisResponse.text()).toBe(200);
-  const renderedQuickView = branchB.locator('[data-ums-scope="product-quick-view:p-105"]');
-  await expect(renderedQuickView).toBeVisible({ timeout: 30_000 });
+  await expect(rightCard.locator('.selection-mode-banner')).toBeVisible();
   const preflightResponsePromise = page.waitForResponse(response => response.url().endsWith('/api/candidate/preflight') && response.request().method() === 'POST');
   const rightAnalysisRequestPromise = page.waitForRequest(request => request.url().endsWith('/api/previews/right/analysis') && request.method() === 'POST', { timeout: 90_000 });
   await renderedQuickView.click({ position: { x: 2, y: 2 } });
