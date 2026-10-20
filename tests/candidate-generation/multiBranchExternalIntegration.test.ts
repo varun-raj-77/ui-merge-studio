@@ -1,4 +1,9 @@
-import { resolve } from 'node:path';
+// @vitest-environment node
+import { symlinkSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createServer } from 'vite';
 import { afterEach, expect, test } from 'vitest';
 import { LocalPlanAuthority, localRepositoryId } from '../../apps/studio/localPlanAuthority';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
@@ -23,8 +28,10 @@ const choices: Choice[] = [
   { previewId: 'right', branch: 'feature-forecast', path: 'src/right/ForecastChip.tsx', name: 'ForecastChip' }
 ];
 
-function branchFiles(choice: Choice, sharedParent: boolean): Record<string, string> {
-  const feature = choice.previewId === 'left' ? leftFeature : rightFeature;
+function branchFiles(choice: Choice, sharedParent: boolean, brokenRight = false): Record<string, string> {
+  const feature = choice.previewId === 'left' ? leftFeature : brokenRight
+    ? "import { rightForecast } from './forecastCopy';\nexport function ForecastChip(){const invalid: number = 'wrong type';return <strong>{rightForecast}{invalid}</strong>}\n"
+    : rightFeature;
   const copy: Record<string, string> = choice.previewId === 'left'
     ? { 'src/left/statusCopy.ts': "export const leftStatus='Status: healthy';\n" }
     : { 'src/right/forecastCopy.ts': "export const rightForecast='Forecast: stable';\n" };
@@ -46,22 +53,32 @@ function branchFiles(choice: Choice, sharedParent: boolean): Record<string, stri
   };
 }
 
-async function createTwoBranchPlan(sharedParent = false) {
+async function createTwoBranchPlan(sharedParent = false, runnable = false, brokenRight = false) {
   const root = createRepository({
-    '.gitignore': '.ums/\n',
+    '.gitignore': '.ums/\nnode_modules\ndist/\n',
     'package.json': '{"name":"ums-multibranch-proof","private":true,"scripts":{"dev":"vite","build":"vite build"}}\n',
     'src/App.tsx': sharedParent
       ? 'export function App(){return <main><h1>Dashboard</h1></main>}\n'
       : "import { LeftPanel } from './left/LeftPanel';\nimport { RightPanel } from './right/RightPanel';\nexport function App(){return <main><LeftPanel/><RightPanel/></main>}\n",
     'src/left/LeftPanel.tsx': 'export function LeftPanel(){return <section><h2>Left panel</h2></section>}\n',
-    'src/right/RightPanel.tsx': 'export function RightPanel(){return <aside><h2>Right panel</h2></aside>}\n'
+    'src/right/RightPanel.tsx': 'export function RightPanel(){return <aside><h2>Right panel</h2></aside>}\n',
+    ...(runnable ? {
+      'index.html': '<!doctype html><html><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>\n',
+      'src/main.tsx': "import { createElement } from 'react'; import { createRoot } from 'react-dom/client'; import { App } from './App'; createRoot(document.getElementById('root')!).render(createElement(App));\n",
+      'vite.config.ts': "export default { esbuild: { jsx: 'automatic' } };\n",
+      'tsconfig.json': JSON.stringify({
+        compilerOptions: { target: 'ES2022', lib: ['ES2022', 'DOM'], module: 'ESNext', moduleResolution: 'Bundler',
+          jsx: 'react-jsx', strict: true, noEmit: true, skipLibCheck: true },
+        include: ['src']
+      }) + '\n'
+    } : {})
   });
   const base = git(root, ['rev-parse', 'main']);
   const sessions = new Map<string, PreviewSession>();
   const commits = new Map<string, string>();
   for (const choice of choices) {
     git(root, ['switch', '-c', choice.branch, 'main']);
-    writeFiles(root, branchFiles(choice, sharedParent));
+    writeFiles(root, branchFiles(choice, sharedParent, brokenRight && choice.previewId === 'right'));
     const sha = commit(root, 'Add selected feature and unrelated experiment');
     commits.set(choice.branch, sha);
     sessions.set(choice.previewId, {
@@ -166,6 +183,98 @@ test('combines independently rendered features from separate React/Vite branches
   expect(git(root, ['status', '--porcelain'])).toBe('');
   expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
 }, 90_000);
+
+const trustedWorkspace = resolve(import.meta.dirname, '../..');
+const trustedNodeModules = resolve(trustedWorkspace, 'node_modules');
+const realVerification = [
+  { name: 'candidate-typescript', executable: process.execPath,
+    args: [resolve(trustedNodeModules, 'typescript/bin/tsc'), '--project', 'tsconfig.json'] },
+  { name: 'candidate-vite-build', executable: process.execPath,
+    args: [resolve(trustedNodeModules, 'vite/bin/vite.js'), 'build', '--config', 'vite.config.ts'] }
+];
+
+function linkTrustedDependencies(worktree: string) {
+  // No npm install, lifecycle scripts, or network: use already-locked CI deps.
+  // The temp candidate .gitignore excludes this symlink and generated dist.
+  symlinkSync(trustedNodeModules, join(worktree, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
+}
+
+test('typechecks, builds and server-renders both selected React/Vite features before writing a verified candidate', async () => {
+  const { root, request, base, commits } = await createTwoBranchPlan(false, true);
+  let rendered = '';
+  const generator = new CandidateGenerator(root, {
+    verificationCommands: realVerification,
+    onWorktreePrepared: linkTrustedDependencies,
+    onVerifiedWorkspace: async worktree => {
+      // Execute the transformed components in Vite SSR; this is an actual
+      // runtime assertion, not a snapshot or a simulated verification pass.
+      const server = await createServer({
+        root: worktree,
+        configFile: false,
+        esbuild: { jsx: 'automatic' },
+        server: { middlewareMode: true },
+        appType: 'custom',
+        logLevel: 'silent'
+      });
+      try {
+        const { App } = await server.ssrLoadModule('/src/App.tsx');
+        rendered = renderToStaticMarkup(createElement(App));
+        expect(rendered).toContain('Status: healthy');
+        expect(rendered).toContain('Forecast: stable');
+        expect(rendered).toContain('Left panel');
+        expect(rendered).toContain('Right panel');
+        expect(rendered).not.toContain('UNSELECTED EXPERIMENT');
+      } finally {
+        await server.close();
+      }
+    }
+  });
+
+  const preflight = await generator.preflight(request);
+  expect(preflight.plan.status, JSON.stringify(preflight.plan.unresolved)).toBe('ready');
+  const report = await generator.generate(request);
+  expect(report.status, report.message).toBe('succeeded');
+  expect(report.verification).toEqual(expect.arrayContaining([
+    expect.objectContaining({ name: 'candidate-typescript', status: 'passed', exitCode: 0 }),
+    expect.objectContaining({ name: 'candidate-vite-build', status: 'passed', exitCode: 0 })
+  ]));
+  expect(rendered).toContain('<strong>Status: healthy</strong>');
+  expect(rendered).toContain('<strong>Forecast: stable</strong>');
+  expect(git(root, ['rev-parse', 'combined-result^'])).toBe(base);
+  expect(git(root, ['status', '--porcelain'])).toBe('');
+  expect(choices.map(choice => git(root, ['rev-parse', choice.branch]))).toEqual(
+    choices.map(choice => commits.get(choice.branch))
+  );
+  expect(report.cleanup).toMatchObject({ worktreeRemoved: true, processesStopped: true });
+  expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+}, 120_000);
+
+test('rejects a two-feature candidate when real TypeScript verification fails', async () => {
+  const { root, request, commits } = await createTwoBranchPlan(false, true, true);
+  const generator = new CandidateGenerator(root, {
+    verificationCommands: realVerification,
+    onWorktreePrepared: linkTrustedDependencies
+  });
+  const preflight = await generator.preflight(request);
+  expect(preflight.plan.status, JSON.stringify(preflight.plan.unresolved)).toBe('ready');
+  const report = await generator.generate(request);
+  expect(report.status).toBe('failed');
+  expect(report.stage).toBe('verify');
+  expect(report.verification).toContainEqual(expect.objectContaining({
+    name: 'candidate-typescript', status: 'failed'
+  }));
+  expect(report.verification.find(result => result.name === 'candidate-typescript')?.outputTail).toContain(
+    "Type 'string' is not assignable to type 'number'"
+  );
+  expect(report.verification.some(result => result.name === 'candidate-vite-build')).toBe(false);
+  expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+  expect(choices.map(choice => git(root, ['rev-parse', choice.branch]))).toEqual(
+    choices.map(choice => commits.get(choice.branch))
+  );
+  expect(git(root, ['status', '--porcelain'])).toBe('');
+  expect(report.cleanup).toMatchObject({ worktreeRemoved: true, processesStopped: true });
+  expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+}, 120_000);
 
 test('removes the candidate worktree and leaves both source branches untouched after second-slice precondition failure', async () => {
   const { root, request, commits } = await createTwoBranchPlan();
