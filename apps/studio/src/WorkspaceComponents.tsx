@@ -25,9 +25,11 @@ export function ProjectContext({ repository, status, onContinue }: { repository:
   const reason = !readiness.clean ? 'Working tree has changes' : readiness.sources < 2 ? 'Two source branches required' : 'Repository ready';
   const guidance = !readiness.clean
     ? 'Commit or stash local changes, then restart Studio.'
-    : readiness.sources < 2
-      ? 'Create a second local source branch alongside the foundation, then restart Studio.'
-      : 'Git is clean and at least two source versions are available for comparison.';
+    : readiness.sources === 0
+      ? 'Create two local source branches besides the foundation, then restart Studio.'
+      : readiness.sources < 2
+        ? 'Create a second local source branch alongside the foundation, then restart Studio.'
+        : 'Git is clean and at least two source versions are available for comparison.';
   return <main className="project-onboarding">
     <header className="project-brand"><span className="brand-mark" aria-hidden="true"><i /><i /></span><strong>UI Merge Studio</strong><small>Local workspace</small></header>
     <section className="project-card" aria-busy={!repository}>

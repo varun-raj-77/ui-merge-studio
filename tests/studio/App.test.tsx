@@ -94,6 +94,15 @@ test('renders real discovered repository metadata before comparison', async () =
   for (const forbidden of ['Hovered boundary', 'Selected boundary', 'Eligible ancestors', 'Feature slice', 'Merge base', 'Runtime instance', 'Candidate preflight']) expect(text).not.toContain(forbidden);
 });
 
+test('explains the zero-source case without suggesting that only one branch is missing', () => {
+  const repository = { repositoryId: foundation.repositoryId, discovery, foundation,
+    branches: ['main'], clean: true, sessions: [] };
+  expect(projectReadiness(repository)).toEqual({ clean: true, sources: 0, ready: false });
+  render(<ProjectContext repository={repository} status="ready" onContinue={vi.fn()} />);
+  expect(screen.getByText(/Create two local source branches besides the foundation/)).toBeVisible();
+  expect(screen.getByRole('button', { name: /Continue to comparison/ })).toBeDisabled();
+});
+
 test('blocks onboarding when fewer than two non-foundation source branches are available', () => {
   const repository = { repositoryId: foundation.repositoryId, discovery, foundation,
     branches: ['main', 'branch-a'], clean: true, sessions: [] };
