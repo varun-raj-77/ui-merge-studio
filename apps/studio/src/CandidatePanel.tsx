@@ -52,7 +52,7 @@ export function IntegrationReadiness({ preflight }: { preflight: CandidatePrefli
   return <section className={blocked ? 'integration-readiness readiness-blocked' : 'integration-readiness'} aria-label="Integration readiness" role="region">
     <div className="readiness-header">
       <strong>{blocked ? 'Integration blocked' : 'Ready to generate'}</strong>
-      <span>{plan.operations.length} planned operations · {plan.conflicts.length} conflicts · {plan.unresolved.length} unresolved</span>
+      <span>{plan.operations.length} planned {plan.operations.length === 1 ? 'operation' : 'operations'} · {plan.conflicts.length} {plan.conflicts.length === 1 ? 'conflict' : 'conflicts'} · {plan.unresolved.length} unresolved</span>
     </div>
     <p>{blocked
       ? 'The server refused this plan. Change selections or resolve the source issue; no candidate was generated.'
@@ -262,7 +262,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       </div>}
     </div>
     <CausalityStrip states={states} />
-    {preflight && <IntegrationReadiness preflight={preflight} />}
+    {preflight && !report && !unknownOutcome && !error && <IntegrationReadiness preflight={preflight} />}
     <div className="tray-primary">
       <p className="tray-progress" role="status" aria-live="polite">{unknownOutcome ? progress : error ?? progress}</p>
       {refused && <div className="protected-outcome"><strong>Cannot combine safely</strong><span>No candidate was created. No files were changed, and your source branches remain unchanged.</span></div>}

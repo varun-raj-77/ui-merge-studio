@@ -124,7 +124,7 @@ test('presents a safe-to-generate plan without claiming runtime verification', a
   render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
   const readiness = await screen.findByRole('region', { name: 'Integration readiness' });
   expect(readiness).toHaveTextContent('Ready to generate');
-  expect(readiness).toHaveTextContent('1 planned operations');
+  expect(readiness).toHaveTextContent('1 planned operation');
   expect(readiness).toHaveTextContent('0 conflicts');
   expect(readiness).toHaveTextContent('0 unresolved');
   expect(readiness).toHaveTextContent('Candidate verification still has to run');
@@ -137,7 +137,7 @@ test('shows the server-reported conflicting file, reason and manual action', asy
   render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
   const readiness = await screen.findByRole('region', { name: 'Integration readiness' });
   expect(readiness).toHaveTextContent('Integration blocked');
-  expect(readiness).toHaveTextContent('1 conflicts');
+  expect(readiness).toHaveTextContent('1 conflict');
   expect(readiness).toHaveTextContent('src/App.tsx');
   expect(readiness).toHaveTextContent('Both slices replace App differently.');
   expect(readiness).toHaveTextContent('Next step: Resolve manually.');
