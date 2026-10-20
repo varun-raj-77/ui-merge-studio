@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CandidateGenerationReport, CandidatePreflight } from '../../../packages/candidate-generation/src/types';
 import type { IntegrationFoundation } from '../../../packages/integration-plan/src/integrationPlan';
 import { canonicalizeLocalIntegrationPlan, localIntegrationPlanIdentity, type LocalIntegrationSelection } from '../../../packages/integration-plan/src/localPlan';
@@ -107,6 +107,12 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   const ready = selectedInputs.length >= 1 && selectedInputs.length <= 2 && artifacts.length === selectedInputs.length && selections.length === selectedInputs.length && Boolean(foundation) && selectedInputs.every(item => item.status === 'resolved' && item.artifact?.slice.status === 'resolved');
   const plan = ready && foundation ? canonicalizeLocalIntegrationPlan({ version: 2, foundation, selections }) : null;
   const planIdentity = plan ? localIntegrationPlanIdentity(plan) : null;
+  // Only the exact current plan can authorize generation or show completion.
+  // A foundation/selection change can leave all individual input statuses intact.
+  const latestPlanIdentity = useRef(planIdentity);
+  latestPlanIdentity.current = planIdentity;
+  const currentPreflight = preflight?.integrationPlan?.identity === planIdentity ? preflight : null;
+  const currentReport = report?.integrationPlan?.identity === planIdentity ? report : null;
   const request = () => ({ plan, planIdentity });
 
   useEffect(() => {
@@ -118,7 +124,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
     setVerificationStarted(false);
     setStage(null);
     setProgress(selectedInputs.length ? (ready ? 'Checking required source and dependencies.' : 'Resolving the selected source boundary.') : 'Click Select parts, then choose something from either version.');
-  }, [inputKey, ready]);
+  }, [inputKey, ready, planIdentity]);
 
   useEffect(() => {
     if (!ready || !plan || !planIdentity) return;
@@ -143,11 +149,12 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   }, [inputKey, ready, planIdentity]);
 
   useEffect(() => {
-    onStateChange?.({ preflight, report, busy, progress, stage, error, unknownOutcome });
-  }, [preflight, report, busy, progress, stage, error, unknownOutcome, onStateChange]);
+    onStateChange?.({ preflight: currentPreflight, report: currentReport, busy, progress, stage, error, unknownOutcome });
+  }, [currentPreflight, currentReport, busy, progress, stage, error, unknownOutcome, onStateChange]);
 
   function applyReport(result: CandidateGenerationReport) {
     if (result.integrationPlan?.identity !== planIdentity) throw new Error('The generated candidate does not refer to the submitted integration plan.');
+    if (latestPlanIdentity.current !== planIdentity) return; // The user has moved to another plan.
     setReport(result);
     setStage(result.stage);
     setUnknownOutcome(false);
@@ -160,6 +167,8 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   }
 
   async function generateCandidate() {
+    if (!currentPreflight || currentPreflight.plan.status !== 'ready' || !planIdentity || busy) return;
+    const submittedIdentity = planIdentity;
     setBusy(true);
     setError(null);
     setUnknownOutcome(false);
@@ -170,10 +179,11 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
     const progressController = new AbortController();
     const poll = async () => {
       let active = true;
-      while (active && !progressController.signal.aborted) {
+      while (active && !progressController.signal.aborted && latestPlanIdentity.current === submittedIdentity) {
         try {
           const response = await fetch('/api/candidate/status', { signal: progressController.signal });
           const value = await response.json() as { status: string; stage: string | null; message: string; sliceId?: string; verification?: string };
+          if (latestPlanIdentity.current !== submittedIdentity) break;
           if (value.status === 'running') {
             setStage(value.stage);
             if (value.stage === 'verification' || value.stage === 'verify') setVerificationStarted(true);
@@ -196,11 +206,13 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       const value = await response.json();
       if (!response.ok) throw new Error(value.error ?? response.statusText);
       const result = value as CandidateGenerationReport;
-      applyReport(result);
+      if (latestPlanIdentity.current === submittedIdentity) applyReport(result);
     } catch (value) {
-      setError(value instanceof Error ? value.message : String(value));
-      setUnknownOutcome(true);
-      setProgress('UI Merge lost contact with the local Studio while generation was running.');
+      if (latestPlanIdentity.current === submittedIdentity) {
+        setError(value instanceof Error ? value.message : String(value));
+        setUnknownOutcome(true);
+        setProgress('UI Merge lost contact with the local Studio while generation was running.');
+      }
     } finally {
       progressController.abort();
       await polling;
@@ -209,11 +221,12 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   }
 
   async function checkCurrentState() {
-    if (!preflight) return;
+    if (!currentPreflight || !planIdentity) return;
     setCheckingOutcome(true);
     try {
       const statusResponse = await fetch('/api/candidate/status');
       const status = await statusResponse.json() as { status?: string; stage?: string | null; message?: string; planIdentity?: string };
+      if (latestPlanIdentity.current !== planIdentity) return;
       if (!statusResponse.ok) throw new Error(status.message ?? statusResponse.statusText);
       if (status.planIdentity !== planIdentity) throw new Error('The Studio is reporting status for a different integration plan.');
       if (!status.status || ['running', 'idle'].includes(status.status)) {
@@ -221,32 +234,35 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
         setProgress(status.status === 'running' ? 'The local Studio still reports this generation as running.' : 'The local Studio does not yet have a completed generation report.');
         return;
       }
-      const reportResponse = await fetch(`/api/candidate/reports/${preflight.generationId}`);
+      const reportResponse = await fetch(`/api/candidate/reports/${currentPreflight.generationId}`);
       const result = await reportResponse.json() as CandidateGenerationReport;
+      if (latestPlanIdentity.current !== planIdentity) return;
       if (!reportResponse.ok) throw new Error(result.message ?? reportResponse.statusText);
       applyReport(result);
     } catch (value) {
-      setError(value instanceof Error ? value.message : String(value));
-      setProgress('Generation status is still unknown. The candidate may or may not have been created.');
+      if (latestPlanIdentity.current === planIdentity) {
+        setError(value instanceof Error ? value.message : String(value));
+        setProgress('Generation status is still unknown. The candidate may or may not have been created.');
+      }
     } finally {
       setCheckingOutcome(false);
     }
   }
 
-  const refused = preflight?.plan.status === 'refused';
-  const failed = Boolean(report && report.status !== 'succeeded');
-  const durableCandidate = Boolean(report?.repository.candidateCommit);
-  const verified = Boolean(report && report.verification.length > 0 && report.verification.every(item => item.status === 'passed'));
+  const refused = currentPreflight?.plan.status === 'refused';
+  const failed = Boolean(currentReport && currentReport.status !== 'succeeded');
+  const durableCandidate = Boolean(currentReport?.repository.candidateCommit);
+  const verified = Boolean(currentReport && currentReport.verification.length > 0 && currentReport.verification.every(item => item.status === 'passed'));
   const sourceResolved = selectedInputs.length > 0 && artifacts.length === selectedInputs.length;
-  const sliceRefused = refused || selectedInputs.some(item => ['partial', 'refused', 'stale'].includes(item.status)) || Boolean(error && !unknownOutcome && !preflight && ready);
+  const sliceRefused = refused || selectedInputs.some(item => ['partial', 'refused', 'stale'].includes(item.status)) || Boolean(error && !unknownOutcome && !currentPreflight && ready);
   const states: Parameters<typeof CausalityStrip>[0]['states'] = {
     Selected: selectedInputs.length ? 'complete' : 'pending',
     Source: sourceResolved ? 'complete' : selectedInputs.length ? 'working' : 'pending',
-    Slice: sliceRefused ? 'warning' : preflight?.plan.status === 'ready' ? 'complete' : sourceResolved ? 'working' : 'pending',
+    Slice: sliceRefused ? 'warning' : currentPreflight?.plan.status === 'ready' ? 'complete' : sourceResolved ? 'working' : 'pending',
     Candidate: durableCandidate ? 'complete' : failed || unknownOutcome ? 'warning' : busy ? 'working' : 'pending',
     Verified: verified ? 'complete' : failed || unknownOutcome ? 'warning' : busy && verificationStarted ? 'working' : 'pending'
   };
-  const blocked = !ready || !plan || !preflight || preflight.plan.status !== 'ready' || busy;
+  const blocked = !ready || !plan || !currentPreflight || currentPreflight.plan.status !== 'ready' || busy;
   const knownProtectedOutcome = refused || failed;
   const preflightUnavailable = Boolean(error && !unknownOutcome && !report);
 
@@ -264,9 +280,9 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
     <CausalityStrip states={states} />
     <div className="tray-primary">
       <p className="tray-progress" role="status" aria-live="polite">{unknownOutcome ? progress : error ?? progress}</p>
-      {preflight && !report && !unknownOutcome && !error && <IntegrationReadiness preflight={preflight} />}
+      {currentPreflight && !currentReport && !unknownOutcome && !error && <IntegrationReadiness preflight={currentPreflight} />}
       {refused && <div className="protected-outcome"><strong>Cannot combine safely</strong><span>No candidate was created. No files were changed, and your source branches remain unchanged.</span></div>}
-      {failed && !durableCandidate && <div className="protected-outcome"><strong>Cannot combine safely</strong><span>No candidate was created. Your source branches remain unchanged. {report?.cleanup.worktreeRemoved && report.cleanup.processesStopped ? 'Temporary cleanup completed.' : 'Temporary cleanup needs review.'}</span></div>}
+      {failed && !durableCandidate && <div className="protected-outcome"><strong>Cannot combine safely</strong><span>No candidate was created. Your source branches remain unchanged. {currentReport?.cleanup.worktreeRemoved && currentReport.cleanup.processesStopped ? 'Temporary cleanup completed.' : 'Temporary cleanup needs review.'}</span></div>}
       {failed && durableCandidate && <div className="protected-outcome candidate-attention"><strong>Candidate needs attention</strong><span>The candidate branch exists, but the generation report did not finish successfully. Inspect evidence before using it.</span></div>}
       {unknownOutcome && <div className="uncertain-outcome"><strong>Generation status unknown</strong><span>The candidate may or may not have been created. Check the current Studio state before retrying.</span></div>}
       {preflightUnavailable && <div className="unavailable-outcome"><strong>Safety check unavailable</strong><span>The Studio could not confirm whether these selections are safe to combine.</span></div>}

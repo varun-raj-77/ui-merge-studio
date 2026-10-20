@@ -40,4 +40,6 @@
 
 - UMS-11 exposes the server-owned preflight verdict in the local combine tray. A ready verdict shows exact planned-operation, conflict, and unresolved counts but does not claim that candidate verification ran. A refusal reveals every reported file, reason, and manual next step, with branch creation still disabled. Aborted responses cannot overwrite a newly selected session. The interface does not resolve conflicts automatically or expand the transformation grammar.
 
+- UMS-12 ties local readiness, create-branch authorization, and visible candidate evidence to the exact current canonical plan identity, including the pinned foundation. Changing a foundation or selection invalidates older preflight authority; late preflight and generation results from the previous plan cannot reauthorize or appear as a verified result for the new plan. An already-started local generation is not remotely cancelled by changing the UI plan; users must inspect any earlier-generation result separately before using it.
+
 Correct refusal is a product capability, not a failure to be hidden.

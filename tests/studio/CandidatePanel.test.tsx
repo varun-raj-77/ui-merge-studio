@@ -183,6 +183,93 @@ test('ignores a preflight response from the previous selection session even when
   expect(screen.queryByRole('button', { name: 'Create combined branch' })).not.toBeInTheDocument();
 });
 
+
+
+test('invalidates a prior preflight when the pinned foundation changes with the same selected inputs', async () => {
+  const changedFoundation: IntegrationFoundation = { ...foundation, commitSha: '4'.repeat(40) };
+  const updatedIdentity = localIntegrationPlanIdentity({ version: 2, foundation: changedFoundation, selections: inputs().map(item => item.selection) });
+  let resolveNewPreflight: ((value: Response) => void) | undefined;
+  let preflightCalls = 0;
+  const generate = vi.fn();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    if (String(input) === '/api/candidate/preflight') {
+      preflightCalls += 1;
+      return preflightCalls === 1 ? response(preflight()) : new Promise<Response>(resolve => { resolveNewPreflight = resolve; });
+    }
+    if (String(input) === '/api/candidate/generate') generate();
+    return response({ error: 'unexpected request' }, 500);
+  });
+  const selected = inputs();
+  const view = render(<CandidatePanel inputs={selected} foundation={foundation} onLaunch={() => undefined} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled());
+  view.rerender(<CandidatePanel inputs={selected} foundation={changedFoundation} onLaunch={() => undefined} />);
+  expect(screen.queryByRole('region', { name: 'Integration readiness' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Create combined branch' }));
+  expect(generate).not.toHaveBeenCalled();
+  await waitFor(() => expect(preflightCalls).toBe(2));
+  const newPreflight = preflight();
+  newPreflight.integrationPlan!.identity = updatedIdentity;
+  newPreflight.plan.repository.baseCommit = changedFoundation.commitSha;
+  resolveNewPreflight?.(new Response(JSON.stringify(newPreflight), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled());
+  expect(screen.getByRole('region', { name: 'Integration readiness' })).toHaveTextContent('Ready to generate');
+});
+
+test('ignores a superseded foundation preflight even when the old request resolves after the new refusal', async () => {
+  const changedFoundation: IntegrationFoundation = { ...foundation, commitSha: '4'.repeat(40) };
+  const updatedIdentity = localIntegrationPlanIdentity({ version: 2, foundation: changedFoundation, selections: inputs().map(item => item.selection) });
+  let resolveOld: ((value: Response) => void) | undefined;
+  let calls = 0;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+    calls += 1;
+    if (calls === 1) return new Promise<Response>(resolve => { resolveOld = resolve; });
+    const refused = preflight('refused');
+    refused.integrationPlan!.identity = updatedIdentity;
+    return response(refused);
+  });
+  const selected = inputs();
+  const view = render(<CandidatePanel inputs={selected} foundation={foundation} onLaunch={() => undefined} />);
+  await waitFor(() => expect(calls).toBe(1));
+  view.rerender(<CandidatePanel inputs={selected} foundation={changedFoundation} onLaunch={() => undefined} />);
+  const blocked = await screen.findByRole('region', { name: 'Integration readiness' });
+  expect(blocked).toHaveTextContent('Integration blocked');
+  resolveOld?.(new Response(JSON.stringify(preflight()), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  await waitFor(() => expect(screen.getByRole('region', { name: 'Integration readiness' })).toHaveTextContent('Integration blocked'));
+  expect(screen.queryByRole('button', { name: 'Create combined branch' })).not.toBeInTheDocument();
+});
+
+test('does not publish an old candidate result if the canonical plan changes during generation', async () => {
+  const changedFoundation: IntegrationFoundation = { ...foundation, commitSha: '4'.repeat(40) };
+  let finishOldGeneration: ((value: Response) => void) | undefined;
+  const launch = vi.fn();
+  const stateChange = vi.fn();
+  let preflightCalls = 0;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') {
+      preflightCalls += 1;
+      return preflightCalls === 1 ? response(preflight()) : new Promise<Response>(() => undefined);
+    }
+    if (url === '/api/candidate/status') return response({ status: 'idle', stage: null, message: 'Waiting.' });
+    if (url === '/api/candidate/generate') return new Promise<Response>(resolve => { finishOldGeneration = resolve; });
+    return response({ error: 'unexpected request' }, 500);
+  });
+  const selected = inputs();
+  const view = render(<CandidatePanel inputs={selected} foundation={foundation} onLaunch={launch} onStateChange={stateChange} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  await waitFor(() => expect(finishOldGeneration).toBeDefined());
+  view.rerender(<CandidatePanel inputs={selected} foundation={changedFoundation} onLaunch={launch} onStateChange={stateChange} />);
+  finishOldGeneration?.(new Response(JSON.stringify(report()), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  await waitFor(() => expect(stateChange).toHaveBeenLastCalledWith(expect.objectContaining({ busy: false, report: null })));
+  expect(launch).not.toHaveBeenCalled();
+  expect(screen.getByText('Candidate').closest('li')).not.toHaveClass('causal-complete');
+  expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
+  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
+});
+
 test('uses plain failure language and replaces branch creation with a revision action', async () => {
   const revise = vi.fn();
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
