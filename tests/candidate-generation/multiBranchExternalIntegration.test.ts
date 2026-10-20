@@ -172,6 +172,7 @@ test('refuses two independently selected features that compete for the same App 
   const generator = new CandidateGenerator(root, { verificationCommands: verification });
   const preflight = await generator.preflight(request);
   expect(preflight.plan.status).toBe('refused');
+  expect(preflight.plan.unresolved).toContainEqual(expect.objectContaining({ path: 'src/App.tsx', reason: expect.stringContaining('cross-slice shared-path composition') }));
   expect(preflight.plan.conflicts).toContainEqual(expect.objectContaining({
     kind: 'overlapping-declaration',
     path: 'src/App.tsx',

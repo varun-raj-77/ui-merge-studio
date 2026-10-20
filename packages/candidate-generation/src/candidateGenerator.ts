@@ -182,26 +182,42 @@ export class CandidateGenerator {
   private validateGenerationProfile(request:CandidateGenerationRequest,operations:CandidateOperation[],unresolved:CandidateUnresolved[]) {
     if ((request.generationProfile??'phase0')!=='external-react-vite') return;
     const reject=(path:string,sliceId:string,reason:string)=>this.unresolved(unresolved,path,sliceId,reason);
-    if(request.artifacts.length!==1){
-      unresolved.push({path:'<request>',sliceId:null,reason:'The bounded external React/Vite profile accepts exactly one rendered feature slice.',manualResolution:'Generate one visually selected external feature at a time.'});
-      return;
+    // UMS-06: two independent selections are allowed only if every planned
+    // write path has a single slice owner. This avoids cross-slice ordering,
+    // same-file imports, and JSX projection interactions before worktree setup.
+    // The existing conflict detector still runs for all profiles.
+    const artifactsById=new Map(request.artifacts.map(item=>[item.analysisId,item]));
+    const pathOwner=new Map<string,string>();
+    for(const operation of operations){
+      const owner=operation.sliceIds[0];
+      if(!owner||operation.sliceIds.length!==1||!artifactsById.has(owner)){
+        unresolved.push({path:operation.target.path,sliceId:null,reason:'An external operation has no unique selected feature owner.',manualResolution:'Re-analyze both selections without shared or unowned operations.'});
+        continue;
+      }
+      const previous=pathOwner.get(operation.target.path);
+      if(previous&&previous!==owner){
+        reject(operation.target.path,owner,`Two external selected features write ${operation.target.path}; cross-slice shared-path composition is not yet supported.`);
+      }else pathOwner.set(operation.target.path,owner);
     }
-    const artifact=request.artifacts[0]; const slice=artifact.slice;
-    if(!request.integrationPlan||request.integrationPlan.version!==2||!/^plan-v2-[a-f0-9]{8}$/.test(request.integrationPlan.identity))reject('<request>',artifact.analysisId,'The external React/Vite profile requires the server-owned canonical Integration Plan V2 identity.');
-    if(request.sourceConfigurations?.length)reject('<request>',artifact.analysisId,'Manual source configuration is outside the external React/Vite generation boundary.');
-    if(slice.selection.confidence!=='exact'||!slice.selection.componentName||!slice.selection.repositoryRelativePath.startsWith('src/')||!slice.selection.repositoryRelativePath.endsWith('.tsx'))reject(slice.selection.repositoryRelativePath,artifact.analysisId,'The external React/Vite profile requires an exact named TSX component selected through trusted rendered instrumentation.');
-    for(const change of slice.excludedChanges.filter(item=>item.proof!=='proven'))reject(change.path,artifact.analysisId,`Excluded change ${change.branchChangeId} is not proven unrelated.`);
+    for(const artifact of request.artifacts){
+      const slice=artifact.slice;
+      if(!request.integrationPlan||request.integrationPlan.version!==2||!/^plan-v2-[a-f0-9]{8}$/.test(request.integrationPlan.identity))reject('<request>',artifact.analysisId,'The external React/Vite profile requires the server-owned canonical Integration Plan V2 identity.');
+      if(request.sourceConfigurations?.length)reject('<request>',artifact.analysisId,'Manual source configuration is outside the external React/Vite generation boundary.');
+      if(slice.selection.confidence!=='exact'||!slice.selection.componentName||!slice.selection.repositoryRelativePath.startsWith('src/')||!slice.selection.repositoryRelativePath.endsWith('.tsx'))reject(slice.selection.repositoryRelativePath,artifact.analysisId,'The external React/Vite profile requires an exact named TSX component selected through trusted rendered instrumentation.');
+      for(const change of slice.excludedChanges.filter(item=>item.proof!=='proven'))reject(change.path,artifact.analysisId,`Excluded change ${change.branchChangeId} is not proven unrelated.`);
+      const integrations=operations.filter(item=>item.kind==='replace-jsx-region'&&item.sliceIds.includes(artifact.analysisId));
+      if(integrations.length!==1)reject(slice.selection.repositoryRelativePath,artifact.analysisId,`The external React/Vite profile requires exactly one structurally anchored JSX integration per selected slice; planned ${integrations.length}.`);
+    }
     const allowed=new Set<CandidateOperation['kind']>(['add-asset','reconstruct-source-file','insert-import-specifier','replace-jsx-region']);
     for(const operation of operations){
-      if(operation.kind==='add-style-file'||operation.kind==='replace-style-file')reject(operation.target.path,artifact.analysisId,'Whole global stylesheet transfer is refused by the external React/Vite profile because CSS rule ownership is not implemented.');
-      if(!allowed.has(operation.kind))reject(operation.target.path,artifact.analysisId,`Operation ${operation.kind} is outside the bounded external React/Vite transform grammar.`);
-      if(!operation.target.path.startsWith('src/'))reject(operation.target.path,artifact.analysisId,'External candidate writes are restricted to the analyzed src/ dependency boundary.');
-      if(operation.kind==='reconstruct-source-file'&&operation.ownership!=='declaration-owned-source')reject(operation.target.path,artifact.analysisId,'External added source must be reconstructed from declaration-owned source evidence.');
-      if(operation.kind==='add-asset'&&operation.ownership!=='exclusive-atomic-dependency')reject(operation.target.path,artifact.analysisId,'External assets require exclusive atomic dependency evidence.');
-      if(operation.kind==='replace-jsx-region'&&operation.jsxProjection?.excludedSourceSiblingCount)reject(operation.target.path,artifact.analysisId,`Unrelated source changes modify the same JSX integration parent as ${operation.jsxProjection.renderedBoundary.symbol}; selective projection from that shared region is refused.`);
+      const owner=operation.sliceIds[0]??'<unknown>';
+      if(operation.kind==='add-style-file'||operation.kind==='replace-style-file')reject(operation.target.path,owner,'Whole global stylesheet transfer is refused by the external React/Vite profile because CSS rule ownership is not implemented.');
+      if(!allowed.has(operation.kind))reject(operation.target.path,owner,`Operation ${operation.kind} is outside the bounded external React/Vite transform grammar.`);
+      if(!operation.target.path.startsWith('src/'))reject(operation.target.path,owner,'External candidate writes are restricted to the analyzed src/ dependency boundary.');
+      if(operation.kind==='reconstruct-source-file'&&operation.ownership!=='declaration-owned-source')reject(operation.target.path,owner,'External added source must be reconstructed from declaration-owned source evidence.');
+      if(operation.kind==='add-asset'&&operation.ownership!=='exclusive-atomic-dependency')reject(operation.target.path,owner,'External assets require exclusive atomic dependency evidence.');
+      if(operation.kind==='replace-jsx-region'&&operation.jsxProjection?.excludedSourceSiblingCount)reject(operation.target.path,owner,`Unrelated source changes modify the same JSX integration parent as ${operation.jsxProjection.renderedBoundary.symbol}; selective projection from that shared region is refused.`);
     }
-    const integrations=operations.filter(item=>item.kind==='replace-jsx-region');
-    if(integrations.length!==1)reject(slice.selection.repositoryRelativePath,artifact.analysisId,`The external React/Vite profile requires exactly one structurally anchored JSX integration operation; planned ${integrations.length}.`);
   }
 
   private async buildOperations(request: CandidateGenerationRequest, operations: CandidateOperation[], unresolved: CandidateUnresolved[]) {
