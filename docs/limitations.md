@@ -38,4 +38,6 @@
 
 - UMS-09 confirms a two-feature candidate from separate synthesized React/Vite branches starts in **real Chromium** after passing real TypeScript and production build, renders both selected components, excludes unselected experiments, and still works after reload. Browser errors and failed local requests fail the regression. This uses only disposable, first-party fixture repositories and the installed CI toolchain; it does **not** establish arbitrary repository support, general same-file composition, or production browser compatibility. A separate CI timing guard awaits the first selection's completed analysis response before starting the second selection, following a post-merge browser-run timeout.
 
+- UMS-11 exposes the server-owned preflight verdict in the local combine tray. A ready verdict shows exact planned-operation, conflict, and unresolved counts but does not claim that candidate verification ran. A refusal reveals every reported file, reason, and manual next step, with branch creation still disabled. Aborted responses cannot overwrite a newly selected session. The interface does not resolve conflicts automatically or expand the transformation grammar.
+
 Correct refusal is a product capability, not a failure to be hidden.
