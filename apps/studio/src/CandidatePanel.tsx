@@ -44,6 +44,35 @@ function stageLabel(state: CausalState) {
   return 'Not started';
 }
 
+
+/** Explain only the server-owned preflight plan, never an unverified candidate. */
+export function IntegrationReadiness({ preflight }: { preflight: CandidatePreflight }) {
+  const { plan } = preflight;
+  const blocked = plan.status === 'refused';
+  return <section className={blocked ? 'integration-readiness readiness-blocked' : 'integration-readiness'} aria-label="Integration readiness" role="region">
+    <div className="readiness-header">
+      <strong>{blocked ? 'Integration blocked' : 'Ready to generate'}</strong>
+      <span>{plan.operations.length} planned operations · {plan.conflicts.length} conflicts · {plan.unresolved.length} unresolved</span>
+    </div>
+    <p>{blocked
+      ? 'The server refused this plan. Change selections or resolve the source issue; no candidate was generated.'
+      : 'The server found no known plan conflicts. Candidate verification still has to run before a branch is accepted.'}</p>
+    {blocked && <ul className="readiness-issues" aria-label="Integration blockers">
+      {plan.conflicts.map(item => <li key={'conflict:' + item.id}>
+        <strong>Conflict · <code>{item.path}</code>{item.symbol ? ' · ' + item.symbol : ''}</strong>
+        <span>{item.reason}</span>
+        <small>Next step: {item.manualResolution}</small>
+      </li>)}
+      {plan.unresolved.map((item, index) => <li key={'unresolved:' + index + ':' + item.path + ':' + (item.sliceId ?? '')}>
+        <strong>Unresolved · <code>{item.path}</code></strong>
+        <span>{item.reason}</span>
+        <small>Next step: {item.manualResolution}</small>
+      </li>)}
+      {plan.conflicts.length === 0 && plan.unresolved.length === 0 && <li><strong>Plan refused</strong><span>No individual blocker was provided.</span><small>Inspect plan evidence before revising selections.</small></li>}
+    </ul>}
+  </section>;
+}
+
 export function CausalityStrip({ states }: { states: Record<'Selected' | 'Source' | 'Slice' | 'Candidate' | 'Verified', CausalState> }) {
   return <ol className="causality-strip" aria-label="Selection to verification progress">
     {Object.entries(states).map(([label, state]) => <li className={`causal-${state}`} key={label}>
@@ -99,12 +128,13 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
         const value = await response.json();
         if (!response.ok) throw new Error(value.error ?? response.statusText);
         const result = value as CandidatePreflight;
+        if (controller.signal.aborted) return;
         if (result.integrationPlan?.identity !== planIdentity) throw new Error('The server returned evidence for a different integration plan.');
         setPreflight(result);
         setProgress(result.plan.status === 'ready' ? 'The selected source slices can be combined safely.' : 'These selections cannot be combined safely.');
       })
       .catch(value => {
-        if ((value as Error).name !== 'AbortError') {
+        if (!controller.signal.aborted && (value as Error).name !== 'AbortError') {
           setError(value instanceof Error ? value.message : String(value));
           setProgress('The safety check could not finish.');
         }
@@ -232,6 +262,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       </div>}
     </div>
     <CausalityStrip states={states} />
+    {preflight && <IntegrationReadiness preflight={preflight} />}
     <div className="tray-primary">
       <p className="tray-progress" role="status" aria-live="polite">{unknownOutcome ? progress : error ?? progress}</p>
       {refused && <div className="protected-outcome"><strong>Cannot combine safely</strong><span>No candidate was created. No files were changed, and your source branches remain unchanged.</span></div>}

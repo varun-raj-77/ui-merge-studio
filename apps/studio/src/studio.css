@@ -228,6 +228,20 @@ code, kbd, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", mon
 .tray-actions .quiet-action { min-height: 34px; padding-inline: 8px; font-size: 8px; }
 .stateful-action { min-width: 154px; }
 .revise-action { color: var(--white); background: var(--failure); box-shadow: none; }
+
+.integration-readiness { display: grid; gap: 4px; min-width: 0; padding: 8px 10px; border-left: 3px solid var(--success); background: #f1f7f0; color: var(--ink); font-size: 9px; }
+.integration-readiness.readiness-blocked { border-left-color: var(--failure); background: #fff1f2; }
+.readiness-header { display: flex; gap: 8px; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
+.readiness-header strong { font-size: 10px; }
+.readiness-header span { color: var(--graphite); font-size: 8px; }
+.integration-readiness p { margin: 0; line-height: 1.45; }
+.readiness-issues { display: grid; gap: 6px; max-height: 165px; overflow-y: auto; margin: 2px 0 0; padding: 0; list-style: none; }
+.readiness-issues li { display: grid; gap: 3px; min-width: 0; padding: 7px 8px; border: 1px solid #d9b3b7; background: #fff; }
+.readiness-issues strong, .readiness-issues span, .readiness-issues small { overflow-wrap: anywhere; }
+.readiness-issues strong { font-size: 9px; }
+.readiness-issues span { font-size: 9px; line-height: 1.4; }
+.readiness-issues small { font-size: 8px; color: #5d4311; line-height: 1.4; }
+
 .protected-outcome { display: grid; gap: 2px; padding: 6px 8px; color: #75242d; border-left: 3px solid var(--failure); background: #fff1f2; }
 .protected-outcome strong { font-size: 9px; }
 .protected-outcome span { font-size: 7px; }
