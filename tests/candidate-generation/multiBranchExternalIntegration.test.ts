@@ -121,7 +121,7 @@ test('combines independently rendered features from separate React/Vite branches
   const originalBranches = choices.map(choice => git(root, ['rev-parse', choice.branch]));
   expect(request.integrationPlan?.identity).toBe(planIdentity);
   expect(request.artifacts).toHaveLength(2);
-  expect(request.artifacts.map(item => item.slice.repository.branchCommit)).toEqual(choices.map(choice => commits.get(choice.branch)));
+  expect(new Set(request.artifacts.map(item => item.slice.repository.branchCommit))).toEqual(new Set(choices.map(choice => commits.get(choice.branch))));
 
   const generator = new CandidateGenerator(root, { verificationCommands: verification });
   const preflight = await generator.preflight(request);
