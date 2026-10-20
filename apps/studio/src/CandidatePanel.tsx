@@ -262,9 +262,9 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       </div>}
     </div>
     <CausalityStrip states={states} />
-    {preflight && !report && !unknownOutcome && !error && <IntegrationReadiness preflight={preflight} />}
     <div className="tray-primary">
       <p className="tray-progress" role="status" aria-live="polite">{unknownOutcome ? progress : error ?? progress}</p>
+      {preflight && !report && !unknownOutcome && !error && <IntegrationReadiness preflight={preflight} />}
       {refused && <div className="protected-outcome"><strong>Cannot combine safely</strong><span>No candidate was created. No files were changed, and your source branches remain unchanged.</span></div>}
       {failed && !durableCandidate && <div className="protected-outcome"><strong>Cannot combine safely</strong><span>No candidate was created. Your source branches remain unchanged. {report?.cleanup.worktreeRemoved && report.cleanup.processesStopped ? 'Temporary cleanup completed.' : 'Temporary cleanup needs review.'}</span></div>}
       {failed && durableCandidate && <div className="protected-outcome candidate-attention"><strong>Candidate needs attention</strong><span>The candidate branch exists, but the generation report did not finish successfully. Inspect evidence before using it.</span></div>}
