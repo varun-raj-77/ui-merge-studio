@@ -91,8 +91,9 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   onEvidence?: (tab: EvidenceTab) => void;
   onStateChange?: (state: CandidateUiState) => void;
 }) {
-  const [preflight, setPreflight] = useState<CandidatePreflight | null>(null);
-  const [report, setReport] = useState<CandidateGenerationReport | null>(null);
+  // Evidence is tied to a plan AND the current preview/selection session.
+  const [preflightRecord, setPreflightRecord] = useState<{ evidenceKey: string; value: CandidatePreflight } | null>(null);
+  const [reportRecord, setReportRecord] = useState<{ evidenceKey: string; value: CandidateGenerationReport } | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('Waiting for a visual selection.');
   const [stage, setStage] = useState<string | null>(null);
@@ -107,17 +108,20 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   const ready = selectedInputs.length >= 1 && selectedInputs.length <= 2 && artifacts.length === selectedInputs.length && selections.length === selectedInputs.length && Boolean(foundation) && selectedInputs.every(item => item.status === 'resolved' && item.artifact?.slice.status === 'resolved');
   const plan = ready && foundation ? canonicalizeLocalIntegrationPlan({ version: 2, foundation, selections }) : null;
   const planIdentity = plan ? localIntegrationPlanIdentity(plan) : null;
-  // Only the exact current plan can authorize generation or show completion.
-  // A foundation/selection change can leave all individual input statuses intact.
-  const latestPlanIdentity = useRef(planIdentity);
-  latestPlanIdentity.current = planIdentity;
+  // Canonical plan identity alone is insufficient: refreshed preview sessions can
+  // have the same plan, but their earlier server evidence must not authorize work.
+  const evidenceKey = JSON.stringify([planIdentity, inputKey, ready]);
+  const latestEvidenceKey = useRef(evidenceKey);
+  latestEvidenceKey.current = evidenceKey;
+  const preflight = preflightRecord?.evidenceKey === evidenceKey ? preflightRecord.value : null;
+  const report = reportRecord?.evidenceKey === evidenceKey ? reportRecord.value : null;
   const currentPreflight = preflight?.integrationPlan?.identity === planIdentity ? preflight : null;
   const currentReport = report?.integrationPlan?.identity === planIdentity ? report : null;
   const request = () => ({ plan, planIdentity });
 
   useEffect(() => {
-    setPreflight(null);
-    setReport(null);
+    setPreflightRecord(null);
+    setReportRecord(null);
     setError(null);
     setUnknownOutcome(false);
     setCheckingOutcome(false);
@@ -134,13 +138,13 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
         const value = await response.json();
         if (!response.ok) throw new Error(value.error ?? response.statusText);
         const result = value as CandidatePreflight;
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || latestEvidenceKey.current !== evidenceKey) return;
         if (result.integrationPlan?.identity !== planIdentity) throw new Error('The server returned evidence for a different integration plan.');
-        setPreflight(result);
+        setPreflightRecord({ evidenceKey, value: result });
         setProgress(result.plan.status === 'ready' ? 'The selected source slices can be combined safely.' : 'These selections cannot be combined safely.');
       })
       .catch(value => {
-        if (!controller.signal.aborted && (value as Error).name !== 'AbortError') {
+        if (!controller.signal.aborted && latestEvidenceKey.current === evidenceKey && (value as Error).name !== 'AbortError') {
           setError(value instanceof Error ? value.message : String(value));
           setProgress('The safety check could not finish.');
         }
@@ -152,10 +156,10 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
     onStateChange?.({ preflight: currentPreflight, report: currentReport, busy, progress, stage, error, unknownOutcome });
   }, [currentPreflight, currentReport, busy, progress, stage, error, unknownOutcome, onStateChange]);
 
-  function applyReport(result: CandidateGenerationReport) {
+  function applyReport(result: CandidateGenerationReport, expectedEvidenceKey = evidenceKey) {
+    if (latestEvidenceKey.current !== expectedEvidenceKey) return;
     if (result.integrationPlan?.identity !== planIdentity) throw new Error('The generated candidate does not refer to the submitted integration plan.');
-    if (latestPlanIdentity.current !== planIdentity) return; // The user has moved to another plan.
-    setReport(result);
+    setReportRecord({ evidenceKey: expectedEvidenceKey, value: result });
     setStage(result.stage);
     setUnknownOutcome(false);
     setError(null);
@@ -168,22 +172,22 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
 
   async function generateCandidate() {
     if (!currentPreflight || currentPreflight.plan.status !== 'ready' || !planIdentity || busy) return;
-    const submittedIdentity = planIdentity;
+    const submittedEvidenceKey = evidenceKey;
     setBusy(true);
     setError(null);
     setUnknownOutcome(false);
     setVerificationStarted(false);
-    setReport(null);
+    setReportRecord(null);
     setStage('validate');
     setProgress('Preparing an isolated candidate workspace.');
     const progressController = new AbortController();
     const poll = async () => {
       let active = true;
-      while (active && !progressController.signal.aborted && latestPlanIdentity.current === submittedIdentity) {
+      while (active && !progressController.signal.aborted && latestEvidenceKey.current === submittedEvidenceKey) {
         try {
           const response = await fetch('/api/candidate/status', { signal: progressController.signal });
           const value = await response.json() as { status: string; stage: string | null; message: string; sliceId?: string; verification?: string };
-          if (latestPlanIdentity.current !== submittedIdentity) break;
+          if (latestEvidenceKey.current !== submittedEvidenceKey) break;
           if (value.status === 'running') {
             setStage(value.stage);
             if (value.stage === 'verification' || value.stage === 'verify') setVerificationStarted(true);
@@ -206,9 +210,9 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       const value = await response.json();
       if (!response.ok) throw new Error(value.error ?? response.statusText);
       const result = value as CandidateGenerationReport;
-      if (latestPlanIdentity.current === submittedIdentity) applyReport(result);
+      if (latestEvidenceKey.current === submittedEvidenceKey) applyReport(result, submittedEvidenceKey);
     } catch (value) {
-      if (latestPlanIdentity.current === submittedIdentity) {
+      if (latestEvidenceKey.current === submittedEvidenceKey) {
         setError(value instanceof Error ? value.message : String(value));
         setUnknownOutcome(true);
         setProgress('UI Merge lost contact with the local Studio while generation was running.');
@@ -222,11 +226,12 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
 
   async function checkCurrentState() {
     if (!currentPreflight || !planIdentity) return;
+    const checkingEvidenceKey = evidenceKey;
     setCheckingOutcome(true);
     try {
       const statusResponse = await fetch('/api/candidate/status');
       const status = await statusResponse.json() as { status?: string; stage?: string | null; message?: string; planIdentity?: string };
-      if (latestPlanIdentity.current !== planIdentity) return;
+      if (latestEvidenceKey.current !== checkingEvidenceKey) return;
       if (!statusResponse.ok) throw new Error(status.message ?? statusResponse.statusText);
       if (status.planIdentity !== planIdentity) throw new Error('The Studio is reporting status for a different integration plan.');
       if (!status.status || ['running', 'idle'].includes(status.status)) {
@@ -236,11 +241,11 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       }
       const reportResponse = await fetch(`/api/candidate/reports/${currentPreflight.generationId}`);
       const result = await reportResponse.json() as CandidateGenerationReport;
-      if (latestPlanIdentity.current !== planIdentity) return;
+      if (latestEvidenceKey.current !== checkingEvidenceKey) return;
       if (!reportResponse.ok) throw new Error(result.message ?? reportResponse.statusText);
-      applyReport(result);
+      applyReport(result, checkingEvidenceKey);
     } catch (value) {
-      if (latestPlanIdentity.current === planIdentity) {
+      if (latestEvidenceKey.current === checkingEvidenceKey) {
         setError(value instanceof Error ? value.message : String(value));
         setProgress('Generation status is still unknown. The candidate may or may not have been created.');
       }
