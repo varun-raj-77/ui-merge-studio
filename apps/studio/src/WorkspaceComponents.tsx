@@ -13,8 +13,23 @@ function projectName(repository: RepositoryResponse | null) {
   return path?.split(/[\\/]/).filter(Boolean).at(-1) ?? 'Local React project';
 }
 
+export function projectReadiness(repository: RepositoryResponse | null) {
+  const sources = repository?.branches.filter(branch => branch !== repository.foundation.branchRef) ?? [];
+  return { clean: Boolean(repository?.clean), sources: sources.length,
+    ready: Boolean(repository?.clean && sources.length >= 2) };
+}
+
 export function ProjectContext({ repository, status, onContinue }: { repository: RepositoryResponse | null; status: string; onContinue: () => void }) {
-  const ready = Boolean(repository?.clean && repository.branches.length > 0);
+  const readiness = projectReadiness(repository);
+  const ready = readiness.ready;
+  const reason = !readiness.clean ? 'Working tree has changes' : readiness.sources < 2 ? 'Two source branches required' : 'Repository ready';
+  const guidance = !readiness.clean
+    ? 'Commit or stash local changes, then restart Studio.'
+    : readiness.sources === 0
+      ? 'Create two local source branches besides the foundation, then restart Studio.'
+      : readiness.sources < 2
+        ? 'Create a second local source branch alongside the foundation, then restart Studio.'
+        : 'Git is clean and at least two source versions are available for comparison.';
   return <main className="project-onboarding">
     <header className="project-brand"><span className="brand-mark" aria-hidden="true"><i /><i /></span><strong>UI Merge Studio</strong><small>Local workspace</small></header>
     <section className="project-card" aria-busy={!repository}>
@@ -26,9 +41,9 @@ export function ProjectContext({ repository, status, onContinue }: { repository:
           <span>Vite <b>{repository.discovery.framework.vite.version}</b></span>
           <span>Package manager <b>{repository.discovery.packageManager.name}</b></span>
         </div>
-        <div className={`repository-state ${repository.clean ? 'state-ready' : 'state-warning'}`} role="status"><i aria-hidden="true" /><span><strong>{repository.clean ? 'Repository ready' : 'Working tree has changes'}</strong><small>{repository.clean ? 'Git is clean. Preview worktrees can be created safely.' : 'Commit or stash local changes, then restart Studio.'}</small></span></div>
-        <dl className="project-facts"><dt>Foundation</dt><dd><code>{repository.foundation.branchRef}</code> · <code>{shortCommit(repository.foundation.commitSha)}</code></dd><dt>Source versions</dt><dd>{repository.branches.filter(branch => branch !== repository.foundation.branchRef).length} local branches available</dd><dt>Entry point</dt><dd><code>{repository.discovery.entryPoints[0] ?? 'Detected by Vite'}</code></dd></dl>
-        <div className="project-actions"><button className="primary-action" onClick={onContinue} disabled={!ready}>Continue to comparison <span aria-hidden="true">→</span></button><details><summary>Change project</summary><p>Repository switching requires restarting the local Studio with the supported command:</p><code>npm run dev -- --repository &lt;path&gt;</code></details></div>
+        <div className={`repository-state ${ready ? 'state-ready' : 'state-warning'}`} role="status"><i aria-hidden="true" /><span><strong>{reason}</strong><small>{guidance}</small></span></div>
+        <dl className="project-facts"><dt>Foundation</dt><dd><code>{repository.foundation.branchRef}</code> · <code>{shortCommit(repository.foundation.commitSha)}</code></dd><dt>Source versions</dt><dd>{readiness.sources} non-foundation branches ({readiness.sources >= 2 ? 'minimum met' : 'two required'})</dd><dt>Entry point</dt><dd><code>{repository.discovery.entryPoints[0] ?? 'Detected by Vite'}</code></dd></dl>
+        <div className="project-actions"><button className="primary-action" onClick={onContinue} disabled={!ready}>Continue to comparison <span aria-hidden="true">→</span></button><details><summary>Change project</summary><p>Repository switching requires restarting the local Studio with the supported command:</p><code>npm run dev -- --repository &lt;path&gt;</code><p>Use only a local React + TypeScript + Vite Git repository you trust. Starting previews may run package-manager installs and lifecycle scripts in disposable worktrees.</p></details></div>
       </> : <div className="repository-state"><i aria-hidden="true" /><span><strong>Inspecting project</strong><small>{status}</small></span></div>}
       {!repository && status !== 'Inspecting repository…' && <div className="onboarding-refusal" role="alert"><strong>This project is not supported yet.</strong><span>{status}</span><small>UI Merge Studio currently requires a local Git repository root containing React, TypeScript, and Vite.</small></div>}
     </section>

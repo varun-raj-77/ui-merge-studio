@@ -87,6 +87,7 @@ code, kbd, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", mon
 .project-actions details { max-width: 370px; color: var(--graphite); font-size: 10px; }
 .project-actions summary { min-height: 36px; padding: 9px 0; color: var(--ink); cursor: pointer; font-weight: 720; }
 .project-actions p { margin: 4px 0 8px; line-height: 1.5; }
+.project-actions details p:last-child { max-width: 350px; line-height: 1.6; }
 .project-actions details code { display: block; padding: 8px; overflow: auto; color: var(--ink); border: 1px solid var(--stone); background: var(--white); }
 .onboarding-refusal { display: grid; gap: 5px; margin: 0 clamp(22px, 5vw, 50px) 24px; padding: 14px; color: #6c1c26; border-left: 3px solid var(--failure); background: #fff1f2; font-size: 11px; }
 .onboarding-sequence { display: flex; justify-content: center; align-items: center; gap: clamp(7px, 2vw, 18px); color: var(--graphite); font-size: 9px; font-weight: 760; text-transform: uppercase; letter-spacing: .08em; }
