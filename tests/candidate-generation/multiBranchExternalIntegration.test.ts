@@ -25,7 +25,7 @@ const choices: Choice[] = [
 
 function branchFiles(choice: Choice, sharedParent: boolean): Record<string, string> {
   const feature = choice.previewId === 'left' ? leftFeature : rightFeature;
-  const copy = choice.previewId === 'left'
+  const copy: Record<string, string> = choice.previewId === 'left'
     ? { 'src/left/statusCopy.ts': "export const leftStatus='Status: healthy';\n" }
     : { 'src/right/forecastCopy.ts': "export const rightForecast='Forecast: stable';\n" };
   const integration = sharedParent
