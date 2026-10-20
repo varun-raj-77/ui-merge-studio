@@ -9,7 +9,7 @@ import type { SourceIdentity } from '../../packages/shared/src/sourceIdentity';
 import type { FeatureSliceArtifact, SliceStatus } from '../../packages/source-analysis/src/types';
 import type { PreviewOperation } from '../../packages/preview-runtime/src/previewOperations';
 import type { IntegrationFoundation } from '../../packages/integration-plan/src/integrationPlan';
-import { ResizableComparison } from '../../apps/studio/src/WorkspaceComponents';
+import { ProjectContext, ResizableComparison, projectReadiness } from '../../apps/studio/src/WorkspaceComponents';
 
 const capabilities: PreviewCapabilities = { routeSync: { version: 1, contract: 'catalogue-query-v1' }, fixtureContext: { version: 1, contract: 'product-catalogue-v1', entityType: 'product' }, sourceSelection: { version: 1 } };
 const session = (previewId: 'left' | 'right', branch: string, generation = 1) => ({ previewId, branch, generation, sessionId: `${previewId}-session-${generation}`, protocolVersion: bridgeVersion, repositoryPath: 'C:/test/repository', commit: `${branch}-commit`, branchCommit: `${branch}-commit`, packageManager: 'npm' as const, url: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}/catalogue`, origin: `http://127.0.0.1:${previewId === 'left' ? 5001 : 5002}`, port: previewId === 'left' ? 5001 : 5002, processId: previewId === 'left' ? 5001 : 5002, worktreePath: `C:/temp/${previewId}`, status: 'running' as const, failure: null });
@@ -92,6 +92,38 @@ test('renders real discovered repository metadata before comparison', async () =
   expect(screen.getByText(/npm run dev -- --repository/)).toBeInTheDocument();
   const text = document.body.textContent ?? '';
   for (const forbidden of ['Hovered boundary', 'Selected boundary', 'Eligible ancestors', 'Feature slice', 'Merge base', 'Runtime instance', 'Candidate preflight']) expect(text).not.toContain(forbidden);
+});
+
+test('blocks onboarding when fewer than two non-foundation source branches are available', () => {
+  const repository = { repositoryId: foundation.repositoryId, discovery, foundation,
+    branches: ['main', 'branch-a'], clean: true, sessions: [] };
+  const continueToCompare = vi.fn();
+  expect(projectReadiness(repository)).toEqual({ clean: true, sources: 1, ready: false });
+  render(<ProjectContext repository={repository} status="ready" onContinue={continueToCompare} />);
+  expect(screen.getByText('Two source branches required')).toBeVisible();
+  expect(screen.getByText(/Create a second local source branch/)).toBeVisible();
+  expect(screen.getByText(/1 non-foundation branches/)).toBeVisible();
+  expect(screen.getByRole('button', { name: /Continue to comparison/ })).toBeDisabled();
+  expect(continueToCompare).not.toHaveBeenCalled();
+});
+
+test('blocks onboarding for a dirty worktree even when two source branches exist', () => {
+  const repository = { repositoryId: foundation.repositoryId, discovery, foundation,
+    branches: ['main', 'branch-a', 'branch-b'], clean: false, sessions: [] };
+  expect(projectReadiness(repository)).toEqual({ clean: false, sources: 2, ready: false });
+  render(<ProjectContext repository={repository} status="ready" onContinue={vi.fn()} />);
+  expect(screen.getByText('Working tree has changes')).toBeVisible();
+  expect(screen.getByRole('button', { name: /Continue to comparison/ })).toBeDisabled();
+});
+
+test('explains local execution risks only in the optional project-switching disclosure', () => {
+  const repository = { repositoryId: foundation.repositoryId, discovery, foundation,
+    branches: ['main', 'branch-a', 'branch-b'], clean: true, sessions: [] };
+  expect(projectReadiness(repository)).toEqual({ clean: true, sources: 2, ready: true });
+  render(<ProjectContext repository={repository} status="ready" onContinue={vi.fn()} />);
+  expect(screen.getByRole('button', { name: /Continue to comparison/ })).toBeEnabled();
+  expect(screen.getByText(/Use only a local React/)).toBeInTheDocument();
+  expect(screen.getByText(/package-manager installs and lifecycle scripts/)).toBeInTheDocument();
 });
 
 test('launches through acknowledged operations and keeps both runtime identities isolated', async () => {
