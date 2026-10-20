@@ -56,7 +56,7 @@ test('real Chromium loads both independently selected features from one verified
   const report = await generator.generate(request);
   expect(report.status, report.message).toBe('succeeded');
   expect(visitedCandidate).toBe(true);
-  expect(report.integrationPlan.identity).toBe(planIdentity);
+  expect(report.integrationPlan?.identity).toBe(planIdentity);
   expect(report.verification).toEqual(expect.arrayContaining([
     expect.objectContaining({ name: 'candidate-typescript', status: 'passed' }),
     expect.objectContaining({ name: 'candidate-vite-build', status: 'passed' })
