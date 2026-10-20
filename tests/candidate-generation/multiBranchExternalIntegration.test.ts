@@ -167,6 +167,69 @@ test('combines independently rendered features from separate React/Vite branches
   expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
 }, 90_000);
 
+test('removes the candidate worktree and leaves both source branches untouched after second-slice precondition failure', async () => {
+  const { root, request, commits } = await createTwoBranchPlan();
+  const originalBranches = choices.map(choice => git(root, ['rev-parse', choice.branch]));
+  const generator = new CandidateGenerator(root, {
+    verificationCommands: verification,
+    onWorktreePrepared: worktree => {
+      // Simulate local foundation drift after immutable planning and before
+      // operation application. Only the disposable detached worktree changes.
+      writeFiles(worktree, {
+        'src/right/RightPanel.tsx':
+          'export function RightPanel(){return <aside>Unexpected worktree drift</aside>}\n'
+      });
+    }
+  });
+
+  const preflight = await generator.preflight(request);
+  expect(preflight.plan.status, JSON.stringify(preflight.plan.unresolved)).toBe('ready');
+  const report = await generator.generate(request);
+  expect(report).toMatchObject({
+    status: 'refused',
+    stage: 'transform',
+    cleanup: { worktreeRemoved: true, processesStopped: true }
+  });
+  expect(report.message).toContain('Base content hash precondition failed for src/right/RightPanel.tsx');
+  expect(report.appliedOperations.some(operation => operation.path === 'src/left/LeftPanel.tsx')).toBe(true);
+  expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+  expect(choices.map(choice => git(root, ['rev-parse', choice.branch]))).toEqual(originalBranches);
+  expect(originalBranches).toEqual(choices.map(choice => commits.get(choice.branch)));
+  expect(git(root, ['status', '--porcelain'])).toBe('');
+  expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+}, 90_000);
+
+test('verification failure after both external feature slices prevents candidate registration', async () => {
+  const { root, request, base, commits } = await createTwoBranchPlan();
+  const generator = new CandidateGenerator(root, {
+    verificationCommands: [{
+      name: 'intentional-two-slice-verification-failure',
+      executable: process.execPath,
+      args: ['-e', 'process.exit(7)']
+    }]
+  });
+
+  const preflight = await generator.preflight(request);
+  expect(preflight.plan.status, JSON.stringify(preflight.plan.unresolved)).toBe('ready');
+  const report = await generator.generate(request);
+  expect(report.status).toBe('failed');
+  expect(report.stage).toBe('verify');
+  expect(report.appliedOperations.length).toBeGreaterThan(0);
+  expect(report.verification).toContainEqual(expect.objectContaining({
+    name: 'intentional-two-slice-verification-failure',
+    status: 'failed',
+    exitCode: 7
+  }));
+  expect(report.cleanup).toMatchObject({ worktreeRemoved: true, processesStopped: true });
+  expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+  expect(git(root, ['rev-parse', 'main'])).toBe(base);
+  expect(choices.map(choice => git(root, ['rev-parse', choice.branch]))).toEqual(
+    choices.map(choice => commits.get(choice.branch))
+  );
+  expect(git(root, ['status', '--porcelain'])).toBe('');
+  expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+}, 90_000);
+
 test('refuses two independently selected features that compete for the same App declaration', async () => {
   const { root, request, commits } = await createTwoBranchPlan(true);
   const generator = new CandidateGenerator(root, { verificationCommands: verification });
