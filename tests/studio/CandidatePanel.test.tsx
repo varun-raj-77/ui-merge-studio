@@ -244,9 +244,13 @@ test('does not publish an old candidate result if the canonical plan changes dur
   let finishOldGeneration: ((value: Response) => void) | undefined;
   const launch = vi.fn();
   const stateChange = vi.fn();
+  let preflightCalls = 0;
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
     const url = String(input);
-    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/preflight') {
+      preflightCalls += 1;
+      return preflightCalls === 1 ? response(preflight()) : new Promise<Response>(() => undefined);
+    }
     if (url === '/api/candidate/status') return response({ status: 'idle', stage: null, message: 'Waiting.' });
     if (url === '/api/candidate/generate') return new Promise<Response>(resolve => { finishOldGeneration = resolve; });
     return response({ error: 'unexpected request' }, 500);
