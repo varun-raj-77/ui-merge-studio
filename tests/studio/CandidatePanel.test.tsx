@@ -119,6 +119,70 @@ test('states a safety refusal without enabling combination', async () => {
   expect(screen.getByText('Candidate').closest('li')).not.toHaveClass('causal-complete');
 });
 
+test('presents a safe-to-generate plan without claiming runtime verification', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() => response(preflight()));
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
+  const readiness = await screen.findByRole('region', { name: 'Integration readiness' });
+  expect(readiness).toHaveTextContent('Ready to generate');
+  expect(readiness).toHaveTextContent('1 planned operations');
+  expect(readiness).toHaveTextContent('0 conflicts');
+  expect(readiness).toHaveTextContent('0 unresolved');
+  expect(readiness).toHaveTextContent('Candidate verification still has to run');
+  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled();
+  expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
+});
+
+test('shows the server-reported conflicting file, reason and manual action', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() => response(preflight('refused')));
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
+  const readiness = await screen.findByRole('region', { name: 'Integration readiness' });
+  expect(readiness).toHaveTextContent('Integration blocked');
+  expect(readiness).toHaveTextContent('1 conflicts');
+  expect(readiness).toHaveTextContent('src/App.tsx');
+  expect(readiness).toHaveTextContent('Both slices replace App differently.');
+  expect(readiness).toHaveTextContent('Next step: Resolve manually.');
+  expect(screen.getByRole('list', { name: 'Integration blockers' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Create combined branch' })).not.toBeInTheDocument();
+});
+
+test('shows unresolved dependency actions independently of conflicts', async () => {
+  const blocked = preflight('refused');
+  blocked.plan.conflicts = [];
+  blocked.plan.unresolved = [{
+    path: 'src/shared/theme.ts', sliceId: 'b'.repeat(16),
+    reason: 'Shared dependency cannot be assigned to one slice.',
+    manualResolution: 'Choose one feature or isolate this dependency.'
+  }];
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() => response(blocked));
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
+  const readiness = await screen.findByRole('region', { name: 'Integration readiness' });
+  expect(readiness).toHaveTextContent('0 conflicts');
+  expect(readiness).toHaveTextContent('1 unresolved');
+  expect(readiness).toHaveTextContent('src/shared/theme.ts');
+  expect(readiness).toHaveTextContent('Shared dependency cannot be assigned');
+  expect(readiness).toHaveTextContent('Next step: Choose one feature');
+  expect(screen.queryByRole('button', { name: 'Create combined branch' })).not.toBeInTheDocument();
+});
+
+test('ignores a preflight response from the previous selection session even when fetch ignores abort', async () => {
+  let resolvePrevious: ((result: Response) => void) | undefined;
+  let requests = 0;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+    requests += 1;
+    if (requests === 1) return new Promise<Response>(resolve => { resolvePrevious = resolve; });
+    return response({ error: 'Preflight not available for the new session.' }, 409);
+  });
+  const initial = inputs();
+  const view = render(<CandidatePanel inputs={initial} foundation={foundation} onLaunch={() => undefined} />);
+  await waitFor(() => expect(requests).toBe(1));
+  view.rerender(<CandidatePanel inputs={initial.map(item => ({ ...item, sessionId: item.sessionId + '-new' }))} foundation={foundation} onLaunch={() => undefined} />);
+  await waitFor(() => expect(requests).toBe(2));
+  resolvePrevious?.(new Response(JSON.stringify(preflight()), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  await screen.findByText('Safety check unavailable');
+  expect(screen.queryByRole('region', { name: 'Integration readiness' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Create combined branch' })).not.toBeInTheDocument();
+});
+
 test('uses plain failure language and replaces branch creation with a revision action', async () => {
   const revise = vi.fn();
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
