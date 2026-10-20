@@ -191,6 +191,7 @@ test('removes the candidate worktree and leaves both source branches untouched a
     cleanup: { worktreeRemoved: true, processesStopped: true }
   });
   expect(report.message).toContain('Base content hash precondition failed for src/right/RightPanel.tsx');
+  expect(report.appliedOperations.some(operation => operation.path === 'src/left/LeftPanel.tsx')).toBe(true);
   expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
   expect(choices.map(choice => git(root, ['rev-parse', choice.branch]))).toEqual(originalBranches);
   expect(originalBranches).toEqual(choices.map(choice => commits.get(choice.branch)));
@@ -213,6 +214,7 @@ test('verification failure after both external feature slices prevents candidate
   const report = await generator.generate(request);
   expect(report.status).toBe('failed');
   expect(report.stage).toBe('verify');
+  expect(report.appliedOperations.length).toBeGreaterThan(0);
   expect(report.verification).toContainEqual(expect.objectContaining({
     name: 'intentional-two-slice-verification-failure',
     status: 'failed',
