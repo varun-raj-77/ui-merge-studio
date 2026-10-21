@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '../setup';
 import { readFileSync } from 'node:fs';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { App, SlicePanel } from '../../apps/studio/src/App';
 import { bridgeVersion, type PreviewCapabilities, type PreviewIdentity } from '../../packages/shared/src/bridge';
@@ -283,8 +283,10 @@ test('rejects a late analysis response after a newer visual selection in the sam
   await waitFor(() => expect(analysisCalls).toBe(1));
   emit(frames.left, left, 'boundary-selected', { selectionReceipt: 'rendered-' + 'c'.repeat(32), ancestorSelectionReceipts: [] });
   expect((await screen.findAllByText('Inventory Summary')).length).toBeGreaterThan(0);
-  finishOldAnalysis?.(new Response(JSON.stringify(analysisEvidence(artifact(sourceIdentity(left, 'CategorySidebar')))), { status: 200, headers: { 'Content-Type': 'application/json' } }));
-  await waitFor(() => expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/left/analysis')).toHaveLength(2));
+  await act(async () => {
+    finishOldAnalysis?.(new Response(JSON.stringify(analysisEvidence(artifact(sourceIdentity(left, 'CategorySidebar')))), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  });
+  expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/left/analysis')).toHaveLength(2);
   expect(screen.queryByText('Category Sidebar')).not.toBeInTheDocument();
   expect(screen.getByText('1 selected')).toBeVisible();
 });
@@ -303,8 +305,10 @@ test('clearing an in-flight visual selection invalidates its late analysis', asy
   emit(frames.left, left, 'boundary-selected', { selectionReceipt: renderedReceipt('left'), ancestorSelectionReceipts: [] });
   await waitFor(() => expect(finishAnalysis).toBeDefined());
   emit(frames.left, left, 'selection-cleared', { reason: 'Selection cleared.' });
-  finishAnalysis?.(new Response(JSON.stringify(analysisEvidence(artifact(sourceIdentity(left, 'CategorySidebar')))), { status: 200, headers: { 'Content-Type': 'application/json' } }));
-  await waitFor(() => expect(screen.getByText('0 selected')).toBeVisible());
+  await act(async () => {
+    finishAnalysis?.(new Response(JSON.stringify(analysisEvidence(artifact(sourceIdentity(left, 'CategorySidebar')))), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  });
+  expect(screen.getByText('0 selected')).toBeVisible();
   expect(screen.queryByText('Category Sidebar')).not.toBeInTheDocument();
   expect(vi.mocked(globalThis.fetch).mock.calls.some(call => String(call[0]) === '/api/candidate/preflight')).toBe(false);
 });
@@ -323,12 +327,15 @@ test('a late preview acknowledgement cannot replace the newer restarted operatio
     return fallback(input, init);
   });
   render(<App />);
-  await launch();
+  fireEvent.click(await screen.findByRole('button', { name: /Continue to comparison/i }));
   await waitFor(() => expect(leftStarts).toBe(1));
+  expect(screen.getByRole('heading', { name: 'Choose the parts worth keeping.' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Open command menu' }));
   fireEvent.click(screen.getByRole('button', { name: 'Restart Source A preview' }));
   await waitFor(() => expect(leftStarts).toBe(2));
-  finishOldLaunch?.(new Response(JSON.stringify({ operationId: 'obsolete-operation', previewId: 'left', branch: 'branch-a', state: 'pending', requestedAt: '', coalesced: false }), { status: 202, headers: { 'Content-Type': 'application/json' } }));
+  await act(async () => {
+    finishOldLaunch?.(new Response(JSON.stringify({ operationId: 'obsolete-operation', previewId: 'left', branch: 'branch-a', state: 'pending', requestedAt: '', coalesced: false }), { status: 202, headers: { 'Content-Type': 'application/json' } }));
+  });
   await waitFor(() => expect(screen.getByTitle('Source A · branch-a live application')).toHaveAttribute('src', session('left', 'branch-a').url));
   expect(fetchMock.mock.calls.some(call => String(call[0]) === '/api/preview-operations/obsolete-operation')).toBe(false);
   expect(screen.queryByText(/obsolete-operation/)).not.toBeInTheDocument();
