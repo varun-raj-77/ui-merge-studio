@@ -37,6 +37,12 @@ export function App() {
   const frames = useRef<Record<PreviewSlotId, HTMLIFrameElement | null>>({ left: null, right: null });
   const operationControllers = useRef<Partial<Record<PreviewSlotId, AbortController>>>({});
   const activeOperationIds = useRef<Partial<Record<PreviewSlotId, string>>>({});
+  const analysisControllers = useRef<Partial<Record<PreviewSlotId, AbortController>>>({});
+
+  function invalidateAnalysis(previewId: PreviewSlotId) {
+    analysisControllers.current[previewId]?.abort();
+    analysisControllers.current[previewId] = undefined;
+  }
 
   const openEvidence = useCallback((tab: EvidenceTab = 'selection') => { setEvidenceTab(tab); setEvidenceOpen(true); }, []);
   const closeEvidence = useCallback(() => setEvidenceOpen(false), []);
@@ -64,6 +70,7 @@ export function App() {
 
   useEffect(() => () => {
     for (const controller of Object.values(operationControllers.current)) controller?.abort();
+    for (const controller of Object.values(analysisControllers.current)) controller?.abort();
   }, []);
 
   useEffect(() => {
@@ -96,6 +103,10 @@ export function App() {
 
   function handleMessage(previewId: PreviewSlotId, message: PreviewMessage) {
     dispatch({ type: 'preview-message', previewId, message });
+    if (message.type === 'selection-cleared') {
+      invalidateAnalysis(previewId);
+      setPlanSelections(current => ({ ...current, [previewId]: null }));
+    }
     if (message.type === 'preview-ready') {
       const payload = message.payload as { capabilities: PreviewCapabilities; context: ComparisonContext };
       const otherId: PreviewSlotId = previewId === 'left' ? 'right' : 'left';
@@ -126,6 +137,8 @@ export function App() {
     const branch = overrideBranch ?? state.previews[previewId].branch;
     const oldOperationId = activeOperationIds.current[previewId];
     operationControllers.current[previewId]?.abort();
+    activeOperationIds.current[previewId] = undefined;
+    invalidateAnalysis(previewId);
     if (oldOperationId) void fetch(`/api/preview-operations/${oldOperationId}`, { method: 'DELETE' }).catch(() => undefined);
     const controller = new AbortController();
     operationControllers.current[previewId] = controller;
@@ -134,17 +147,29 @@ export function App() {
     try {
       const response = await fetch(`/api/previews/${previewId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ branch }), signal: controller.signal });
       const acknowledgement = await response.json() as PreviewOperationAcknowledgement | { error?: string };
+      if (controller.signal.aborted || operationControllers.current[previewId] !== controller) return;
       if (!response.ok) throw new Error('error' in acknowledgement && acknowledgement.error ? acknowledgement.error : response.statusText);
-      const operationId = (acknowledgement as PreviewOperationAcknowledgement).operationId;
+      const accepted = acknowledgement as PreviewOperationAcknowledgement;
+      if (!accepted.operationId || accepted.previewId !== previewId || accepted.branch !== branch) {
+        throw new Error('The Studio returned a launch acknowledgement for a different preview or branch.');
+      }
+      const operationId = accepted.operationId;
       activeOperationIds.current[previewId] = operationId;
       const operation = await pollPreviewOperation(operationId, { signal: controller.signal, onUpdate: value => {
-        if (activeOperationIds.current[previewId] === operationId) setOperations(current => ({ ...current, [previewId]: value }));
+        if (value.operationId !== operationId || value.previewId !== previewId || value.branch !== branch) {
+          throw new Error('The Studio returned preview status for a different operation.');
+        }
+        if (!controller.signal.aborted && operationControllers.current[previewId] === controller && activeOperationIds.current[previewId] === operationId) {
+          setOperations(current => ({ ...current, [previewId]: value }));
+        }
       } });
-      if (activeOperationIds.current[previewId] !== operationId) return;
+      if (controller.signal.aborted || operationControllers.current[previewId] !== controller || activeOperationIds.current[previewId] !== operationId) return;
       if (operation.state === 'ready' && operation.result) dispatch({ type: 'preview-started', previewId, session: operation.result });
       else if (terminalPreviewStates.has(operation.state)) dispatch({ type: 'preview-failed', previewId, error: operation.error ?? `The preview launch was ${operation.state}.` });
     } catch (error) {
-      if ((error as Error).name !== 'AbortError') dispatch({ type: 'preview-failed', previewId, error: error instanceof Error ? error.message : String(error) });
+      if (!controller.signal.aborted && operationControllers.current[previewId] === controller && (error as Error).name !== 'AbortError') {
+        dispatch({ type: 'preview-failed', previewId, error: error instanceof Error ? error.message : String(error) });
+      }
     }
   }
 
@@ -159,17 +184,28 @@ export function App() {
   }
 
   async function analyzeRenderedSelection(previewId: PreviewSlotId, selectionReceipt: string) {
+    // A late response from an earlier click must never supply plan authority for
+    // a different selection, a cleared selection, or a restarted preview.
+    invalidateAnalysis(previewId);
+    const controller = new AbortController();
+    analysisControllers.current[previewId] = controller;
     dispatch({ type: 'analysis-started', previewId });
+    setPlanSelections(current => ({ ...current, [previewId]: null }));
     try {
-      const response = await fetch(`/api/previews/${previewId}/analysis`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selectionReceipt }) });
+      const response = await fetch(`/api/previews/${previewId}/analysis`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ selectionReceipt }), signal: controller.signal });
       const value = await response.json() as { artifact?: import('../../../packages/source-analysis/src/types').FeatureSliceArtifact; selection?: LocalIntegrationSelection; foundation?: IntegrationFoundation; error?: string };
+      if (controller.signal.aborted || analysisControllers.current[previewId] !== controller) return;
       if (!response.ok) throw new Error(value.error ?? response.statusText);
       if (!value.artifact || !value.selection || !value.foundation) throw new Error('The server did not return canonical selection evidence.');
       dispatch({ type: 'analysis-finished', previewId, artifact: value.artifact });
       setPlanSelections(current => ({ ...current, [previewId]: value.selection! }));
       setFoundation(value.foundation);
     } catch (error) {
-      dispatch({ type: 'analysis-failed', previewId, error: error instanceof Error ? error.message : String(error) });
+      if (!controller.signal.aborted && analysisControllers.current[previewId] === controller && (error as Error).name !== 'AbortError') {
+        dispatch({ type: 'analysis-failed', previewId, error: error instanceof Error ? error.message : String(error) });
+      }
+    } finally {
+      if (analysisControllers.current[previewId] === controller) analysisControllers.current[previewId] = undefined;
     }
   }
 
@@ -181,6 +217,7 @@ export function App() {
 
   function reviseSelections() {
     for (const slot of slots) {
+      invalidateAnalysis(slot);
       send(slot, 'clear-selection');
       dispatch({ type: 'clear-selection', previewId: slot });
     }
@@ -189,6 +226,7 @@ export function App() {
   }
 
   function clearSelection(slot: PreviewSlotId) {
+    invalidateAnalysis(slot);
     send(slot, 'clear-selection');
     dispatch({ type: 'clear-selection', previewId: slot });
     setPlanSelections(current => ({ ...current, [slot]: null }));
@@ -201,6 +239,8 @@ export function App() {
 
   async function stopWorkspace() {
     for (const controller of Object.values(operationControllers.current)) controller?.abort();
+    operationControllers.current = {};
+    for (const slot of slots) invalidateAnalysis(slot);
     activeOperationIds.current = {};
     await fetch('/api/preview', { method: 'DELETE' }).catch(() => undefined);
     setOperations({ left: null, right: null });
