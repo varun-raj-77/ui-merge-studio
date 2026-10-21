@@ -116,7 +116,20 @@ test.describe('mode-free comparison workspace', () => {
     await versionB(page).getByRole('button', { name: 'Close quick view' }).click();
     await setPickMode(page);
     await keepQuickView(page, 'Arc Headphones');
-    await keepQuickView(page, 'Task Lamp');
+
+    // A changing iframe scroll position must not unmount a selectable overlay
+    // between scrolling Task Lamp into view and a real pointer click.
+    const lampRegion = page.locator('.ums-selection-region[data-ums-scope="product-quick-view:p-103"]');
+    await expect(lampRegion).toHaveCount(1);
+    const beforeScroll = await lampRegion.elementHandle();
+    expect(beforeScroll).not.toBeNull();
+    await versionB(page).getByRole('heading', { name: 'Task Lamp' })
+      .locator('xpath=ancestor::article')
+      .evaluate(element => element.scrollIntoView({ block: 'center' }));
+    await expect(lampRegion).toBeVisible();
+    expect(await lampRegion.evaluate((element, original) => element === original, beforeScroll)).toBe(true);
+    await page.getByRole('button', { name: 'Keep Quick View on Task Lamp from Version B' }).click();
+    await expect(page.getByRole('button', { name: 'Remove Quick View on Task Lamp' })).toHaveAttribute('aria-pressed', 'true');
 
     await page.getByRole('button', { name: 'Review 2 selected parts' }).click();
     await page.getByRole('menuitem', { name: 'Inspect Quick View · Task Lamp' }).click();

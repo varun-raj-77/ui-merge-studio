@@ -432,6 +432,7 @@ interface SelectionRegionGeometry {
   scope: string;
   visibleLabel: string;
   capability: SelectionCapability<CatalogueSourceBranch>;
+  visible: boolean;
   top: number;
   left: number;
   width: number;
@@ -445,6 +446,7 @@ function sameRegionGeometry(current: SelectionRegionGeometry[], next: SelectionR
     return candidate
       && region.scope === candidate.scope
       && region.visibleLabel === candidate.visibleLabel
+      && region.visible === candidate.visible
       && region.top === candidate.top
       && region.left === candidate.left
       && region.width === candidate.width
@@ -523,11 +525,15 @@ function ArtifactFrame({
       const style = frameWindow?.getComputedStyle?.(selectionTarget);
       if (style?.display === 'none' || style?.visibility === 'hidden') return [];
       const hasBrowserGeometry = rect.width > 0 && rect.height > 0;
-      if (hasBrowserGeometry && (rect.bottom < 0 || rect.right < 0 || rect.top > frameHeight || rect.left > frameWidth)) return [];
+      // Keep keyed controls mounted while a scrolling iframe moves the source
+      // boundary into view. Unmounting offscreen controls makes pointer actions
+      // chase disappearing DOM nodes during mobile scroll synchronization.
+      const visible = !hasBrowserGeometry || (rect.bottom > 0 && rect.right > 0 && rect.top < frameHeight && rect.left < frameWidth);
       return [{
         scope,
         visibleLabel,
         capability,
+        visible,
         top: Math.round(Math.max(0, rect.top)),
         left: Math.round(Math.max(0, rect.left)),
         width: Math.round(Math.min(rect.width || 1, Math.max(1, frameWidth - Math.max(0, rect.left)))),
@@ -671,7 +677,9 @@ function ArtifactFrame({
           type="button"
           key={`${region.capability.id}:${region.scope}`}
           className="ums-selection-region"
-          style={{ top: region.top, left: region.left, width: region.width, height: region.height }}
+          style={{ top: region.top, left: region.left, width: region.width, height: region.height, visibility: region.visible ? 'visible' : 'hidden' }}
+          aria-hidden={!region.visible}
+          tabIndex={region.visible ? 0 : -1}
           data-ums-selection-region=""
           data-ums-scope={region.scope}
           data-source-version={version}
