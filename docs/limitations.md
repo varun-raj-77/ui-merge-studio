@@ -44,6 +44,8 @@
 
 - UMS-13 scopes local readiness, completed evidence and late generation responses to both the canonical plan identity and current preview/selection-session input key. A new local session must receive its own server preflight even if the canonical plan is unchanged. The UI prevents an older session's result from being presented or launched as current evidence; this does not cancel or reverse a previous local generation already running on the server.
 
+- UMS-15 fences local preview acknowledgements, operation results, and source-analysis responses to the still-current launch or selection request. Restarts, reselections, explicit clears, and stopping previews abort and invalidate outstanding selection requests; late responses remain inert even if the fetch implementation ignores abort. An operation from another preview/branch cannot be reported as a successful local launch. This guards the normal local UI state, not server-side cancellation, arbitrary browser forgery, or process-level isolation.
+
 - UMS-14 keeps each supported Showcase selection-overlay control mounted with stable keyed identity while its source region moves outside the iframe viewport, hiding offscreen controls from pointer and keyboard interaction. A mobile browser regression asserts that the original Task Lamp region remains mounted across scrolling before a real pointer click and selection-state confirmation. This targets the observed overlay detachment timeout; it does not establish universal mobile device compatibility or remove all animation/timing risks.
 
 Correct refusal is a product capability, not a failure to be hidden.

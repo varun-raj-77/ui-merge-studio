@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import '../setup';
 import { readFileSync } from 'node:fs';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, test, vi } from 'vitest';
 import { App, SlicePanel } from '../../apps/studio/src/App';
 import { bridgeVersion, type PreviewCapabilities, type PreviewIdentity } from '../../packages/shared/src/bridge';
@@ -260,6 +260,85 @@ test('does not use a fixture-specific component allowlist before engine prefligh
   emit(frames.right, right, 'boundary-selected', { selectionReceipt: renderedReceipt('right'), ancestorSelectionReceipts: [] });
   expect((await screen.findAllByText('Inventory Summary')).length).toBeGreaterThan(0);
   await waitFor(() => expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/candidate/preflight')).toHaveLength(1));
+});
+
+test('rejects a late analysis response after a newer visual selection in the same preview', async () => {
+  const fallback = appFetch().getMockImplementation()!;
+  let finishOldAnalysis: ((value: Response) => void) | undefined;
+  let analysisCalls = 0;
+  const fetchMock = vi.mocked(globalThis.fetch);
+  fetchMock.mockImplementation((input, init) => {
+    if (String(input) === '/api/previews/left/analysis') {
+      analysisCalls++;
+      if (analysisCalls === 1) return new Promise<Response>(resolve => { finishOldAnalysis = resolve; });
+      return response(analysisEvidence(artifact(sourceIdentity(session('left', 'branch-a'), 'InventorySummary'))));
+    }
+    return fallback(input, init);
+  });
+  render(<App />);
+  const frames = await launch();
+  const left = session('left', 'branch-a');
+  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.left, left, 'boundary-selected', { selectionReceipt: renderedReceipt('left'), ancestorSelectionReceipts: [] });
+  await waitFor(() => expect(analysisCalls).toBe(1));
+  emit(frames.left, left, 'boundary-selected', { selectionReceipt: 'rendered-' + 'c'.repeat(32), ancestorSelectionReceipts: [] });
+  expect((await screen.findAllByText('Inventory Summary')).length).toBeGreaterThan(0);
+  await act(async () => {
+    finishOldAnalysis?.(new Response(JSON.stringify(analysisEvidence(artifact(sourceIdentity(left, 'CategorySidebar')))), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  });
+  expect(fetchMock.mock.calls.filter(call => String(call[0]) === '/api/previews/left/analysis')).toHaveLength(2);
+  expect(screen.queryByText('Category Sidebar')).not.toBeInTheDocument();
+  expect(screen.getByText('1 selected')).toBeVisible();
+});
+
+test('clearing an in-flight visual selection invalidates its late analysis', async () => {
+  const fallback = appFetch().getMockImplementation()!;
+  let finishAnalysis: ((value: Response) => void) | undefined;
+  vi.mocked(globalThis.fetch).mockImplementation((input, init) => {
+    if (String(input) === '/api/previews/left/analysis') return new Promise<Response>(resolve => { finishAnalysis = resolve; });
+    return fallback(input, init);
+  });
+  render(<App />);
+  const frames = await launch();
+  const left = session('left', 'branch-a');
+  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.left, left, 'boundary-selected', { selectionReceipt: renderedReceipt('left'), ancestorSelectionReceipts: [] });
+  await waitFor(() => expect(finishAnalysis).toBeDefined());
+  emit(frames.left, left, 'selection-cleared', { reason: 'Selection cleared.' });
+  await act(async () => {
+    finishAnalysis?.(new Response(JSON.stringify(analysisEvidence(artifact(sourceIdentity(left, 'CategorySidebar')))), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  });
+  expect(screen.getByText('0 selected')).toBeVisible();
+  expect(screen.queryByText('Category Sidebar')).not.toBeInTheDocument();
+  expect(vi.mocked(globalThis.fetch).mock.calls.some(call => String(call[0]) === '/api/candidate/preflight')).toBe(false);
+});
+
+test('a late preview acknowledgement cannot replace the newer restarted operation', async () => {
+  const fallback = appFetch().getMockImplementation()!;
+  let finishOldLaunch: ((value: Response) => void) | undefined;
+  let leftStarts = 0;
+  const fetchMock = vi.mocked(globalThis.fetch);
+  fetchMock.mockImplementation((input, init) => {
+    if (String(input) === '/api/previews/left' && init?.method === 'POST') {
+      leftStarts++;
+      if (leftStarts === 1) return new Promise<Response>(resolve => { finishOldLaunch = resolve; });
+      return response({ operationId: 'left-operation', previewId: 'left', branch: 'branch-a', state: 'pending', requestedAt: '', coalesced: false }, 202);
+    }
+    return fallback(input, init);
+  });
+  render(<App />);
+  fireEvent.click(await screen.findByRole('button', { name: /Continue to comparison/i }));
+  await waitFor(() => expect(leftStarts).toBe(1));
+  expect(screen.getByRole('heading', { name: 'Choose the parts worth keeping.' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Open command menu' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Restart Source A preview' }));
+  await waitFor(() => expect(leftStarts).toBe(2));
+  await act(async () => {
+    finishOldLaunch?.(new Response(JSON.stringify({ operationId: 'obsolete-operation', previewId: 'left', branch: 'branch-a', state: 'pending', requestedAt: '', coalesced: false }), { status: 202, headers: { 'Content-Type': 'application/json' } }));
+  });
+  await waitFor(() => expect(screen.getByTitle('Source A · branch-a live application')).toHaveAttribute('src', session('left', 'branch-a').url));
+  expect(fetchMock.mock.calls.some(call => String(call[0]) === '/api/preview-operations/obsolete-operation')).toBe(false);
+  expect(screen.queryByText(/obsolete-operation/)).not.toBeInTheDocument();
 });
 
 test('opens a contextual real-action command menu with Ctrl+K', async () => {
