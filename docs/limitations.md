@@ -42,4 +42,6 @@
 
 - UMS-12 ties local readiness, create-branch authorization, and visible candidate evidence to the exact current canonical plan identity, including the pinned foundation. Changing a foundation or selection invalidates older preflight authority; late preflight and generation results from the previous plan cannot reauthorize or appear as a verified result for the new plan. An already-started local generation is not remotely cancelled by changing the UI plan; users must inspect any earlier-generation result separately before using it.
 
+- UMS-13 scopes local readiness, completed evidence and late generation responses to both the canonical plan identity and current preview/selection-session input key. A new local session must receive its own server preflight even if the canonical plan is unchanged. The UI prevents an older session's result from being presented or launched as current evidence; this does not cancel or reverse a previous local generation already running on the server.
+
 Correct refusal is a product capability, not a failure to be hidden.

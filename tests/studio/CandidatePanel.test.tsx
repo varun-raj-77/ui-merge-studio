@@ -270,6 +270,84 @@ test('does not publish an old candidate result if the canonical plan changes dur
   expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
 });
 
+
+test('refreshing a selection session blocks old ready preflight even when the plan identity is unchanged', async () => {
+  let calls = 0;
+  let resolveRefreshed: ((value: Response) => void) | undefined;
+  const generate = vi.fn();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    if (String(input) === '/api/candidate/preflight') {
+      calls += 1;
+      return calls === 1 ? response(preflight()) : new Promise<Response>(resolve => { resolveRefreshed = resolve; });
+    }
+    if (String(input) === '/api/candidate/generate') generate();
+    return response({ error: 'unexpected request' }, 500);
+  });
+  const initial = inputs();
+  const view = render(<CandidatePanel inputs={initial} foundation={foundation} onLaunch={() => undefined} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled());
+  view.rerender(<CandidatePanel inputs={initial.map(item => ({ ...item, sessionId: item.sessionId + '-refreshed' }))} foundation={foundation} onLaunch={() => undefined} />);
+  expect(screen.queryByRole('region', { name: 'Integration readiness' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Create combined branch' }));
+  expect(generate).not.toHaveBeenCalled();
+  await waitFor(() => expect(calls).toBe(2));
+  resolveRefreshed?.(new Response(JSON.stringify(preflight()), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled());
+});
+
+test('a completed candidate from a previous session never remains verified on a refreshed session with the same plan', async () => {
+  let calls = 0;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') {
+      calls += 1;
+      return calls === 1 ? response(preflight()) : new Promise<Response>(() => undefined);
+    }
+    if (url === '/api/candidate/status') return response({ status: 'failed', stage: 'verify', message: 'Done.' });
+    if (url === '/api/candidate/generate') return response(report());
+    return response({ error: 'unexpected request' }, 500);
+  });
+  const initial = inputs();
+  const view = render(<CandidatePanel inputs={initial} foundation={foundation} onLaunch={() => undefined} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  await waitFor(() => expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-complete'));
+  view.rerender(<CandidatePanel inputs={initial.map(item => ({ ...item, sessionId: item.sessionId + '-refreshed' }))} foundation={foundation} onLaunch={() => undefined} />);
+  expect(screen.getByText('Candidate').closest('li')).not.toHaveClass('causal-complete');
+  expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
+  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled();
+});
+
+test('a generation response from a previous session cannot launch after a same-plan session refresh', async () => {
+  let calls = 0;
+  let finishPrevious: ((value: Response) => void) | undefined;
+  const launch = vi.fn();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') {
+      calls += 1;
+      return calls === 1 ? response(preflight()) : new Promise<Response>(() => undefined);
+    }
+    if (url === '/api/candidate/status') return response({ status: 'idle', stage: null, message: 'Awaiting verification.' });
+    if (url === '/api/candidate/generate') return new Promise<Response>(resolve => { finishPrevious = resolve; });
+    return response({ error: 'unexpected request' }, 500);
+  });
+  const initial = inputs();
+  const view = render(<CandidatePanel inputs={initial} foundation={foundation} onLaunch={launch} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  await waitFor(() => expect(finishPrevious).toBeDefined());
+  view.rerender(<CandidatePanel inputs={initial.map(item => ({ ...item, sessionId: item.sessionId + '-refreshed' }))} foundation={foundation} onLaunch={launch} />);
+  finishPrevious?.(new Response(JSON.stringify(report()), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeDisabled());
+  await waitFor(() => expect(screen.getByText('Candidate').closest('li')).not.toHaveClass('causal-complete'));
+  expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
+  expect(launch).not.toHaveBeenCalled();
+});
+
 test('uses plain failure language and replaces branch creation with a revision action', async () => {
   const revise = vi.fn();
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
