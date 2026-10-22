@@ -26,12 +26,13 @@ jobs:
         working-directory: UI merge studio
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           path: UI merge studio
+          persist-credentials: false
 
       - name: Configure Node (matches Vercel)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: '24'
           cache: npm
@@ -59,7 +60,18 @@ jobs:
         run: npm run build
 
       - name: Install Chromium for bounded browser journeys
-        run: npx playwright install --with-deps chromium
+        # Includes Playwright's required Linux libraries. Keeping --with-deps
+        # matters more than shaving minutes by skipping system dependencies.
+        # Bound this independently so an OS-package mirror cannot consume the
+        # full job timeout without yielding a diagnosable failed step.
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+          npx playwright --version
+          started="$(date +%s)"
+          npx playwright install --with-deps chromium
+          finished="$(date +%s)"
+          echo "Chromium and system dependencies installed in $((finished - started)) seconds."
 
       - name: Check real Showcase journeys, configured plans, and safe refusal in browser
         run: >-
