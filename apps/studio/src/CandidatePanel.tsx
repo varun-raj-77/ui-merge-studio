@@ -37,6 +37,15 @@ export function failedCandidateMessage(report: CandidateGenerationReport) {
   return `${gate} did not pass. No combined branch was created, both source branches are unchanged, and ${cleanup}.`;
 }
 
+function isVerifiedCandidateReport(report: CandidateGenerationReport) {
+  return report.status === 'succeeded'
+    && Boolean(report.repository?.candidateCommit && report.repository?.candidateTree)
+    && report.verification.length > 0
+    && report.verification.every(item => item.status === 'passed')
+    && report.cleanup.worktreeRemoved
+    && report.cleanup.processesStopped;
+}
+
 function stageLabel(state: CausalState) {
   if (state === 'complete') return 'Complete';
   if (state === 'working') return 'Working';
@@ -140,6 +149,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
         const result = value as CandidatePreflight;
         if (controller.signal.aborted || latestEvidenceKey.current !== evidenceKey) return;
         if (result.integrationPlan?.identity !== planIdentity) throw new Error('The server returned evidence for a different integration plan.');
+        if (typeof result.generationId !== 'string' || !result.generationId) throw new Error('The server returned a safety check without a generation identity.');
         setPreflightRecord({ evidenceKey, value: result });
         setProgress(result.plan.status === 'ready' ? 'The selected source slices can be combined safely.' : 'These selections cannot be combined safely.');
       })
@@ -159,12 +169,25 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   function applyReport(result: CandidateGenerationReport, expectedEvidenceKey = evidenceKey) {
     if (latestEvidenceKey.current !== expectedEvidenceKey) return;
     if (result.integrationPlan?.identity !== planIdentity) throw new Error('The generated candidate does not refer to the submitted integration plan.');
+    // The plan can be unchanged across requests. Bind the result to the exact
+    // server-issued preflight generation and its pinned foundation/branch.
+    if (!currentPreflight
+      || result.generationId !== currentPreflight.generationId
+      || result.repository?.provenance?.generationId !== currentPreflight.generationId
+      || result.repository?.provenance?.planIdentity !== planIdentity
+      || result.repository?.baseCommit !== currentPreflight.plan.repository.baseCommit
+      || result.repository?.candidateBranch !== currentPreflight.plan.repository.candidateBranch) {
+      throw new Error('The candidate report does not match the current server preflight and cannot be trusted.');
+    }
+    if (result.status === 'succeeded' && !isVerifiedCandidateReport(result)) {
+      throw new Error('The candidate report claimed success without a complete verified branch and cleanup record.');
+    }
     setReportRecord({ evidenceKey: expectedEvidenceKey, value: result });
     setStage(result.stage);
     setUnknownOutcome(false);
     setError(null);
     if (result.verification.length > 0) setVerificationStarted(true);
-    if (result.status === 'succeeded') {
+    if (isVerifiedCandidateReport(result)) {
       setProgress('Combined branch created and verified.');
       onLaunch(result);
     } else setProgress(failedCandidateMessage(result));
@@ -215,7 +238,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       if (latestEvidenceKey.current === submittedEvidenceKey) {
         setError(value instanceof Error ? value.message : String(value));
         setUnknownOutcome(true);
-        setProgress('UI Merge lost contact with the local Studio while generation was running.');
+        setProgress('UI Merge could not confirm this generation result. Check the current Studio state before retrying.');
       }
     } finally {
       progressController.abort();
@@ -257,7 +280,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   const refused = currentPreflight?.plan.status === 'refused';
   const failed = Boolean(currentReport && currentReport.status !== 'succeeded');
   const durableCandidate = Boolean(currentReport?.repository.candidateCommit);
-  const verified = Boolean(currentReport && currentReport.verification.length > 0 && currentReport.verification.every(item => item.status === 'passed'));
+  const verified = Boolean(currentReport && isVerifiedCandidateReport(currentReport));
   const sourceResolved = selectedInputs.length > 0 && artifacts.length === selectedInputs.length;
   const sliceRefused = refused || selectedInputs.some(item => ['partial', 'refused', 'stale'].includes(item.status)) || Boolean(error && !unknownOutcome && !currentPreflight && ready);
   const states: Parameters<typeof CausalityStrip>[0]['states'] = {
