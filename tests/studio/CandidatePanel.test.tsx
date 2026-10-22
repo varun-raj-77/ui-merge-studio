@@ -53,6 +53,69 @@ test('runs safety checking automatically, creates the candidate, and exposes ver
   expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-complete');
 });
 
+test('ignores stale terminal status and wrong-generation progress while waiting for the current attempt', async () => {
+  const launch = vi.fn();
+  let calls = 0;
+  let finishGeneration: ((value: Response) => void) | undefined;
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/status') {
+      calls++;
+      if (calls === 1) return response({
+        status: 'succeeded', stage: 'complete', message: 'STALE TERMINAL RESULT',
+        planIdentity: 'different-plan', generationId: '0'.repeat(16)
+      });
+      if (calls === 2) return response({
+        status: 'running', stage: 'verification', verification: 'STALE PRIVATE GATE',
+        message: 'STALE PRIVATE GATE', planIdentity: identity, generationId: '0'.repeat(16)
+      });
+      return response({
+        status: 'running', stage: 'verification', verification: 'typecheck',
+        message: 'Running current verification.', planIdentity: identity, generationId: 'f'.repeat(16)
+      });
+    }
+    if (url === '/api/candidate/generate') return new Promise<Response>(resolve => { finishGeneration = resolve; });
+    return response({ error: 'unexpected' }, 500);
+  });
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={launch} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  await waitFor(() => expect(calls).toBeGreaterThanOrEqual(3), { timeout: 5_000 });
+  expect(screen.queryByText(/STALE TERMINAL RESULT|STALE PRIVATE GATE/)).not.toBeInTheDocument();
+  expect(await screen.findByText('Running TypeScript verification.')).toBeVisible();
+  expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-working');
+  finishGeneration?.(new Response(JSON.stringify(report()), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+  await waitFor(() => expect(launch).toHaveBeenCalledOnce());
+  expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-complete');
+});
+
+test('uncertain-outcome recovery refuses same-plan status from another generation without fetching its report', async () => {
+  const launch = vi.fn();
+  const requestReport = vi.fn(() => response(report()));
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/generate') return Promise.reject(new TypeError('connection lost'));
+    if (url === '/api/candidate/status') return response({
+      status: 'succeeded', stage: 'complete', message: 'Another attempt finished.',
+      planIdentity: identity, generationId: '0'.repeat(16)
+    });
+    if (url.startsWith('/api/candidate/reports/')) return requestReport();
+    return response({ error: 'unexpected' }, 500);
+  });
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={launch} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  expect(await screen.findByText('Generation status unknown')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Check current state' }));
+  expect(await screen.findByText(/status for a different generation/)).toBeVisible();
+  expect(requestReport).not.toHaveBeenCalled();
+  expect(launch).not.toHaveBeenCalled();
+});
+
 test('keeps candidate progress evidence-backed and monotonic through verification and later writing stages', async () => {
   let statusCalls = 0;
   let finishGeneration: ((value: Response) => void) | undefined;
