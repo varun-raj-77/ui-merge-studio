@@ -348,6 +348,79 @@ test('a generation response from a previous session cannot launch after a same-p
   expect(launch).not.toHaveBeenCalled();
 });
 
+test.each([
+  {
+    issue: 'a different report generation ID',
+    corrupt: (value: CandidateGenerationReport) => { value.generationId = '0'.repeat(16); }
+  },
+  {
+    issue: 'different generation provenance',
+    corrupt: (value: CandidateGenerationReport) => { value.repository.provenance.generationId = '0'.repeat(16); }
+  },
+  {
+    issue: 'different plan provenance',
+    corrupt: (value: CandidateGenerationReport) => { value.repository.provenance.planIdentity = 'plan-v2-unrelated'; }
+  },
+  {
+    issue: 'a different foundation commit',
+    corrupt: (value: CandidateGenerationReport) => { value.repository.baseCommit = '9'.repeat(40); }
+  },
+  {
+    issue: 'a missing candidate commit',
+    corrupt: (value: CandidateGenerationReport) => { value.repository.candidateCommit = undefined; }
+  },
+  {
+    issue: 'a missing verification record',
+    corrupt: (value: CandidateGenerationReport) => { value.verification = []; }
+  },
+  {
+    issue: 'a failed verification inside a success report',
+    corrupt: (value: CandidateGenerationReport) => { value.verification[0].status = 'failed'; }
+  }
+])('never launches or claims verification for $issue', async ({ corrupt }) => {
+  const invalid = report();
+  corrupt(invalid);
+  const launch = vi.fn();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/status') return response({ status: 'succeeded', stage: 'complete', message: 'Done.' });
+    if (url === '/api/candidate/generate') return response(invalid);
+    return response({ error: 'unexpected' }, 500);
+  });
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={launch} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  expect(await screen.findByText('Generation status unknown')).toBeVisible();
+  expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
+  expect(screen.getByRole('button', { name: 'Check current state' })).toBeVisible();
+  expect(launch).not.toHaveBeenCalled();
+});
+
+test('does not launch mismatched generation evidence during uncertain-outcome recovery', async () => {
+  const launch = vi.fn();
+  const invalid = report();
+  invalid.generationId = '0'.repeat(16);
+  vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
+    const url = String(input);
+    if (url === '/api/candidate/preflight') return response(preflight());
+    if (url === '/api/candidate/generate') return Promise.reject(new TypeError('disconnected'));
+    if (url === '/api/candidate/status') return response({ status: 'succeeded', stage: 'complete', message: 'Complete.', planIdentity: identity });
+    if (url === '/api/candidate/reports/' + 'f'.repeat(16)) return response(invalid);
+    return response({ error: 'unexpected' }, 500);
+  });
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={launch} />);
+  const create = screen.getByRole('button', { name: 'Create combined branch' });
+  await waitFor(() => expect(create).toBeEnabled());
+  fireEvent.click(create);
+  expect(await screen.findByText('Generation status unknown')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Check current state' }));
+  expect(await screen.findByText(/report from a different generation/)).toBeVisible();
+  expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
+  expect(launch).not.toHaveBeenCalled();
+});
+
 test('uses plain failure language and replaces branch creation with a revision action', async () => {
   const revise = vi.fn();
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
@@ -383,6 +456,9 @@ test('marks Candidate complete only when a failed report still proves a durable 
       const cleanupFailure = report('failed');
       cleanupFailure.repository.candidateCommit = '4'.repeat(40);
       cleanupFailure.repository.candidateTree = '5'.repeat(40);
+      // Earlier verification passed, but the overall outcome remains failed.
+      cleanupFailure.verification[0].status = 'passed';
+      cleanupFailure.verification[0].exitCode = 0;
       cleanupFailure.cleanup = { worktreeRemoved: false, processesStopped: true, detail: 'Temporary worktree cleanup failed.' };
       return response(cleanupFailure);
     }
@@ -396,6 +472,7 @@ test('marks Candidate complete only when a failed report still proves a durable 
   expect(screen.getByText(/candidate branch exists/i)).toBeVisible();
   expect(screen.queryByText(/No candidate was created/)).not.toBeInTheDocument();
   expect(screen.getByText('Candidate').closest('li')).toHaveClass('causal-complete');
+  expect(screen.getByText('Verified').closest('li')).toHaveClass('causal-warning');
 });
 
 test('resets candidate and verification completion for a new selection attempt', async () => {
