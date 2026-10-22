@@ -30,12 +30,9 @@ const analyzer = new FeatureSliceAnalyzer(repositoryPath, workspaceRoot);
 const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(repositoryPath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions(), externalFeatureSlices ? 'external-react-vite' : 'phase0');
 const candidateProgress = new CandidateProgressTracker();
 const candidateGenerationGate = new CandidateGenerationGate();
-let activeGenerationAttempt: symbol | null = null;
-const candidateGenerator = new CandidateGenerator(repositoryPath,{
-  artifactRoot: workspaceRoot,
-  verificationCommands,
-  onProgress: event => candidateProgress.update(activeGenerationAttempt, event)
-});
+// Read-only preflight analysis can overlap a generation without sharing a
+// progress callback. Each generation gets a callback bound to its own token.
+const candidateGenerator = new CandidateGenerator(repositoryPath, { artifactRoot: workspaceRoot, verificationCommands });
 const vite = await createViteServer({ configFile: resolve(import.meta.dirname, 'vite.config.ts'), server: { middlewareMode: true }, appType: 'spa' });
 
 async function body(request: import('node:http').IncomingMessage) { const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown; }
@@ -86,15 +83,19 @@ const server = createServer(async (request, response) => {
         const projected = await planAuthority.project(await body(request));
         candidateGenerationGate.bind(projected.planIdentity);
         attempt = candidateProgress.begin(projected.planIdentity);
-        activeGenerationAttempt = attempt;
-        const report = await candidateGenerator.generate(projected.request);
+        const generationAttempt = attempt;
+        const ownedGenerator = new CandidateGenerator(repositoryPath, {
+          artifactRoot: workspaceRoot,
+          verificationCommands,
+          onProgress: event => candidateProgress.update(generationAttempt, event)
+        });
+        const report = await ownedGenerator.generate(projected.request);
         candidateProgress.finish(attempt, report);
         return json(response, 200, report);
       } catch (error) {
         candidateProgress.fail(attempt, error);
         throw error;
       } finally {
-        activeGenerationAttempt = null;
         candidateGenerationGate.release();
       }
     }
