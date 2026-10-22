@@ -196,6 +196,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
   async function generateCandidate() {
     if (!currentPreflight || currentPreflight.plan.status !== 'ready' || !planIdentity || busy) return;
     const submittedEvidenceKey = evidenceKey;
+    const expectedGenerationId = currentPreflight.generationId;
     setBusy(true);
     setError(null);
     setUnknownOutcome(false);
@@ -209,18 +210,22 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       while (active && !progressController.signal.aborted && latestEvidenceKey.current === submittedEvidenceKey) {
         try {
           const response = await fetch('/api/candidate/status', { signal: progressController.signal });
-          const value = await response.json() as { status: string; stage: string | null; message: string; sliceId?: string; verification?: string };
+          const value = await response.json() as { status: string; stage: string | null; message: string; planIdentity?: string; generationId?: string; sliceId?: string; verification?: string };
           if (latestEvidenceKey.current !== submittedEvidenceKey) break;
-          if (value.status === 'running') {
-            setStage(value.stage);
-            if (value.stage === 'verification' || value.stage === 'verify') setVerificationStarted(true);
-            if (value.stage === 'applying-feature' && value.sliceId) {
-              const selected = artifacts.find(item => item.analysisId === value.sliceId);
-              setProgress(`Applying ${featureLabel(selected)}.`);
-            } else if (value.stage === 'verification' && value.verification) setProgress(`Running ${verificationLabel(value.verification)} verification.`);
-            else setProgress(value.message);
+          // This endpoint carries the latest server attempt, which can belong
+          // to another plan or an older same-plan generation.
+          if (value.planIdentity === planIdentity && value.generationId === expectedGenerationId) {
+            if (value.status === 'running') {
+              setStage(value.stage);
+              if (value.stage === 'verification' || value.stage === 'verify') setVerificationStarted(true);
+              if (value.stage === 'applying-feature' && value.sliceId) {
+                const selected = artifacts.find(item => item.analysisId === value.sliceId);
+                setProgress(`Applying ${featureLabel(selected)}.`);
+              } else if (value.stage === 'verification' && value.verification) setProgress(`Running ${verificationLabel(value.verification)} verification.`);
+              else setProgress(value.message);
+            }
+            active = value.status === 'running' || value.status === 'idle';
           }
-          active = value.status === 'running' || value.status === 'idle';
         } catch (value) {
           if ((value as Error).name !== 'AbortError') active = false;
         }
@@ -253,10 +258,12 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
     setCheckingOutcome(true);
     try {
       const statusResponse = await fetch('/api/candidate/status');
-      const status = await statusResponse.json() as { status?: string; stage?: string | null; message?: string; planIdentity?: string };
+      const status = await statusResponse.json() as { status?: string; stage?: string | null; message?: string; planIdentity?: string; generationId?: string };
       if (latestEvidenceKey.current !== checkingEvidenceKey) return;
       if (!statusResponse.ok) throw new Error(status.message ?? statusResponse.statusText);
-      if (status.planIdentity !== planIdentity) throw new Error('The Studio is reporting status for a different integration plan.');
+      if (status.planIdentity !== planIdentity || status.generationId !== currentPreflight.generationId) {
+        throw new Error('The Studio is reporting status for a different generation; the current candidate outcome remains unconfirmed.');
+      }
       if (!status.status || ['running', 'idle'].includes(status.status)) {
         setStage(status.stage ?? null);
         setProgress(status.status === 'running' ? 'The local Studio still reports this generation as running.' : 'The local Studio does not yet have a completed generation report.');
@@ -273,7 +280,9 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
         setError(message);
         setProgress(message.includes('does not match the current server preflight')
           ? 'The Studio returned a report from a different generation. No verified result can be shown; inspect the current Studio state before retrying.'
-          : 'Generation status is still unknown. The candidate may or may not have been created.');
+          : message.includes('status for a different generation')
+            ? 'The Studio status belongs to a different generation. This candidate remains unconfirmed; inspect the current Studio state before using it.'
+            : 'Generation status is still unknown. The candidate may or may not have been created.');
       }
     } finally {
       setCheckingOutcome(false);
