@@ -4,7 +4,11 @@ The [UI Merge Studio verification workflow](../.github/workflows/verify.yml) run
 
 ## What it verifies
 
-The workflow uses Ubuntu 24.04 and Node.js 24 to match the currently configured Vercel Node major version. From the committed lockfile it runs:
+The workflow uses Ubuntu 24.04 and Node.js 24 to match the currently configured Vercel Node major version. GitHub-hosted checkout and Node setup actions use reviewed, immutable Node.js 24-compatible action commits, and checkout does not persist GitHub credentials into the working repository. The explicitly configured npm cache is preserved.
+
+Chromium installation uses the pinned Playwright version from the committed lockfile, including OS dependencies (`--with-deps`). UMS-17's completed CI required 10m55s for this stage; it may depend on Linux package mirrors and browser download availability. The step now prints the Playwright version, reports its elapsed installation time and has an independent 20-minute timeout. **This adds visibility and a failure bound, not a measured speed improvement or browser-cache guarantee.** Existing browser suites, browser assertion coverage, and the overall 40-minute job timeout are unchanged.
+
+The workflow uses same-ref concurrency cancellation (`cancel-in-progress: true`): if GitHub schedules a second run for the same branch/commit, the earlier run may show Cancelled. Evaluate the latest completed run for the exact SHA; do not treat an older cancelled run as a product failure or as proof that the latest run succeeded. From the committed lockfile the workflow runs:
 
 1. `npm ci --no-audit --no-fund`.
 2. `npm run fixture:create` to generate a **disposable** controlled Git repository in the CI checkout (not in the original repository).
