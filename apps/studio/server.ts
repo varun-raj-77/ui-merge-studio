@@ -82,7 +82,7 @@ const server = createServer(async (request, response) => {
       try {
         const projected = await planAuthority.project(await body(request));
         candidateGenerationGate.bind(projected.planIdentity);
-        attempt = candidateProgress.begin(projected.planIdentity);
+        attempt = candidateProgress.begin(projected.planIdentity, candidateGenerator.generationIdentity(projected.request));
         const generationAttempt = attempt;
         const ownedGenerator = new CandidateGenerator(repositoryPath, {
           artifactRoot: workspaceRoot,

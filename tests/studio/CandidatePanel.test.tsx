@@ -37,7 +37,7 @@ test('runs safety checking automatically, creates the candidate, and exposes ver
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
     const url = String(input);
     if (url === '/api/candidate/preflight') return response(preflight());
-    if (url === '/api/candidate/status') return response({ status: 'running', stage: 'verify', message: 'Candidate generation is running: verify.' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'running', stage: 'verify', message: 'Candidate generation is running: verify.' });
     if (url === '/api/candidate/generate') return response(report());
     return response({ error: 'unexpected' }, 500);
   });
@@ -62,8 +62,8 @@ test('keeps candidate progress evidence-backed and monotonic through verificatio
     if (url === '/api/candidate/status') {
       statusCalls += 1;
       return response(statusCalls === 1
-        ? { status: 'running', stage: 'verification', message: 'Running verification.', verification: 'typecheck' }
-        : { status: 'running', stage: 'writing-tree', message: 'Writing the verified candidate tree.' });
+        ? { planIdentity: identity, generationId: 'f'.repeat(16), status: 'running', stage: 'verification', message: 'Running verification.', verification: 'typecheck' }
+        : { planIdentity: identity, generationId: 'f'.repeat(16), status: 'running', stage: 'writing-tree', message: 'Writing the verified candidate tree.' });
     }
     if (url === '/api/candidate/generate') return new Promise<Response>(resolve => { finishGeneration = resolve; });
     return response({ error: 'unexpected' }, 500);
@@ -89,7 +89,7 @@ test('shows a distinct uncertainty state when the generation request loses trans
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
     const url = String(input);
     if (url === '/api/candidate/preflight') return response(preflight());
-    if (url === '/api/candidate/status') return response({ status: 'failed', stage: 'verify', message: 'Connection state unavailable.' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'failed', stage: 'verify', message: 'Connection state unavailable.' });
     if (url === '/api/candidate/generate') return Promise.reject(new TypeError('fetch failed: ECONNRESET'));
     return response({ error: 'unexpected' }, 500);
   });
@@ -251,7 +251,7 @@ test('does not publish an old candidate result if the canonical plan changes dur
       preflightCalls += 1;
       return preflightCalls === 1 ? response(preflight()) : new Promise<Response>(() => undefined);
     }
-    if (url === '/api/candidate/status') return response({ status: 'idle', stage: null, message: 'Waiting.' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'idle', stage: null, message: 'Waiting.' });
     if (url === '/api/candidate/generate') return new Promise<Response>(resolve => { finishOldGeneration = resolve; });
     return response({ error: 'unexpected request' }, 500);
   });
@@ -304,7 +304,7 @@ test('a completed candidate from a previous session never remains verified on a 
       calls += 1;
       return calls === 1 ? response(preflight()) : new Promise<Response>(() => undefined);
     }
-    if (url === '/api/candidate/status') return response({ status: 'failed', stage: 'verify', message: 'Done.' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'failed', stage: 'verify', message: 'Done.' });
     if (url === '/api/candidate/generate') return response(report());
     return response({ error: 'unexpected request' }, 500);
   });
@@ -330,7 +330,7 @@ test('a generation response from a previous session cannot launch after a same-p
       calls += 1;
       return calls === 1 ? response(preflight()) : new Promise<Response>(() => undefined);
     }
-    if (url === '/api/candidate/status') return response({ status: 'idle', stage: null, message: 'Awaiting verification.' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'idle', stage: null, message: 'Awaiting verification.' });
     if (url === '/api/candidate/generate') return new Promise<Response>(resolve => { finishPrevious = resolve; });
     return response({ error: 'unexpected request' }, 500);
   });
@@ -384,7 +384,7 @@ test.each([
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
     const url = String(input);
     if (url === '/api/candidate/preflight') return response(preflight());
-    if (url === '/api/candidate/status') return response({ status: 'succeeded', stage: 'complete', message: 'Done.' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'succeeded', stage: 'complete', message: 'Done.' });
     if (url === '/api/candidate/generate') return response(invalid);
     return response({ error: 'unexpected' }, 500);
   });
@@ -406,7 +406,7 @@ test('does not launch mismatched generation evidence during uncertain-outcome re
     const url = String(input);
     if (url === '/api/candidate/preflight') return response(preflight());
     if (url === '/api/candidate/generate') return Promise.reject(new TypeError('disconnected'));
-    if (url === '/api/candidate/status') return response({ status: 'succeeded', stage: 'complete', message: 'Complete.', planIdentity: identity });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'succeeded', stage: 'complete', message: 'Complete.' });
     if (url === '/api/candidate/reports/' + 'f'.repeat(16)) return response(invalid);
     return response({ error: 'unexpected' }, 500);
   });
@@ -426,7 +426,7 @@ test('uses plain failure language and replaces branch creation with a revision a
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
     const url = String(input);
     if (url === '/api/candidate/preflight') return response(preflight());
-    if (url === '/api/candidate/status') return response({ status: 'running', stage: 'verification', message: 'Verification command typecheck failed with exit code 2.', verification: 'typecheck' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'running', stage: 'verification', message: 'Verification command typecheck failed with exit code 2.', verification: 'typecheck' });
     if (url === '/api/candidate/generate') {
       const failed = report('failed');
       failed.message = 'Verification command typecheck failed with exit code 2.';
@@ -451,7 +451,7 @@ test('marks Candidate complete only when a failed report still proves a durable 
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
     const url = String(input);
     if (url === '/api/candidate/preflight') return response(preflight());
-    if (url === '/api/candidate/status') return response({ status: 'running', stage: 'commit', message: 'Registering candidate.' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'running', stage: 'commit', message: 'Registering candidate.' });
     if (url === '/api/candidate/generate') {
       const cleanupFailure = report('failed');
       cleanupFailure.repository.candidateCommit = '4'.repeat(40);
@@ -479,7 +479,7 @@ test('resets candidate and verification completion for a new selection attempt',
   vi.spyOn(globalThis, 'fetch').mockImplementation(input => {
     const url = String(input);
     if (url === '/api/candidate/preflight') return response(preflight());
-    if (url === '/api/candidate/status') return response({ status: 'running', stage: 'verify', message: 'Verifying.' });
+    if (url === '/api/candidate/status') return response({ planIdentity: identity, generationId: 'f'.repeat(16), status: 'running', stage: 'verify', message: 'Verifying.' });
     if (url === '/api/candidate/generate') return response(report());
     return response({ error: 'unexpected' }, 500);
   });
