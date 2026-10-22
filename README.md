@@ -296,7 +296,7 @@ Historical evaluation material remains available in [development prompts](docs/c
 - The hosted configured result renders canonical-plan projections; it does not check out Git, create a branch, or prove an unrecorded local integration.
 - There is no GitHub authentication, push, pull-request, collaboration, or production-readiness claim.
 
-Correct refusal is a product capability, not a hidden failure. The full constraint set is maintained in [Current limitations](docs/limitations.md).
+Correct refusal is a product capability, not a hidden failure. The full constraint set is maintained in [Current limitations](docs/limitations.md). For an evidence-backed comparison of hosted, controlled-local and general-repository readiness—including open blockers before broader claims—see the [UMS-21 readiness audit](docs/product-readiness-audit.md).
 
 ## Current Evaluation Focus
 
