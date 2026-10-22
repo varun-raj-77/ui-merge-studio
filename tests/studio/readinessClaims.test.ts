@@ -44,7 +44,7 @@ describe('UMS-21 honest product readiness claims', () => {
   test('preserves the bounded local compatibility/trust assertions in readiness documentation', () => {
     expect(audit).toContain('pnpm/yarn');
     expect(audit).toContain('not sandboxes');
-    expect(audit).toContain('one unrelated');
+    expect(audit).toContain('One unrelated Vite repository');
     expect(audit).toContain('last-attempt snapshot');
     expect(audit).toContain('NOT READY');
   });
