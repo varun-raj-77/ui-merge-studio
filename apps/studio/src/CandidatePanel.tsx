@@ -280,7 +280,9 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
         setError(message);
         setProgress(message.includes('does not match the current server preflight')
           ? 'The Studio returned a report from a different generation. No verified result can be shown; inspect the current Studio state before retrying.'
-          : 'Generation status is still unknown. The candidate may or may not have been created.');
+          : message.includes('status for a different generation')
+            ? 'The Studio status belongs to a different generation. This candidate remains unconfirmed; inspect the current Studio state before using it.'
+            : 'Generation status is still unknown. The candidate may or may not have been created.');
       }
     } finally {
       setCheckingOutcome(false);

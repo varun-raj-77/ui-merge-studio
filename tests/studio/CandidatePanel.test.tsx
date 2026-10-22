@@ -111,7 +111,7 @@ test('uncertain-outcome recovery refuses same-plan status from another generatio
   fireEvent.click(create);
   expect(await screen.findByText('Generation status unknown')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Check current state' }));
-  expect(await screen.findByText(/status for a different generation/)).toBeVisible();
+  expect(await screen.findByText(/status belongs to a different generation/)).toBeVisible();
   expect(requestReport).not.toHaveBeenCalled();
   expect(launch).not.toHaveBeenCalled();
 });
