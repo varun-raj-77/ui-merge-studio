@@ -4,6 +4,7 @@ import type { IntegrationFoundation } from '../../../packages/integration-plan/s
 import type { PreviewOperation } from '../../../packages/preview-runtime/src/previewOperations';
 import type { PreviewSlot } from './comparisonState';
 import { featureLabel } from './demoScenario';
+import { formatVerifiedCandidateHandoff } from './candidateHandoff';
 import type { RepositoryResponse } from './studioTypes';
 
 function shortCommit(value: string | null | undefined) { return value ? value.slice(0, 7) : 'pending'; }
@@ -168,10 +169,33 @@ export function ResultWorkspace({ report, foundation, selections, onOpen, onEvid
   onCopy: () => void;
   onReturn: () => void;
 }) {
+  const [handoffStatus, setHandoffStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const handoff = formatVerifiedCandidateHandoff(report);
+  const handoffRevision = `${report.generationId}:${report.repository.candidateCommit}:${report.integrationPlan?.identity}`;
+  const latestRevision = useRef(handoffRevision);
+  latestRevision.current = handoffRevision;
+  useEffect(() => { setHandoffStatus('idle'); }, [handoffRevision]);
+
+  async function copyHandoff() {
+    if (!handoff) return;
+    const revision = handoffRevision;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(handoff);
+      if (latestRevision.current === revision) setHandoffStatus('copied');
+    } catch {
+      if (latestRevision.current === revision) setHandoffStatus('failed');
+    }
+  }
+
   return <section className="result-workspace" aria-labelledby="result-title">
     <div className="result-convergence" aria-label="Selected sources converge into the combined result"><div className="result-sources">{selections.map(selection => <span key={`${selection.branch}:${selection.label}`}><i>✓</i><small>{selection.branch}</small><strong>{selection.label}</strong></span>)}</div><div className="convergence-line" aria-hidden="true"><i /><b>→</b></div><div className="result-identity"><p className="eyebrow">Verified combined result</p><h1 id="result-title">{report.repository.candidateBranch}</h1><code>{shortCommit(report.repository.candidateCommit)}</code><span>Built from <code>{foundation?.branchRef}</code> · <code>{shortCommit(foundation?.commitSha)}</code></span></div></div>
     <div className="result-verification" aria-label="Verification results">{report.verification.map(item => <span className={`verification-${item.status}`} key={item.name}><i aria-hidden="true">{item.status === 'passed' ? '✓' : '!'}</i><small>{item.name}</small><strong>{item.status}</strong></span>)}<span><small>Operations</small><strong>{report.plan.operations.length}</strong></span></div>
-    <div className="result-controls"><button className="primary-action" onClick={onOpen}>Open combined preview</button><button className="quiet-action" onClick={onEvidence}>Inspect evidence</button><button className="quiet-action" onClick={onCopy}>Copy branch name</button><button className="quiet-action" onClick={onReturn}>Return to comparison</button></div>
+    <div className="result-controls"><button className="primary-action" onClick={onOpen}>Open combined preview</button><button className="quiet-action" onClick={onEvidence}>Inspect evidence</button><button className="quiet-action" onClick={onCopy}>Copy branch name</button><button className="quiet-action" onClick={() => void copyHandoff()} disabled={!handoff}>Copy verified handoff</button><button className="quiet-action" onClick={onReturn}>Return to comparison</button></div>
+    {handoffStatus !== 'idle' && <p role="status" aria-live="polite">{handoffStatus === 'copied'
+      ? 'Verified local candidate handoff copied. No logs or local paths included.'
+      : 'Could not copy the handoff. Allow clipboard access, or inspect the evidence here.'}</p>}
+    {!handoff && <p role="status">Handoff unavailable: the candidate report is not fully verified.</p>}
   </section>;
 }
 
