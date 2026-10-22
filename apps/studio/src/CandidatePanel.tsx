@@ -269,8 +269,11 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
       applyReport(result, checkingEvidenceKey);
     } catch (value) {
       if (latestEvidenceKey.current === checkingEvidenceKey) {
-        setError(value instanceof Error ? value.message : String(value));
-        setProgress('Generation status is still unknown. The candidate may or may not have been created.');
+        const message = value instanceof Error ? value.message : String(value);
+        setError(message);
+        setProgress(message.includes('does not match the current server preflight')
+          ? 'The Studio returned a report from a different generation. No verified result can be shown; inspect the current Studio state before retrying.'
+          : 'Generation status is still unknown. The candidate may or may not have been created.');
       }
     } finally {
       setCheckingOutcome(false);

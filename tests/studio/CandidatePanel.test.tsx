@@ -416,7 +416,7 @@ test('does not launch mismatched generation evidence during uncertain-outcome re
   fireEvent.click(create);
   expect(await screen.findByText('Generation status unknown')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Check current state' }));
-  expect(await screen.findByText(/does not match the current server preflight/)).toBeVisible();
+  expect(await screen.findByText(/report from a different generation/)).toBeVisible();
   expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
   expect(launch).not.toHaveBeenCalled();
 });
