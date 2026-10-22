@@ -13,6 +13,7 @@ import { CandidateGenerator } from '../../packages/candidate-generation/src/cand
 import { loadRepositoryConfiguration, resolveStudioOrigin } from './repositoryConfig';
 import { LocalPlanAuthority, localPlanErrorStatus, localRepositoryId } from './localPlanAuthority';
 import { CandidateGenerationGate } from './candidateGenerationGate';
+import { CandidateProgressTracker } from './candidateProgress';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
 const configuration = loadRepositoryConfiguration(workspaceRoot);
@@ -27,9 +28,14 @@ const previews = new PreviewController(repository, resolve(import.meta.dirname, 
 const previewOperations = new PreviewOperationManager(previews);
 const analyzer = new FeatureSliceAnalyzer(repositoryPath, workspaceRoot);
 const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(repositoryPath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions(), externalFeatureSlices ? 'external-react-vite' : 'phase0');
-let candidateProgress: { status: 'idle' | 'running' | 'succeeded' | 'refused' | 'failed'; stage: string | null; message: string; planIdentity?: string; sliceId?: string; path?: string; verification?: string } = { status:'idle',stage:null,message:'No candidate generation is running.' };
+const candidateProgress = new CandidateProgressTracker();
 const candidateGenerationGate = new CandidateGenerationGate();
-const candidateGenerator = new CandidateGenerator(repositoryPath,{artifactRoot:workspaceRoot,verificationCommands,onProgress:event=>{candidateProgress={status:'running',planIdentity:candidateGenerationGate.planIdentity ?? candidateProgress.planIdentity,...event};}});
+let activeGenerationAttempt: symbol | null = null;
+const candidateGenerator = new CandidateGenerator(repositoryPath,{
+  artifactRoot: workspaceRoot,
+  verificationCommands,
+  onProgress: event => candidateProgress.update(activeGenerationAttempt, event)
+});
 const vite = await createViteServer({ configFile: resolve(import.meta.dirname, 'vite.config.ts'), server: { middlewareMode: true }, appType: 'spa' });
 
 async function body(request: import('node:http').IncomingMessage) { const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk)); return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') as unknown; }
@@ -67,9 +73,32 @@ const server = createServer(async (request, response) => {
     }
     const analysisId = artifactRoute(request.url);
     if (analysisId && request.method === 'GET') { const artifact = await readFile(resolve(workspaceRoot, '.ums', 'analysis', analysisId, 'feature-slice.json')); response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="feature-slice-${analysisId}.json"` }); return response.end(artifact); }
-    if(request.url==='/api/candidate/preflight'&&request.method==='POST'){const projected=await planAuthority.project(await body(request));const result=await candidateGenerator.preflight(projected.request);candidateProgress={status:result.plan.status==='ready'?'idle':'refused',stage:'plan',message:result.plan.status==='ready'?'Candidate plan is ready.':'Candidate plan was refused.',planIdentity:projected.planIdentity};return json(response,200,result);}
-    if(request.url==='/api/candidate/generate'&&request.method==='POST'){if(!candidateGenerationGate.acquire())return json(response,409,{error:'Candidate generation is already running. Wait for the active generation to finish before starting another.'});try{const projected=await planAuthority.project(await body(request));candidateGenerationGate.bind(projected.planIdentity);candidateProgress={status:'running',stage:'validate',message:'Candidate generation is running: validate.',planIdentity:projected.planIdentity};const report=await candidateGenerator.generate(projected.request);candidateProgress={status:report.status,stage:report.stage,message:report.message,planIdentity:projected.planIdentity};return json(response,200,report);}finally{candidateGenerationGate.release();}}
-    if(request.url==='/api/candidate/status'&&request.method==='GET')return json(response,200,candidateProgress);
+    if (request.url === '/api/candidate/preflight' && request.method === 'POST') {
+      const projected = await planAuthority.project(await body(request));
+      // A separate selection's preflight must not overwrite a running or
+      // recoverable generation. The verdict is returned directly to its caller.
+      return json(response, 200, await candidateGenerator.preflight(projected.request));
+    }
+    if (request.url === '/api/candidate/generate' && request.method === 'POST') {
+      if (!candidateGenerationGate.acquire()) return json(response, 409, { error: 'Candidate generation is already running. Wait for the active generation to finish before starting another.' });
+      let attempt: symbol | null = null;
+      try {
+        const projected = await planAuthority.project(await body(request));
+        candidateGenerationGate.bind(projected.planIdentity);
+        attempt = candidateProgress.begin(projected.planIdentity);
+        activeGenerationAttempt = attempt;
+        const report = await candidateGenerator.generate(projected.request);
+        candidateProgress.finish(attempt, report);
+        return json(response, 200, report);
+      } catch (error) {
+        candidateProgress.fail(attempt, error);
+        throw error;
+      } finally {
+        activeGenerationAttempt = null;
+        candidateGenerationGate.release();
+      }
+    }
+    if (request.url === '/api/candidate/status' && request.method === 'GET') return json(response, 200, candidateProgress.get());
     const generationId=generationArtifactRoute(request.url);if(generationId&&request.method==='GET'){const artifact=await readFile(resolve(workspaceRoot,'.ums','generation',generationId,'candidate-report.json'));response.writeHead(200,{'Content-Type':'application/json','Content-Disposition':`attachment; filename="candidate-report-${generationId}.json"`});return response.end(artifact);}
     const previewOperationId = previewOperationRoute(request.url);
     if (previewOperationId && request.method === 'GET') {
