@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 const leftBranch = 'ui-merge-validation-left';
 const rightBranch = 'ui-merge-validation-right';
 const card = (page: Page, side: 'left' | 'right') => page.locator(`[data-preview-id="${side}"]`);
-const field = (panel: ReturnType<Page['locator']>, name: string) => panel.locator('dt', { hasText: name }).locator('xpath=following-sibling::dd[1]');
+const field = (panel: ReturnType<Page['locator']>, name: string) => panel.locator('dt', { hasText: new RegExp(`^${name}const field = (panel: ReturnType<Page['locator']>, name: string) => ) }).locator('xpath=following-sibling::dd[1]');
 
 test.afterEach(async ({ request }) => { await request.delete('/api/preview').catch(() => undefined); });
 
