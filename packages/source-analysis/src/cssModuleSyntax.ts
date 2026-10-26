@@ -1,4 +1,4 @@
-import postcss from 'postcss';
+import postcss, { type Root } from 'postcss';
 
 export interface CssModuleSyntaxEvidence {
   status: 'supported' | 'refused';
@@ -32,7 +32,7 @@ function refused(reason: string): CssModuleSyntaxEvidence {
 export function inspectCssModuleSyntax(css: string, path: string): CssModuleSyntaxEvidence {
   if (!path.endsWith('.module.css')) return refused('Only an explicit .module.css source is eligible for syntax inspection.');
   if (Buffer.byteLength(css, 'utf8') > maxBytes) return refused('CSS Module exceeds the 16 KiB bounded inspection limit.');
-  let root: postcss.Root;
+  let root: Root;
   try {
     root = postcss.parse(css, { from: path });
   } catch {
