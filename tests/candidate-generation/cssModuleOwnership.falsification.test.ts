@@ -165,4 +165,23 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
     expect(git(root, ['status', '--porcelain'])).toBe('');
   });
 
+  test('refuses a module owned only by an integration ancestor rather than the selected feature', async () => {
+    const root = repository();
+    git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+    addFeature(root, '.pulse{color:green}\n', {
+      'src/App.tsx': "import styles from './app.module.css';\nimport { RevenuePulseBadge } from './features/revenue/RevenuePulseBadge';\nexport function App(){return <main className={styles.shell}><RevenuePulseBadge/><h1>Dashboard</h1></main>}\n",
+      'src/app.module.css': '.shell{display:flex}\n'
+    });
+    const { artifact, request } = await renderedSlice(root);
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: 'src/app.module.css', edge: 'non-exclusive-style-dependency',
+      reason: expect.stringContaining('src/App.tsx#App')
+    }));
+    const preflight = await new CandidateGenerator(root).preflight(request);
+    expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
+    expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+  });
+
 });
