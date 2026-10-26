@@ -138,9 +138,28 @@ export class FeatureSliceAnalyzer {
       const module = declaration ? branchIndex.moduleByPath.get(declaration.path) : null;
       if (module) styleModules.set(module.path, module);
     }
+    const checkedCssModuleImporters = new Map<string, string | null>();
+    const cssModuleImporterIssue = (stylePath: string, file: ChangedFile) => {
+      if (checkedCssModuleImporters.has(stylePath)) return checkedCssModuleImporters.get(stylePath)!;
+      let issue: string | null = file.status === 'added' ? null : 'CSS Module ' + stylePath + ' is ' + file.status + '; exclusive new-file ownership requires a stylesheet absent from the foundation.';
+      let importers = 0; let owners = 0;
+      for (const importer of branchIndex.modules) for (const binding of importer.imports.filter(item => item.kind === 'style' && item.resolvedPath === stylePath)) {
+        importers += 1;
+        const consumers = binding.local ? importer.declarations.filter(item => item.dependencies.includes(binding.local)) : [];
+        if (!binding.local || consumers.length !== 1) issue ??= 'CSS Module ' + stylePath + ' has no unique statically bound declaration owner in ' + importer.path + '.';
+        for (const consumer of consumers) {
+          owners += 1;
+          if (!reachableFromSelection.has(consumer.key)) issue ??= 'CSS Module ' + stylePath + ' is also referenced by unrelated project declaration ' + consumer.key + '.';
+        }
+      }
+      if (importers !== 1 || owners !== 1) issue ??= 'CSS Module ' + stylePath + ' is imported or consumed more than once, or has no uniquely owned importer.';
+      checkedCssModuleImporters.set(stylePath, issue); return issue;
+    };
     for (const module of [...styleModules.values()].sort((a, b) => a.path.localeCompare(b.path))) for (const styleImport of module.imports.filter(item => item.kind === 'style' && item.resolvedPath)) {
       const stylePath = styleImport.resolvedPath!; const file = changedByPath.get(stylePath); if (!file) continue; const id = addEvidence('imports-style', module.path, stylePath, `${module.path} statically imports the changed stylesheet.`, baseIndex.moduleByPath.get(module.path)?.imports.some(item => item.kind === 'style' && item.resolvedPath === stylePath) ? 'existing' : 'added');
-      included.set(`${stylePath}#<file>`, { path: stylePath, category: 'style', symbol: null, branchChangeId: `${branchCommit}:${stylePath}:file`, wholeFile: true, reason: 'The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported.', evidenceEdgeIds: [id], confidence: 'conservative' });
+      const issue = policy.strictExternal && stylePath.endsWith('.module.css') ? cssModuleImporterIssue(stylePath, file) : null;
+      included.set(`${stylePath}#<file>`, { path: stylePath, category: 'style', symbol: null, branchChangeId: `${branchCommit}:${stylePath}:file`, wholeFile: true, reason: issue ? 'CSS Module import ownership is not uniquely supported by the selected dependency graph.' : 'The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported.', evidenceEdgeIds: [id], confidence: issue ? 'unresolved' : 'conservative' });
+      if (issue && !unresolved.some(item => item.path === stylePath && item.edge === 'non-exclusive-style-dependency')) unresolved.push({ path: stylePath, symbol: null, reason: issue, edge: 'non-exclusive-style-dependency', manualNextStep: 'Use a newly added, uniquely imported CSS Module owned by the selected declaration graph; CSS syntax and rule ownership still require separate proof.', ancestorBoundaryMayHelp: false });
       if (!baseIndex.moduleByPath.get(module.path)?.imports.some(item => item.kind === 'style' && item.resolvedPath === stylePath) && changedByPath.has(module.path)) included.set(`${module.path}#<module>`, { path: module.path, category: 'integration', symbol: null, branchChangeId: `${branchCommit}:${module.path}:module`, wholeFile: true, reason: 'This changed module-level import registers the feature stylesheet on the application integration chain.', evidenceEdgeIds: [id], confidence: 'conservative' });
     }
     const checkedAssets = new Map<string, string | null>();

@@ -103,16 +103,21 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
         "import styles from './RevenuePulseBadge.module.css';\nexport function UnrelatedBadge(){return <aside className={styles.unrelated}>Not selected</aside>}\n"
     });
     const { artifact, request, branchCommit, gitRepository } = await renderedSlice(root);
-    expect(artifact.slice.status).toBe('resolved');
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: stylePath, edge: 'non-exclusive-style-dependency',
+      reason: expect.stringContaining('UnrelatedBadge')
+    }));
     const index = await buildSourceIndex(gitRepository, branchCommit);
     const importers = index.modules.filter(module => module.imports.some(binding => binding.resolvedPath === stylePath)).map(module => module.path).sort();
     expect(importers).toEqual([featurePath, 'src/features/revenue/UnrelatedBadge.tsx']);
-    expect(artifact.slice.includedChanges.some(change => change.path === stylePath && change.wholeFile)).toBe(true);
+    expect(artifact.slice.includedChanges.some(change => change.path === stylePath && change.wholeFile && change.confidence === 'unresolved')).toBe(true);
     expect(artifact.slice.includedChanges.some(change => change.path === 'src/features/revenue/UnrelatedBadge.tsx')).toBe(false);
     const preflight = await new CandidateGenerator(root).preflight(request);
     expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
     expect(preflight.plan.unresolved).toContainEqual(expect.objectContaining({
-      path: stylePath, reason: expect.stringContaining('CSS rule ownership is not implemented')
+      path: '<slice>', reason: expect.stringContaining('only resolved slices can generate a candidate')
     }));
     expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
     expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
@@ -125,19 +130,58 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
     git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
     addFeature(root, '.pulse{color:green}\n.unrelated{display:none}\n');
     const { artifact, request } = await renderedSlice(root);
-    expect(artifact.slice.status).toBe('resolved');
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: stylePath, edge: 'non-exclusive-style-dependency',
+      reason: expect.stringContaining('absent from the foundation')
+    }));
     expect(artifact.slice.includedChanges).toContainEqual(expect.objectContaining({
       path: stylePath, category: 'style', wholeFile: true
     }));
     const preflight = await new CandidateGenerator(root).preflight(request);
-    expect(preflight.plan.operations).toContainEqual(expect.objectContaining({
-      kind: 'replace-style-file', target: expect.objectContaining({ path: stylePath })
-    }));
     expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
     expect(preflight.plan.unresolved).toContainEqual(expect.objectContaining({
-      path: stylePath, reason: expect.stringContaining('CSS rule ownership is not implemented')
+      path: '<slice>', reason: expect.stringContaining('only resolved slices can generate a candidate')
     }));
     expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
     expect(git(root, ['status', '--porcelain'])).toBe('');
   });
+  test('refuses a bare CSS Module import with no unique declaration owner', async () => {
+    const root = repository();
+    git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+    addFeature(root, '.pulse{color:green}\n', {
+      [featurePath]: "import styles from './RevenuePulseBadge.module.css';\nimport './RevenuePulseBadge.module.css';\nexport function RevenuePulseBadge(){return <section className={styles.pulse}>Revenue pulse</section>}\n"
+    });
+    const { artifact, request } = await renderedSlice(root);
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: stylePath, edge: 'non-exclusive-style-dependency',
+      reason: expect.stringContaining('no unique statically bound declaration owner')
+    }));
+    const preflight = await new CandidateGenerator(root).preflight(request);
+    expect(preflight.plan.status).toBe('refused');
+    expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+    expect(git(root, ['status', '--porcelain'])).toBe('');
+  });
+
+  test('refuses a module owned only by an integration ancestor rather than the selected feature', async () => {
+    const root = repository();
+    git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+    addFeature(root, '.pulse{color:green}\n', {
+      'src/App.tsx': "import styles from './app.module.css';\nimport { RevenuePulseBadge } from './features/revenue/RevenuePulseBadge';\nexport function App(){return <main className={styles.shell}><RevenuePulseBadge/><h1>Dashboard</h1></main>}\n",
+      'src/app.module.css': '.shell{display:flex}\n'
+    });
+    const { artifact, request } = await renderedSlice(root);
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: 'src/app.module.css', edge: 'non-exclusive-style-dependency',
+      reason: expect.stringContaining('src/App.tsx#App')
+    }));
+    const preflight = await new CandidateGenerator(root).preflight(request);
+    expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
+    expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+  });
+
 });
