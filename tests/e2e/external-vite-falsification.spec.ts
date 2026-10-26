@@ -9,7 +9,7 @@ const candidateBranch = 'prompt015-external-candidate';
 const foundationCommit = '8223897259151c450f954e462c57df3703d5508d';
 const externalRepository = resolve(process.env.UI_MERGE_EXTERNAL_REPOSITORY ?? resolve(import.meta.dirname, '../../.validation-worktrees/prompt015-external-vite'));
 const card = (page: Page, side: 'left' | 'right') => page.locator(`[data-preview-id="${side}"]`);
-const field = (panel: Locator, name: string) => panel.locator('dt', { hasText: new RegExp(`^${name}const field = (panel: Locator, name: string) => ) }).locator('xpath=following-sibling::dd[1]');
+const field = (panel: Locator, name: string) => panel.locator('dt', { hasText: new RegExp('^' + name + '$') }).locator('xpath=following-sibling::dd[1]');
 
 test.afterEach(async ({ request }) => {
   await request.delete('/api/preview').catch(() => undefined);
