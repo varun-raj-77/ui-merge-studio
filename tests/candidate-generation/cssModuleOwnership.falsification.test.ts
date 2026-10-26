@@ -115,8 +115,9 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
     expect(artifact.slice.includedChanges.some(change => change.path === 'src/features/revenue/UnrelatedBadge.tsx')).toBe(false);
     const preflight = await new CandidateGenerator(root).preflight(request);
     expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
     expect(preflight.plan.unresolved).toContainEqual(expect.objectContaining({
-      path: stylePath, reason: expect.stringContaining('CSS rule ownership is not implemented')
+      path: '<slice>', reason: expect.stringContaining('only resolved slices can generate a candidate')
     }));
     expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
     expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
@@ -138,12 +139,10 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
       path: stylePath, category: 'style', wholeFile: true
     }));
     const preflight = await new CandidateGenerator(root).preflight(request);
-    expect(preflight.plan.operations).toContainEqual(expect.objectContaining({
-      kind: 'replace-style-file', target: expect.objectContaining({ path: stylePath })
-    }));
     expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
     expect(preflight.plan.unresolved).toContainEqual(expect.objectContaining({
-      path: stylePath, reason: expect.stringContaining('CSS rule ownership is not implemented')
+      path: '<slice>', reason: expect.stringContaining('only resolved slices can generate a candidate')
     }));
     expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
     expect(git(root, ['status', '--porcelain'])).toBe('');
