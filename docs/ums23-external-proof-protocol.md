@@ -24,6 +24,8 @@ This test **executes third-party package-manager lifecycle and Vite/build code**
 
 **Do not invoke the workflow without a separate, explicit owner decision accepting the external code/network execution.** If the workflow file is still only on a PR branch, GitHub may require it to land on the default branch before manual dispatch is available. Enabling the workflow is not consent to execute it.
 
+At dispatch time, select the protected `main` ref and provide the independently reverified **40-character exact `main` commit SHA** in the required `expected_sha` input. The workflow refuses mismatched SHAs before first-party dependency installation or external cloning, and the job is skipped for non-`main` refs. A workflow checkout is not a Git security sandbox, and validating the exact SHA does not substitute for reviewing workflow changes and upstream execution risk.
+
 ## Required PASS evidence
 
 1. Workflow runs from the exact reviewed UI Merge `main` SHA with the pinned external foundation and both tracked patch branches. Record every SHA.
