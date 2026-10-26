@@ -4,6 +4,11 @@ name: UMS-23 pinned external Vite proof (manual opt-in)
 # code from an unrelated pinned public Git repository.
 on:
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: 'Exact reviewed main commit SHA (40 lowercase hex characters)'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -15,6 +20,8 @@ concurrency:
 jobs:
   external-proof:
     name: Pinned unrelated Vite integration proof
+    # Do not run third-party source from a dispatch on an unreviewed branch/tag.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 55
     defaults:
@@ -33,6 +40,17 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: UI merge studio/package-lock.json
+
+      - name: Reject unexpected source ref or commit before execution
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          ACTUAL_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_SHA" = "$ACTUAL_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git branch --show-current)" = "main" || test -z "$(git branch --show-current)"
 
       - name: Install UI Merge locked dependencies
         run: npm ci --no-audit --no-fund
