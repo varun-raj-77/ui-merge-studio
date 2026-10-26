@@ -184,4 +184,25 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
     expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
   });
 
+  test('refuses a selected CSS Module with global rules or at-rules before candidate planning', async () => {
+    for (const css of [
+      '.pulse{color:green}\n:global(body){color:red}\n',
+      '.pulse{color:green}\n@keyframes spin{from{opacity:0}to{opacity:1}}\n'
+    ]) {
+      const root = repository();
+      git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+      addFeature(root, css);
+      const { artifact, request } = await renderedSlice(root);
+      expect(artifact.slice.status).toBe('refused');
+      expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+        path: stylePath, edge: 'unsupported-css-module-syntax'
+      }));
+      const preflight = await new CandidateGenerator(root).preflight(request);
+      expect(preflight.plan.status).toBe('refused');
+      expect(preflight.plan.operations).toEqual([]);
+      expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+      expect(git(root, ['status', '--porcelain'])).toBe('');
+    }
+  });
+
 });
