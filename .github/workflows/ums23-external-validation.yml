@@ -1,0 +1,74 @@
+name: UMS-23 pinned external Vite proof (manual opt-in)
+
+# Deliberately excluded from push/PR CI: this job installs and runs
+# code from an unrelated pinned public Git repository.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ums-23-external-proof
+  cancel-in-progress: false
+
+jobs:
+  external-proof:
+    name: Pinned unrelated Vite integration proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    defaults:
+      run:
+        working-directory: UI merge studio
+    steps:
+      - name: Checkout reviewed UI Merge source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          path: UI merge studio
+          persist-credentials: false
+
+      - name: Configure Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: UI merge studio/package-lock.json
+
+      - name: Install UI Merge locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate disposable first-party fixture
+        run: npm run fixture:create
+
+      - name: Install Chromium and OS dependencies
+        timeout-minutes: 20
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare unrelated pinned repository and controlled branches
+        env:
+          UI_MERGE_EXTERNAL_SOURCE: https://github.com/larry-xue/react-admin-dashboard.git
+        run: npm run external:prepare
+
+      - name: Verify exact upstream foundation before execution
+        run: |
+          set -euo pipefail
+          external=".validation-worktrees/prompt015-external-vite"
+          test "$(git -C "$external" rev-parse prompt014-foundation)" = "8223897259151c450f954e462c57df3703d5508d"
+          test -z "$(git -C "$external" status --porcelain)"
+          git -C "$external" log -3 --oneline --all
+
+      - name: Run real external React/Vite selection and candidate falsification
+        timeout-minutes: 25
+        run: npm run test:e2e:external
+
+      - name: Inspect deterministic candidate and worktree cleanup
+        if: success()
+        run: |
+          set -euo pipefail
+          external=".validation-worktrees/prompt015-external-vite"
+          test "$(git -C "$external" rev-parse prompt014-foundation)" = "8223897259151c450f954e462c57df3703d5508d"
+          git -C "$external" rev-parse prompt015-external-candidate
+          git -C "$external" rev-parse prompt015-external-candidate^{tree}
+          test "$(git -C "$external" worktree list --porcelain | grep -c '^worktree ')" -eq 1
+          test -z "$(git -C "$external" status --porcelain)"
+          git diff --exit-code
