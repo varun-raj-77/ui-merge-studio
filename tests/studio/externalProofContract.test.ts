@@ -14,6 +14,10 @@ describe('UMS-23 external proof execution boundary', () => {
     expect(workflow).not.toMatch(/^  (?:push|pull_request|schedule|repository_dispatch):/m);
     expect(workflow).toContain('permissions:\n  contents: read');
     expect(workflow).toContain('persist-credentials: false');
+    expect(workflow).toContain("if: github.ref == 'refs/heads/main'");
+    expect(workflow).toMatch(/expected_sha:\n\s+description:/);
+    expect(workflow).toContain('test "$EXPECTED_SHA" = "$ACTUAL_SHA"');
+    expect(workflow).toContain('test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"');
     expect(workflow).not.toMatch(/\$\{\{\s*secrets\.|vercel\s+(?:deploy|promote|rollback)|--prod|force[- ]promote/i);
     expect(protocol).toContain('separate, explicit owner decision');
   });
