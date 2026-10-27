@@ -131,7 +131,9 @@ export class FeatureSliceAnalyzer {
     const walk = (declaration: DeclarationRecord) => { if (visited.has(declaration.key)) return; visited.add(declaration.key); for (const edge of branchEdges.filter(item => item.from.key === declaration.key)) { const id = addEvidence(edge.type, edge.from.key, edge.to.key, `${edge.from.name} statically ${edge.type === 'renders-component' ? 'renders' : 'references'} ${edge.to.name}.`, baseEdgeKeys.has(edgeKey(edge)) ? 'existing' : 'added'); includeDeclaration(edge.to, `${edge.to.name} is a changed static dependency of the analyzed boundary.`, [id], edge.to.key === seed.key); walk(edge.to); } };
     includeDeclaration(seed, 'This changed definition is the validated visual selection seed.', [addEvidence('changed-within', seed.path, seed.key, 'The selected definition overlaps a branch diff region.', baseSeed ? 'changed' : 'added')], true);
     for (const edge of integrationPath) { const id = addEvidence('integrated-by', edge.to.key, edge.from.key, `${edge.from.name} provides the supported reverse component-integration edge for ${edge.to.name}.`, baseEdgeKeys.has(edgeKey(edge)) ? 'existing' : 'added'); includeDeclaration(edge.from, `${edge.from.name} is a changed integration step required to connect the selection to ${boundary.name}.`, [id]); }
-    walk(boundary);
+    // External JSX projection inserts the attested selected child, not unrelated source siblings.
+    // Traverse the selected definition's forward dependencies; preserve legacy analyzer breadth.
+    walk(policy.strictExternal ? seed : boundary);
     const integrationModules = this.reverseModuleClosure(branchIndex, boundary.path);
     const unresolved: UnresolvedDependency[] = [];
     const styleModules = new Map(integrationModules.map(module => [module.path, module]));
