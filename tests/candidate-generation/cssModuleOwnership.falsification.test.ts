@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { LocalPlanAuthority, localRepositoryId } from '../../apps/studio/localPlanAuthority';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
+import { projectJsxRegion } from '../../packages/candidate-generation/src/astTransform';
 import { localIntegrationPlanIdentity } from '../../packages/integration-plan/src/localPlan';
 import type { PreviewSession } from '../../packages/preview-runtime/src/previewController';
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
@@ -203,6 +204,96 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
       expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
       expect(git(root, ['status', '--porcelain'])).toBe('');
     }
+  });
+
+  test('refuses an exclusive stylesheet with an unselected local class rule', async () => {
+    const root = repository();
+    git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+    addFeature(root, '.pulse{color:green}\n.unrelated{display:none}\n');
+    const { artifact, request } = await renderedSlice(root);
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: stylePath, edge: 'unsupported-css-module-class-usage',
+      reason: expect.stringContaining('unrelated')
+    }));
+    const preflight = await new CandidateGenerator(root).preflight(request);
+    expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
+    expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+    expect(git(root, ['status', '--porcelain'])).toBe('');
+  });
+
+  test('refuses dynamic style-key lookup with no candidate side effects', async () => {
+    const root = repository();
+    git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+    addFeature(root, '.pulse{color:green}\n', {
+      [featurePath]: "import styles from './RevenuePulseBadge.module.css';\nexport function RevenuePulseBadge({name}: {name:string}){return <section className={styles[name]}>Revenue pulse</section>}\n"
+    });
+    const { artifact, request } = await renderedSlice(root);
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: stylePath, edge: 'unsupported-css-module-class-usage',
+      reason: expect.stringContaining('dynamic')
+    }));
+    const preflight = await new CandidateGenerator(root).preflight(request);
+    expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
+    expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+    expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+  });
+
+  test('UMS-24F isolates selected JSX child and CSS Module from an added unrelated sibling', async () => {
+    const root = repository();
+    git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+    const unrelatedPath = 'src/features/revenue/UnrelatedBadge.tsx';
+    const unrelatedStylePath = 'src/features/revenue/UnrelatedBadge.module.css';
+    const sourceApp = [
+      "import { RevenuePulseBadge } from './features/revenue/RevenuePulseBadge';",
+      "import { UnrelatedBadge } from './features/revenue/UnrelatedBadge';",
+      'export function App(){return <main><RevenuePulseBadge/><h1>Dashboard</h1><UnrelatedBadge/></main>}',
+      ''
+    ].join('\n');
+    addFeature(root, '.pulse{color:green}\n', {
+      'src/App.tsx': sourceApp,
+      [unrelatedPath]: "import styles from './UnrelatedBadge.module.css';\nexport function UnrelatedBadge(){return <aside className={styles.unrelated}>Not selected</aside>}\n",
+      [unrelatedStylePath]: '.unrelated{color:red}\n'
+    });
+
+    const foundationApp = 'export function App(){return <main><h1>Dashboard</h1></main>}\n';
+    const projected = projectJsxRegion(foundationApp, sourceApp, 'src/App.tsx', 'App', {
+      path: featurePath, symbol: 'RevenuePulseBadge'
+    });
+    expect(projected.code).toBe('export function App(){return <main><RevenuePulseBadge/><h1>Dashboard</h1></main>}\n');
+    expect(projected.evidence).toMatchObject({
+      mode: 'insert-child', excludedSourceSiblingCount: 1,
+      renderedBoundary: { path: featurePath, symbol: 'RevenuePulseBadge' }
+    });
+    expect(projected.code).not.toContain('UnrelatedBadge');
+
+    const { artifact, request } = await renderedSlice(root);
+    expect(artifact.slice.status).toBe('resolved');
+    expect(artifact.slice.includedChanges).toContainEqual(expect.objectContaining({
+      path: featurePath, category: 'selected-definition'
+    }));
+    expect(artifact.slice.includedChanges).toContainEqual(expect.objectContaining({
+      path: stylePath, category: 'style', confidence: 'conservative'
+    }));
+    for (const unrelated of [unrelatedPath, unrelatedStylePath]) {
+      expect(artifact.slice.includedChanges.some(change => change.path === unrelated)).toBe(false);
+      expect(artifact.slice.excludedChanges.some(change => change.path === unrelated)).toBe(true);
+    }
+
+    const generator = new CandidateGenerator(root);
+    const first = await generator.preflight(request);
+    expect(await generator.preflight(request)).toEqual(first);
+    expect(first.plan.status).toBe('refused');
+    expect(first.plan.unresolved).toContainEqual(expect.objectContaining({
+      path: stylePath, reason: expect.stringContaining('CSS rule ownership is not implemented')
+    }));
+    expect(first.plan.operations.some(operation => operation.target?.path === unrelatedPath || operation.target?.path === unrelatedStylePath)).toBe(false);
+    expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+    expect(git(root, ['status', '--porcelain'])).toBe('');
+    expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
   });
 
 });
