@@ -296,4 +296,33 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
     expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
   });
 
+  test('UMS-24G refuses declaration-wide CSS references outside the selected rendered host root', async () => {
+    const root = repository();
+    git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+    addFeature(root, '.pulse{color:green}\n.unrelated{color:red}\n', {
+      [featurePath]: [
+        "import styles from './RevenuePulseBadge.module.css';",
+        'export function RevenuePulseBadge(){',
+        '  const unselected = <aside className={styles.unrelated}>Not rendered</aside>;',
+        '  return <section className={styles.pulse}>Revenue pulse</section>;',
+        '}',
+        ''
+      ].join('\n')
+    });
+    const { artifact, request } = await renderedSlice(root);
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: stylePath, edge: 'unsupported-css-module-rendered-root',
+      reason: expect.stringContaining('one unconditional direct host JSX root')
+    }));
+    const generator = new CandidateGenerator(root);
+    const first = await generator.preflight(request);
+    expect(await generator.preflight(request)).toEqual(first);
+    expect(first.plan.status).toBe('refused');
+    expect(first.plan.operations).toEqual([]);
+    expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+    expect(git(root, ['status', '--porcelain'])).toBe('');
+    expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+  });
+
 });
