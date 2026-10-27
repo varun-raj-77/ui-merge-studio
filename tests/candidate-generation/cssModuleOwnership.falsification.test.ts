@@ -208,7 +208,7 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
   test('refuses an exclusive stylesheet with an unselected local class rule', async () => {
     const root = repository();
     git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
-    addFeature(root, '.pulse{color:green}\\n.unrelated{display:none}\\n');
+    addFeature(root, '.pulse{color:green}\n.unrelated{display:none}\n');
     const { artifact, request } = await renderedSlice(root);
     expect(artifact.slice.status).toBe('refused');
     expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
@@ -225,8 +225,8 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
   test('refuses dynamic style-key lookup with no candidate side effects', async () => {
     const root = repository();
     git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
-    addFeature(root, '.pulse{color:green}\\n', {
-      [featurePath]: "import styles from './RevenuePulseBadge.module.css';\\nexport function RevenuePulseBadge({name}: {name:string}){return <section className={styles[name]}>Revenue pulse</section>}\\n"
+    addFeature(root, '.pulse{color:green}\n', {
+      [featurePath]: "import styles from './RevenuePulseBadge.module.css';\nexport function RevenuePulseBadge({name}: {name:string}){return <section className={styles[name]}>Revenue pulse</section>}\n"
     });
     const { artifact, request } = await renderedSlice(root);
     expect(artifact.slice.status).toBe('refused');
