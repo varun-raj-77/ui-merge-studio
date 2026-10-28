@@ -118,6 +118,30 @@ describe('bounded external React/Vite candidate generation',()=>{
     expect(git(root,['worktree','list','--porcelain'])).not.toContain('ui-merge-studio-candidate-');
   });
 
+  test('UMS-24A keeps external preflight refusal when a selected JSX insertion has an excluded sibling',async()=>{
+    const root=baseRepository();
+    git(root,['switch','-c','prompt020-revenue-pulse']);
+    writeRevenueFeature(root,
+      "import { RevenuePulseBadge } from './features/revenue/RevenuePulseBadge';\n"
+      + 'export function App(){return <main><RevenuePulseBadge/><h1>Dashboard</h1><p data-testid="unselected-experiment">UNSELECTED_SIBLING</p></main>}\n'
+    );
+    const {artifact,request}=await artifactFromRenderedSelection(root,commit(root,'feat: selected badge plus excluded sibling'));
+    expect(artifact.slice.status).toBe('resolved');
+    const preflight=await new CandidateGenerator(root).preflight(request);
+    const projection=preflight.plan.operations.find(operation=>operation.kind==='replace-jsx-region'&&operation.target.path==='src/App.tsx');
+    expect(projection?.jsxProjection).toMatchObject({
+      mode:'insert-child',excludedSourceSiblingCount:1,anchor:{side:'before'}
+    });
+    expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.unresolved).toContainEqual(expect.objectContaining({
+      path:'src/App.tsx',
+      reason:expect.stringContaining('Unrelated source changes modify the same JSX integration parent')
+    }));
+    expect(()=>git(root,['rev-parse','combined-result'])).toThrow();
+    expect(git(root,['status','--porcelain'])).toBe('');
+    expect(git(root,['worktree','list','--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+  });
+
   test('refuses duplicate matching JSX parent shells before candidate mutation',async()=>{
     const root=createRepository({
       'package.json':'{"scripts":{"typecheck":"tsc --noEmit","test":"echo ok","build":"vite build"}}\n',
