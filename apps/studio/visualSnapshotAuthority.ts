@@ -5,7 +5,7 @@ import type { CandidateGenerationReport } from '../../packages/candidate-generat
 import type { PreviewSession } from '../../packages/preview-runtime/src/previewController';
 import { formatVerifiedCandidateHandoff } from './src/candidateHandoff';
 import type { ComparisonSource } from './src/candidateLiveComparison';
-import { isSafeCaptureRoute } from './src/visualSnapshotRoutes';
+import { isSafeCaptureRoute, matchesCaptureLocation } from './src/visualSnapshotRoutes';
 import type { VisualSnapshotCapture, VisualSnapshotState } from './src/visualSnapshotTypes';
 import { VisualReviewAuthority, VisualReviewError } from './visualReviewAuthority';
 
@@ -45,10 +45,14 @@ async function browserCapturePair(sourceUrl: string, candidateUrl: string) {
     async function screenshot(url: string) {
       const page = await context.newPage();
       try {
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+        const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 });
+        if (response && !response.ok()) throw new VisualReviewError(409, 'The selected preview route did not return a successful response.');
         await page.locator('body').waitFor({ state: 'visible', timeout: 10_000 });
         // HMR websockets can prevent an absolute network-idle guarantee.
         await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined);
+        if (!matchesCaptureLocation(url, page.url())) {
+          throw new VisualReviewError(409, 'The preview redirected away from the exact requested route. Capture refused.');
+        }
         return await page.screenshot({ type: 'png', animations: 'disabled', caret: 'hide', timeout: 20_000 });
       } finally {
         await page.close();
