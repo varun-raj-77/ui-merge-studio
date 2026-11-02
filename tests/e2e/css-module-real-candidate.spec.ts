@@ -1,4 +1,4 @@
-import { symlinkSync } from 'node:fs';
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import react from '@vitejs/plugin-react';
@@ -9,7 +9,7 @@ import { cleanupRepositories, commit, createRepository, git, writeFiles } from '
 
 test.afterEach(cleanupRepositories);
 
-async function inspectProductionBuild(root: string, page: Page) {
+async function inspectProductionBuild(root: string, page: Page, evidenceDir: string) {
   await build({ root, configFile: false, plugins: [react()], logLevel: 'error', build: { outDir: 'dist' } });
   const server = await preview({ root, configFile: false, logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } });
   try {
@@ -19,7 +19,8 @@ async function inspectProductionBuild(root: string, page: Page) {
     await expect(page.locator('#unrelated')).toHaveText('Unrelated sibling');
     const sibling = await page.locator('#unrelated').boundingBox();
     if (!sibling) throw new Error('Unrelated sibling has no layout box.');
-    return sibling.x;
+    await page.screenshot({ path: resolve(evidenceDir, 'baseline.png'), animations: 'disabled' });
+    return sibling;
   } finally {
     await new Promise<void>((done, reject) => server.httpServer.close(error => error ? reject(error) : done()));
   }
@@ -27,6 +28,11 @@ async function inspectProductionBuild(root: string, page: Page) {
 
 test('UMS-25A: a real phase0 Git candidate compiles its CSS Module, which shifts an untouched sibling', async ({ page }) => {
   test.setTimeout(180_000);
+  // Controlled fixture only: these fixed captures contain no external app
+  // content and are safe to publish with the CI run as inspectable evidence.
+  const evidenceDir = resolve(process.cwd(), 'test-results', 'ums-css-module-visual-evidence');
+  mkdirSync(evidenceDir, { recursive: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
   const root = createRepository({
     '.gitignore': 'node_modules\ndist\n',
     'package.json': '{"private":true,"type":"module","scripts":{"build":"vite build"}}\n',
@@ -38,7 +44,7 @@ test('UMS-25A: a real phase0 Git candidate compiles its CSS Module, which shifts
   // dependencies; node_modules and Vite output remain ignored and uncommitted.
   symlinkSync(resolve(process.cwd(), 'node_modules'), resolve(root, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
   const baseCommit = git(root, ['rev-parse', 'main']);
-  const baselineX = await inspectProductionBuild(root, page);
+  const baseline = await inspectProductionBuild(root, page, evidenceDir);
 
   git(root, ['switch', '-c', 'feature']);
   writeFiles(root, {
@@ -102,7 +108,8 @@ test('UMS-25A: a real phase0 Git candidate compiles its CSS Module, which shifts
     const sibling = page.locator('#unrelated');
     const styled = await sibling.boundingBox();
     if (!styled) throw new Error('Missing candidate sibling layout box.');
-    expect(styled.x - baselineX).toBeGreaterThan(250);
+    expect(styled.x - baseline.x).toBeGreaterThan(250);
+    await page.screenshot({ path: resolve(evidenceDir, 'candidate-compiled.png'), animations: 'disabled' });
 
     // Disable the compiled stylesheet without changing the selected or
     // unrelated DOM. The resulting geometry isolates the CSS effect.
@@ -112,6 +119,37 @@ test('UMS-25A: a real phase0 Git candidate compiles its CSS Module, which shifts
     expect(styled.x - unstyled.x).toBeGreaterThan(120);
     await expect(sibling).toHaveText('Unrelated sibling');
     expect(await sibling.getAttribute('class')).toBeNull();
+    await page.screenshot({ path: resolve(evidenceDir, 'candidate-without-compiled-css.png'), animations: 'disabled' });
+
+    // Source identity and DOM geometry accompany the three fixed screenshots.
+    // This is an observed CSS counterexample, NOT a pixel-perfect comparison,
+    // approved visual review, compatibility expansion, or merge permission.
+    writeFileSync(resolve(evidenceDir, 'geometry.json'), JSON.stringify({
+      schemaVersion: 1,
+      scope: 'synthetic-phase0-css-module-git-candidate-only',
+      visualAcceptance: 'not-assessed',
+      viewport: { width: 1280, height: 720 },
+      git: {
+        baseCommit,
+        featureCommit,
+        candidateCommit: git(root, ['rev-parse', 'combined-result']),
+        candidateTree: git(root, ['rev-parse', 'combined-result^{tree}'])
+      },
+      captures: {
+        baseline: { file: 'baseline.png', unrelatedBox: baseline },
+        candidateCompiled: {
+          file: 'candidate-compiled.png', unrelatedBox: styled,
+          selectedWidthPx: styledWidth, compiledClass
+        },
+        candidateWithoutCompiledCss: {
+          file: 'candidate-without-compiled-css.png', unrelatedBox: unstyled
+        }
+      },
+      measuredDeltaPx: {
+        candidateVsBaselineUnrelatedX: styled.x - baseline.x,
+        compiledCssEffectOnUnrelatedX: styled.x - unstyled.x
+      }
+    }, null, 2) + '\n', 'utf-8');
   } finally {
     await new Promise<void>((done, reject) => server.httpServer.close(error => error ? reject(error) : done()));
   }
