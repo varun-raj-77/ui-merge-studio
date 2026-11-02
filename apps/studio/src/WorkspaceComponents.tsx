@@ -7,6 +7,7 @@ import { featureLabel } from './demoScenario';
 import { formatVerifiedCandidateHandoff } from './candidateHandoff';
 import type { ComparisonSource, SourcePreviewPins } from './candidateLiveComparison';
 import { VisualReviewPanel } from './VisualReviewPanel';
+import { VisualSnapshotPanel } from './VisualSnapshotPanel';
 import type { RepositoryResponse } from './studioTypes';
 
 function shortCommit(value: string | null | undefined) { return value ? value.slice(0, 7) : 'pending'; }
@@ -215,8 +216,9 @@ export function ResultWorkspace({ report, foundation, selections, onOpen, onComp
           ? comparisonActive
             ? 'Both exact-commit previews are visible at the Studio viewport preset. Compare matching routes and content before recording observations.'
             : 'The pinned source and result are running. Choose Compare Source A or B to view them side by side.'
-          : `Source ${activeSource} is loading or does not match its original pinned commit; wait or restart this preview before comparing.`} Source A and B are inspected one at a time; no screenshots or pixel-diff evidence are captured here.</p>
+          : `Source ${activeSource} is loading or does not match its original pinned commit; wait or restart this preview before comparing.`} Source A and B are inspected one at a time; local screenshots can be captured on request, but no automatic pixel-diff verdict is made.</p>
     </aside>
+    <VisualSnapshotPanel key={handoffRevision} report={report} activeSource={activeSource} comparisonActive={comparisonActive} sourcePreviewReady={sourcePreviewReady} candidatePreviewReady={candidatePreviewReady} />
     <VisualReviewPanel key={handoffRevision} report={report} previewOpened={previewOpened} candidatePreviewReady={candidatePreviewReady} />
     {handoffStatus !== 'idle' && <p role="status" aria-live="polite">{handoffStatus === 'copied'
       ? 'Verified local candidate handoff copied. No logs or local paths included.'

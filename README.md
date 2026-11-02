@@ -266,11 +266,17 @@ npm run dev -- --repository /absolute/path/to/react-vite-repository
 
 The path must be the clean root of a local Git repository that passes the current React + TypeScript + Vite discovery checks and declares a `dev` script. `UI_MERGE_REPOSITORY_PATH` is also available for scripted startup.
 
-Install Playwright's browser only when running browser tests:
+Install Playwright's browser to run browser tests or opt-in local candidate screenshot capture:
 
 ```sh
 npx playwright install chromium
 ```
+
+### Capture local candidate snapshots (opt-in)
+
+After a verified local candidate is generated, select **Compare Source A with result** or **Compare Source B with result**. Once both exact-commit previews are ready, use **Capture Source A/B + result snapshots** in the Result workspace. Studio captures both managed local preview URLs with Chromium at a fixed 1280 × 800 viewport, records the original generation-time A/B branch SHAs, and displays each captured pair beside the visual review receipt. Switch sources and repeat to capture both A and B.
+
+Captures are manual, one-time per source and candidate generation, and live only under ignored `.ums/visual-snapshots/<generation-id>/` with private file permissions. They are **not** uploaded, added to Git, merged, compared pixel-by-pixel, or treated as an approval. Review the actual app interaction and nearby layout yourself, then record the separate local visual self-attestation if appropriate. Capture runs your local app in a headless browser; use trusted repositories and avoid private content on the captured route. If Chromium is not installed, run `npx playwright install chromium` before retrying.
 
 ## Repository and Generated Data Notes
 

@@ -10,7 +10,10 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 function apiResponse(value: unknown, status = 200) {
   return Promise.resolve(new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } }));
 }
-beforeEach(() => { vi.spyOn(globalThis, 'fetch').mockImplementation(() => apiResponse({ status: 'pending', receipt: null })); });
+beforeEach(() => { vi.spyOn(globalThis, 'fetch').mockImplementation(input =>
+  apiResponse(String(input).includes('/visual-snapshots/')
+    ? { status: 'ready', captures: { A: null, B: null } }
+    : { status: 'pending', receipt: null })); });
 
 function verifiedReport(): CandidateGenerationReport {
   const identity = 'plan-v2-fixture-verified';
@@ -264,4 +267,37 @@ test('renders the exact persisted review and blocks another decision when the br
   showResult(result);
   expect(await screen.findByRole('alert')).toHaveTextContent('no longer points');
   expect(screen.queryByRole('button', { name: 'Record visual review' })).not.toBeInTheDocument();
+});
+
+test('keeps screenshot capture opt-in and restricted to two running exact-commit previews', async () => {
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} onOpen={() => undefined} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
+  expect(await screen.findByRole('button', { name: 'Capture Source A + result snapshots' })).toBeDisabled();
+  cleanup();
+  const fetchSpy = vi.mocked(globalThis.fetch);
+  fetchSpy.mockImplementation((input, init) => {
+    if (String(input).includes('/visual-snapshots/') && init?.method === 'POST') {
+      return apiResponse({ status: 'ready', captures: {
+        A: { version: 1, generationId: 'f'.repeat(16), source: 'A', planIdentity: 'plan-v2-fixture-verified',
+          sourceBranch: 'branch-a', sourceCommit: '4'.repeat(40), candidateCommit: '2'.repeat(40), candidateTree: '3'.repeat(40),
+          capturedAt: '2026-01-01T00:00:00Z', viewport: { width: 1280, height: 800 } },
+        B: null
+      } });
+    }
+    return apiResponse(String(input).includes('/visual-snapshots/')
+      ? { status: 'ready', captures: { A: null, B: null } }
+      : { status: 'pending', receipt: null });
+  });
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} comparisonActive={true} onOpen={() => undefined} onEvidence={() => undefined}
+    onCopy={() => undefined} onReturn={() => undefined} />);
+  const capture = await screen.findByRole('button', { name: 'Capture Source A + result snapshots' });
+  await waitFor(() => expect(capture).toBeEnabled());
+  fireEvent.click(capture);
+  await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('/api/candidate/visual-snapshots/' + 'f'.repeat(16), expect.objectContaining({
+    method: 'POST', body: JSON.stringify({ source: 'A' })
+  })));
+  expect(await screen.findByText('Source A', { selector: 'figcaption' })).toBeInTheDocument();
+  expect(screen.getByAltText(/Source A local screenshot/)).toHaveAttribute('src', expect.stringContaining('/A/source.png'));
+  expect(screen.getByRole('button', { name: 'Source A captured' })).toBeDisabled();
 });

@@ -15,6 +15,7 @@ import { LocalPlanAuthority, localPlanErrorStatus, localRepositoryId } from './l
 import { CandidateGenerationGate } from './candidateGenerationGate';
 import { CandidateProgressTracker } from './candidateProgress';
 import { VisualReviewAuthority, VisualReviewError } from './visualReviewAuthority';
+import { VisualSnapshotAuthority } from './visualSnapshotAuthority';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
 const configuration = loadRepositoryConfiguration(workspaceRoot);
@@ -32,6 +33,7 @@ const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(r
 const candidateProgress = new CandidateProgressTracker();
 const candidateGenerationGate = new CandidateGenerationGate();
 const visualReviewAuthority = new VisualReviewAuthority(repositoryPath, workspaceRoot);
+const visualSnapshotAuthority = new VisualSnapshotAuthority(workspaceRoot, visualReviewAuthority, previews);
 // Read-only preflight analysis can overlap a generation without sharing a
 // progress callback. Each generation gets a callback bound to its own token.
 const candidateGenerator = new CandidateGenerator(repositoryPath, { artifactRoot: workspaceRoot, verificationCommands });
@@ -46,6 +48,8 @@ function instrumentationPreviewRoute(url: string | undefined) { const match = ur
 function artifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/analysis\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
 function generationArtifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/reports\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
 function visualReviewRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/visual-reviews\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
+function visualSnapshotRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/visual-snapshots\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
+function visualSnapshotImageRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/visual-snapshots\/([a-f0-9]{16})\/(A|B)\/(source|candidate)\.png$/); return match ? { id: match[1], source: match[2], kind: match[3] as 'source' | 'candidate' } : null; }
 const server = createServer(async (request, response) => {
   try {
     const instrumentationPreviewId = instrumentationPreviewRoute(request.url);
@@ -93,6 +97,10 @@ const server = createServer(async (request, response) => {
           onProgress: event => candidateProgress.update(generationAttempt, event)
         });
         const report = await ownedGenerator.generate(projected.request);
+        if (report.status === 'succeeded') {
+          // Preserve both source identities before the result replaces the right preview.
+          await visualSnapshotAuthority.register(report).catch(error => console.error('Local snapshot pins unavailable:', error));
+        }
         candidateProgress.finish(attempt, report);
         return json(response, 200, report);
       } catch (error) {
@@ -103,6 +111,19 @@ const server = createServer(async (request, response) => {
       }
     }
     if (request.url === '/api/candidate/status' && request.method === 'GET') return json(response, 200, candidateProgress.get());
+    const snapshotId = visualSnapshotRoute(request.url);
+    if (snapshotId && request.method === 'GET') return json(response, 200, await visualSnapshotAuthority.get(snapshotId));
+    if (snapshotId && request.method === 'POST') {
+      if (request.headers.origin && request.headers.origin !== studioOrigin) return json(response, 403, { error: 'Local screenshot capture requires the Studio origin.' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return json(response, 415, { error: 'Local screenshot capture requires JSON input.' });
+      return json(response, 201, await visualSnapshotAuthority.capture(snapshotId, await body(request)));
+    }
+    const snapshotImage = visualSnapshotImageRoute(request.url);
+    if (snapshotImage && request.method === 'GET') {
+      const png = await visualSnapshotAuthority.image(snapshotImage.id, snapshotImage.source, snapshotImage.kind);
+      response.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+      return response.end(png);
+    }
     const reviewId = visualReviewRoute(request.url);
     if (reviewId && request.method === 'GET') return json(response, 200, await visualReviewAuthority.get(reviewId));
     if (reviewId && request.method === 'POST') {
