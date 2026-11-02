@@ -127,8 +127,48 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   await expect(candidate.getByText('Seasonal edit')).toHaveCount(0);
   await expect(candidate.getByText('5 products ready')).toHaveCount(0);
 
+  // Exercise the real localhost UI-to-server review handoff. This automated
+  // fixture deliberately records NEEDS CHANGES, never a false human approval.
+  const reviewUrl = '/api/candidate/visual-reviews/' + report.generationId;
+  const testObservation = 'Automated browser test only; no human visual acceptance was performed.';
+  const beforeReview = await request.get(reviewUrl);
+  expect(beforeReview.status(), await beforeReview.text()).toBe(200);
+  const beforeStatus = await beforeReview.json() as { status: string; receipt?: { decision: string; notes: string } | null };
+  if (beforeStatus.status === 'pending') {
+    const recordButton = page.getByRole('button', { name: 'Record visual review' });
+    await expect(recordButton).toBeDisabled();
+    await page.getByRole('button', { name: 'Open combined preview' }).click();
+    await page.getByLabel('Visual review decision').selectOption('needs-changes');
+    await page.getByLabel('Visual observations').fill(testObservation);
+    await expect(recordButton).toBeEnabled();
+    const reviewResponse = page.waitForResponse(response => response.url().endsWith(reviewUrl) && response.request().method() === 'POST');
+    await recordButton.click();
+    const saved = await reviewResponse;
+    expect(saved.status(), await saved.text()).toBe(201);
+    expect(saved.request().postDataJSON()).toEqual({ decision: 'needs-changes', notes: testObservation });
+  } else {
+    // A repeated local test may encounter the same immutable receipt.
+    expect(beforeStatus).toMatchObject({ status: 'recorded', receipt: { decision: 'needs-changes', notes: testObservation } });
+  }
+  const persistedResponse = await request.get(reviewUrl);
+  expect(persistedResponse.status()).toBe(200);
+  expect(await persistedResponse.json()).toMatchObject({
+    status: 'recorded',
+    receipt: {
+      scope: 'local-self-attested-visual-review', generationId: report.generationId,
+      planIdentity: outgoing.planIdentity, candidateCommit: report.repository.candidateCommit,
+      candidateTree: report.repository.candidateTree, decision: 'needs-changes', notes: testObservation
+    }
+  });
+
   await stopPreviews(request);
   await removeCandidate();
+  const staleReviewResponse = await request.get(reviewUrl);
+  expect(staleReviewResponse.status()).toBe(200);
+  expect(await staleReviewResponse.json()).toMatchObject({
+    status: 'stale', receipt: { candidateCommit: report.repository.candidateCommit },
+    reason: expect.stringContaining('no longer points')
+  });
   const repositoryState = await request.get('/api/repository').then(response => response.json()) as { sessions: Array<{ status: string }> };
   expect(repositoryState.sessions).toHaveLength(2);
   expect(repositoryState.sessions.every(session => session.status === 'stopped')).toBe(true);
