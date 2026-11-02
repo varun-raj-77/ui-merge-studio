@@ -309,3 +309,21 @@ test('keeps screenshot capture opt-in and restricted to two running exact-commit
   expect(screen.getByText(/route/, { selector: 'small' })).toHaveTextContent('/catalogue');
   expect(screen.getByText(/PNG SHA-256 matches local manifest/)).toBeInTheDocument();
 });
+
+
+test('follows the live route until the reviewer overrides the capture pathname', () => {
+  const props = {
+    report: verifiedReport(), foundation, selections: [{ branch: 'branch-a', label: 'Sidebar' }],
+    ...liveComparisonProps, comparisonActive: true,
+    onOpen: () => undefined, onEvidence: () => undefined, onCopy: () => undefined,
+    onReturn: () => undefined
+  };
+  const { rerender } = render(<ResultWorkspace {...props} activeRoute="/catalogue" />);
+  const input = screen.getByLabelText('Local screenshot route');
+  expect(input).toHaveValue('/catalogue');
+  rerender(<ResultWorkspace {...props} activeRoute="/products/desk-stand" />);
+  expect(input).toHaveValue('/products/desk-stand');
+  fireEvent.change(input, { target: { value: '/custom-review' } });
+  rerender(<ResultWorkspace {...props} activeRoute="/products/another" />);
+  expect(input).toHaveValue('/custom-review');
+});

@@ -15,8 +15,8 @@ export function VisualSnapshotPanel({ report, activeSource, activeRoute, compari
   const [state, setState] = useState<VisualSnapshotState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [route, setRoute] = useState(activeRoute);
-  useEffect(() => { setRoute(activeRoute); }, [activeRoute]);
+  const [routeOverride, setRouteOverride] = useState<string | null>(null);
+  const route = routeOverride ?? activeRoute;
   const url = '/api/candidate/visual-snapshots/' + report.generationId;
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function VisualSnapshotPanel({ report, activeSource, activeRoute, compari
     <p>Capture is optional. Choose a relative route to open in both exact-commit previews at a fixed 1280 × 800 viewport. The first route captured for each source is immutable for that candidate. Images stay in the ignored local .ums folder and are checked against stored SHA-256 digests. Local checksums detect changed PNG bytes, but are neither signed proof nor visual approval.</p>
     <label className="visual-snapshot-route">Capture route
       <input aria-label="Local screenshot route" value={state?.captures?.[activeSource]?.route ?? route}
-        onChange={event => setRoute(event.target.value)} disabled={busy || Boolean(state?.captures?.[activeSource])}
+        onChange={event => setRouteOverride(event.target.value)} disabled={busy || Boolean(state?.captures?.[activeSource])}
         maxLength={180} placeholder="/catalogue" />
     </label>
     {!isSafeCaptureRoute(route) && !state?.captures?.[activeSource] && <small role="alert">Enter a local pathname such as /catalogue or /products/item. No host, query, fragment or traversal.</small>}
