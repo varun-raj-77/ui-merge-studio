@@ -3,7 +3,7 @@ import type { CandidateGenerationReport } from '../../../packages/candidate-gene
 import { transferredStylesheets } from './candidateVisualReview';
 import type { VisualReviewDecision, VisualReviewSnapshot } from './visualReviewTypes';
 
-export function VisualReviewPanel({ report, previewOpened }: { report: CandidateGenerationReport; previewOpened: boolean }) {
+export function VisualReviewPanel({ report, previewOpened, candidatePreviewReady }: { report: CandidateGenerationReport; previewOpened: boolean; candidatePreviewReady: boolean }) {
   const stylesheets = transferredStylesheets(report.plan);
   const [snapshot, setSnapshot] = useState<VisualReviewSnapshot | null>(null);
   const [decision, setDecision] = useState<VisualReviewDecision | ''>('');
@@ -27,7 +27,7 @@ export function VisualReviewPanel({ report, previewOpened }: { report: Candidate
   }, [url]);
 
   async function recordReview() {
-    if (!previewOpened || snapshot?.status !== 'pending' || saving || !decision || notes.trim().length < 8 || notes.trim().length > 400) return;
+    if (!previewOpened || !candidatePreviewReady || snapshot?.status !== 'pending' || saving || !decision || notes.trim().length < 8 || notes.trim().length > 400) return;
     setSaving(true);
     setError(null);
     try {
@@ -62,8 +62,9 @@ export function VisualReviewPanel({ report, previewOpened }: { report: Candidate
             <option value="needs-changes">Needs changes</option>
           </select></label>
           <label>What did you observe?<input aria-label="Visual observations" value={notes} onChange={event => setNotes(event.target.value)} maxLength={400} placeholder="Describe the result (8–400 characters)" /></label>
-          <button type="submit" disabled={!previewOpened || !decision || notes.trim().length < 8 || saving}>{saving ? 'Recording…' : 'Record visual review'}</button>
+          <button type="submit" disabled={!previewOpened || !candidatePreviewReady || !decision || notes.trim().length < 8 || saving}>{saving ? 'Recording…' : 'Record visual review'}</button>
           {!previewOpened && <small>Open combined preview before recording your observation.</small>}
+          {previewOpened && !candidatePreviewReady && <small>The combined preview must be running at the exact verified commit before recording.</small>}
         </form> : <p>Checking the current candidate and any existing review record…</p>}
     {error && <p role="alert">{error}</p>}
   </aside>;

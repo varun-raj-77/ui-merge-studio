@@ -8,6 +8,7 @@ import type { LocalIntegrationSelection } from '../../../packages/integration-pl
 import { CandidatePanel, type GenerationInput } from './CandidatePanel';
 import { compareCapabilities, comparisonReducer, initialComparisonState, planContextSynchronization, viewportPresets, type PreviewSlotId } from './comparisonState';
 import { featureLabel } from './demoScenario';
+import { matchesPinnedLivePreview, type LivePreviewPin } from './candidateLiveComparison';
 import { EvidenceDrawer, SlicePanel } from './EvidenceDrawer';
 import { pollPreviewOperation } from './operationPolling';
 import { BranchContextBar, CommandPalette, PreviewPane, ProjectContext, ResizableComparison, ResultWorkspace, projectName, type WorkspaceCommand } from './WorkspaceComponents';
@@ -34,6 +35,7 @@ export function App() {
   const [candidateUi, setCandidateUi] = useState<CandidateUiState>(emptyCandidateUiState);
   const [resultReport, setResultReport] = useState<CandidateGenerationReport | null>(null);
   const [resultSources, setResultSources] = useState<{ branch: string; label: string }[]>([]);
+  const [resultSourceAPin, setResultSourceAPin] = useState<LivePreviewPin | null>(null);
   const frames = useRef<Record<PreviewSlotId, HTMLIFrameElement | null>>({ left: null, right: null });
   const operationControllers = useRef<Partial<Record<PreviewSlotId, AbortController>>>({});
   const activeOperationIds = useRef<Partial<Record<PreviewSlotId, string>>>({});
@@ -246,6 +248,7 @@ export function App() {
     setOperations({ left: null, right: null });
     setResultReport(null);
     setResultSources([]);
+    setResultSourceAPin(null);
     setComparisonLayout('both');
     setPlanSelections({ left: null, right: null });
     setCandidateUi(emptyCandidateUiState);
@@ -272,6 +275,8 @@ export function App() {
   function handleCandidateLaunch(report: CandidateGenerationReport) {
     const sources = generationInputs.filter(input => input.visualSelected).map(input => ({ branch: input.branch ?? input.selection?.sourceBranch ?? 'source', label: featureLabel(input.artifact) }));
     setResultSources(sources);
+    const sourceA = state.previews.left.session;
+    setResultSourceAPin(sourceA ? { branch: sourceA.branch, commit: sourceA.branchCommit } : null);
     setResultReport(report);
     setCandidateUi(current => ({ ...current, report, progress: 'Combined branch created and verified.', stage: report.stage }));
     setSelectionRequested(false);
@@ -283,6 +288,7 @@ export function App() {
   function returnToComparison() {
     setResultReport(null);
     setResultSources([]);
+    setResultSourceAPin(null);
     setCandidateUi(emptyCandidateUiState);
     setComparisonLayout('both');
     const branch = sourceBranches[1];
@@ -314,6 +320,12 @@ export function App() {
     { id: 'project', label: 'Return to project context', action: () => setWorkspaceOpen(false) }
   ];
 
+  const candidatePreviewReady = resultReport ? matchesPinnedLivePreview(state.previews.right, {
+    branch: resultReport.repository.candidateBranch,
+    commit: resultReport.repository.candidateCommit ?? ''
+  }) : false;
+  const sourceAPreviewReady = matchesPinnedLivePreview(state.previews.left, resultSourceAPin);
+
   const leftPane = <PreviewPane sourceLabel="Source A" preview={state.previews.left} operation={operations.left} viewportWidth={state.viewport.width} iframeRef={node => { frames.current.left = node; }} onRestart={() => void startPreview('left')} onEvidence={() => openEvidence('selection')} onClear={() => clearSelection('left')} />;
   const rightPane = <PreviewPane sourceLabel={resultReport ? 'Combined result' : 'Source B'} preview={state.previews.right} operation={operations.right} viewportWidth={state.viewport.width} iframeRef={node => { frames.current.right = node; }} result={Boolean(resultReport)} planIdentity={resultReport?.integrationPlan?.identity} onRestart={() => void startPreview('right')} onEvidence={() => openEvidence('selection')} onClear={() => clearSelection('right')} />;
 
@@ -330,7 +342,7 @@ export function App() {
       </div>
     </header>
     <BranchContextBar foundation={foundation} left={state.previews.left} right={state.previews.right} sourceBranches={sourceBranches} />
-    {resultReport ? <ResultWorkspace report={resultReport} foundation={foundation} selections={resultSources} onOpen={() => setComparisonLayout('right')} onEvidence={() => openEvidence('verification')} onCopy={() => void navigator.clipboard?.writeText(resultReport.repository.candidateBranch)} onReturn={returnToComparison} /> : <section className="workspace-heading"><div><p className="eyebrow">Compare running versions</p><h1>Choose the parts worth keeping.</h1></div><p>Interact normally, or enter Select parts to turn a rendered React boundary into verified integration intent.</p><span className={readyCount === 2 ? 'linked' : ''}><i aria-hidden="true" />{readyCount === 2 ? 'Routes linked' : 'Linking previews'}</span></section>}
+    {resultReport ? <ResultWorkspace report={resultReport} foundation={foundation} selections={resultSources} onOpen={() => setComparisonLayout('right')} onEvidence={() => openEvidence('verification')} onCopy={() => void navigator.clipboard?.writeText(resultReport.repository.candidateBranch)} onReturn={returnToComparison} candidatePreviewReady={candidatePreviewReady} sourceAPin={resultSourceAPin} sourceAPreviewReady={sourceAPreviewReady} comparisonActive={comparisonLayout === 'both'} onCompare={() => setComparisonLayout('both')} /> : <section className="workspace-heading"><div><p className="eyebrow">Compare running versions</p><h1>Choose the parts worth keeping.</h1></div><p>Interact normally, or enter Select parts to turn a rendered React boundary into verified integration intent.</p><span className={readyCount === 2 ? 'linked' : ''}><i aria-hidden="true" />{readyCount === 2 ? 'Routes linked' : 'Linking previews'}</span></section>}
     <ResizableComparison layout={comparisonLayout} left={leftPane} right={rightPane} />
     {!resultReport && <CandidatePanel inputs={generationInputs} foundation={foundation} candidateBranch={candidateBranch} onRevise={reviseSelections} onEvidence={openEvidence} onStateChange={updateCandidateUi} onLaunch={handleCandidateLaunch} />}
     <EvidenceDrawer open={evidenceOpen} requestedTab={evidenceTab} onClose={closeEvidence} state={state} operations={operations} candidate={candidateUi} onSelectAncestor={(slot, index) => send(slot, 'select-ancestor', { index })} onClear={clearSelection} />

@@ -137,7 +137,14 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   if (beforeStatus.status === 'pending') {
     const recordButton = page.getByRole('button', { name: 'Record visual review' });
     await expect(recordButton).toBeDisabled();
-    await page.getByRole('button', { name: 'Open combined preview' }).click();
+    const compareButton = page.getByRole('button', { name: 'Compare Source A with result' });
+    await expect(compareButton).toBeEnabled({ timeout: 120_000 });
+    await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('Both exact-commit previews are running');
+    await compareButton.click();
+    await expect(page.locator('.preview-comparison')).toHaveClass(/layout-both/);
+    await expect(page.locator('[data-preview-id="left"]')).toContainText('branch-a');
+    await expect(page.locator('[data-preview-id="right"]')).toContainText(candidateBranch);
+    await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('Both exact-commit previews are visible');
     await page.getByLabel('Visual review decision').selectOption('needs-changes');
     await page.getByLabel('Visual observations').fill(testObservation);
     await expect(recordButton).toBeEnabled();
