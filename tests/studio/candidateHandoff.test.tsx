@@ -278,7 +278,8 @@ test('keeps screenshot capture opt-in and restricted to two running exact-commit
   fetchSpy.mockImplementation((input, init) => {
     if (String(input).includes('/visual-snapshots/') && init?.method === 'POST') {
       return apiResponse({ status: 'ready', captures: {
-        A: { version: 1, generationId: 'f'.repeat(16), source: 'A', planIdentity: 'plan-v2-fixture-verified',
+        A: { version: 2, generationId: 'f'.repeat(16), source: 'A', planIdentity: 'plan-v2-fixture-verified',
+          sourceSha256: 'a'.repeat(64), candidateSha256: 'b'.repeat(64),
           sourceBranch: 'branch-a', sourceCommit: '4'.repeat(40), candidateCommit: '2'.repeat(40), candidateTree: '3'.repeat(40),
           capturedAt: '2026-01-01T00:00:00Z', viewport: { width: 1280, height: 800 } },
         B: null
@@ -300,4 +301,5 @@ test('keeps screenshot capture opt-in and restricted to two running exact-commit
   expect(await screen.findByText('Source A', { selector: 'figcaption' })).toBeInTheDocument();
   expect(screen.getByAltText(/Source A local screenshot/)).toHaveAttribute('src', expect.stringContaining('/A/source.png'));
   expect(screen.getByRole('button', { name: 'Source A captured' })).toBeDisabled();
+  expect(screen.getByText(/PNG SHA-256 matches local manifest/)).toBeInTheDocument();
 });

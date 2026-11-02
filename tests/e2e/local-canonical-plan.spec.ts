@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
@@ -178,9 +179,21 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
     expect((await aCapture).status()).toBe(201);
     const metadataResponse = await request.get(snapshotsUrl);
     expect(metadataResponse.status()).toBe(200);
-    const snapshotMetadata = await metadataResponse.json() as { captures: Record<string, { sourceCommit: string; candidateCommit: string } | null> };
-    expect(snapshotMetadata.captures.B).toMatchObject({ sourceCommit: sourceBPin, candidateCommit: report.repository.candidateCommit });
-    expect(snapshotMetadata.captures.A).toMatchObject({ candidateCommit: report.repository.candidateCommit });
+    const snapshotMetadata = await metadataResponse.json() as { captures: Record<'A' | 'B', {
+      version: number; sourceCommit: string; candidateCommit: string; sourceSha256: string; candidateSha256: string;
+    } | null> };
+    expect(snapshotMetadata.captures.B).toMatchObject({ version: 2, sourceCommit: sourceBPin, candidateCommit: report.repository.candidateCommit });
+    expect(snapshotMetadata.captures.A).toMatchObject({ version: 2, candidateCommit: report.repository.candidateCommit });
+    for (const source of ['A', 'B'] as const) {
+      for (const kind of ['source', 'candidate'] as const) {
+        const image = await request.get(snapshotsUrl + '/' + source + '/' + kind + '.png');
+        expect(image.status()).toBe(200);
+        const computed = createHash('sha256').update(await image.body()).digest('hex');
+        const expected = kind === 'source' ? snapshotMetadata.captures[source]!.sourceSha256 : snapshotMetadata.captures[source]!.candidateSha256;
+        expect(computed).toBe(expected);
+      }
+    }
+    await expect(page.getByText(/PNG SHA-256 matches local manifest/).first()).toBeVisible();
     await expect(page.getByAltText(/Candidate local screenshot.*Source B/)).toBeVisible();
     await page.getByLabel('Visual review decision').selectOption('needs-changes');
     await page.getByLabel('Visual observations').fill(testObservation);

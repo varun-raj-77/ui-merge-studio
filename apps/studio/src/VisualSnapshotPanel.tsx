@@ -54,7 +54,7 @@ export function VisualSnapshotPanel({ report, activeSource, comparisonActive, so
 
   return <aside className="result-visual-snapshots" aria-label="Local visual snapshots">
     <strong>Local screenshot evidence</strong>
-    <p>Capture is optional. Each pair shows the selected generation-pinned source and the exact verified candidate at a fixed 1280 × 800 viewport. Images stay in the ignored local .ums folder; they are neither pixel-diff proof nor visual approval.</p>
+    <p>Capture is optional. Each pair shows the selected generation-pinned source and the exact verified candidate at a fixed 1280 × 800 viewport. Images stay in the ignored local .ums folder and are checked against stored SHA-256 digests. Local checksums detect changed PNG bytes, but are neither signed proof nor visual approval.</p>
     <button className="quiet-action" type="button" onClick={() => void capture()}
       disabled={busy || state?.status !== 'ready' || Boolean(state?.captures?.[activeSource])
         || !comparisonActive || !sourcePreviewReady || !candidatePreviewReady}>
@@ -70,6 +70,9 @@ export function VisualSnapshotPanel({ report, activeSource, comparisonActive, so
       return <div className="visual-snapshot-pair" key={source}>
         <strong>Source {source} · {capture.sourceBranch} @ {capture.sourceCommit.slice(0, 12)} versus result @ {capture.candidateCommit.slice(0, 12)}</strong>
         <p><small>Captured {capture.capturedAt} · {capture.viewport.width} × {capture.viewport.height} · one route, no pixel-diff verdict</small></p>
+        {capture.sourceSha256 && capture.candidateSha256
+          ? <p className="visual-snapshot-integrity">PNG SHA-256 matches local manifest · Source <code>{capture.sourceSha256.slice(0, 12)}</code> · Candidate <code>{capture.candidateSha256.slice(0, 12)}</code></p>
+          : <p className="visual-snapshot-integrity">Screenshot digest metadata is missing; do not rely on this image pair.</p>}
         <div className="visual-snapshot-images">
           <figure><img src={url + '/' + source + '/source.png'} alt={'Source ' + source + ' local screenshot at ' + capture.sourceCommit.slice(0, 12)} loading="lazy" /><figcaption>Source {source}</figcaption></figure>
           <figure><img src={url + '/' + source + '/candidate.png'} alt={'Candidate local screenshot at ' + capture.candidateCommit.slice(0, 12) + ' compared with Source ' + source} loading="lazy" /><figcaption>Combined candidate</figcaption></figure>

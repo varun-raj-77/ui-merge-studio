@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { afterEach, expect, test, vi } from 'vitest';
@@ -75,6 +76,10 @@ test('captures opt-in real-preview pairs with immutable generation-time A/B pins
     candidateCommit: f.candidateCommit, viewport: { width: 1280, height: 800 }
   });
   expect(result.captures.B).toBeNull();
+  const expectedDigest = createHash('sha256').update(f.png).digest('hex');
+  expect(result.captures.A).toMatchObject({
+    version: 2, sourceSha256: expectedDigest, candidateSha256: expectedDigest
+  });
   expect(f.capturePair).toHaveBeenCalledWith('http://127.0.0.1:48210/catalogue', 'http://127.0.0.1:48212/catalogue');
   expect(await f.authority.image(f.generationId, 'A', 'source')).toEqual(f.png);
   expect(await f.authority.image(f.generationId, 'A', 'candidate')).toEqual(f.png);
@@ -124,4 +129,52 @@ test('cannot replace pins or capture a report whose verified candidate identity 
   f.report.repository.candidateCommit = 'd'.repeat(40);
   writeFileSync(path, JSON.stringify(f.report));
   await expect(f.authority.get(f.generationId)).rejects.toMatchObject({ statusCode: 409 });
+});
+
+
+test('rejects modified, deleted, or replaced local screenshot bytes even when Git pins are unchanged', async () => {
+  const f = fixture();
+  await f.authority.register(f.report);
+  f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
+  await f.authority.capture(f.generationId, { source: 'A' });
+  const folder = resolve(f.artifactRoot, '.ums', 'visual-snapshots', f.generationId, 'A');
+  const manifest = JSON.parse(readFileSync(resolve(folder, 'manifest.json'), 'utf8')) as {
+    sourceFile: string; candidateFile: string; sourceSha256: string; candidateSha256: string; version: number;
+  };
+  expect(manifest.sourceSha256).toMatch(/^[a-f0-9]{64}$/);
+  const sourcePath = resolve(folder, manifest.sourceFile);
+  const candidatePath = resolve(folder, manifest.candidateFile);
+  const tamperedPng = Buffer.concat([f.png, Buffer.from('altered')]);
+  writeFileSync(sourcePath, tamperedPng);
+  await expect(f.authority.get(f.generationId)).rejects.toMatchObject({
+    statusCode: 409, message: expect.stringContaining('source A screenshot')
+  });
+  await expect(f.authority.image(f.generationId, 'A', 'source')).rejects.toMatchObject({ statusCode: 409 });
+
+  writeFileSync(sourcePath, f.png);
+  writeFileSync(candidatePath, tamperedPng);
+  await expect(f.authority.get(f.generationId)).rejects.toMatchObject({
+    statusCode: 409, message: expect.stringContaining('candidate A screenshot')
+  });
+  writeFileSync(candidatePath, f.png);
+  rmSync(candidatePath);
+  await expect(f.authority.image(f.generationId, 'A', 'candidate')).rejects.toMatchObject({ statusCode: 409 });
+  expect(git(f.root, ['status', '--porcelain'])).toBe('');
+});
+
+test('refuses digest-forged or legacy manifests instead of silently blessing old screenshots', async () => {
+  const f = fixture();
+  await f.authority.register(f.report);
+  f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
+  await f.authority.capture(f.generationId, { source: 'A' });
+  const path = resolve(f.artifactRoot, '.ums', 'visual-snapshots', f.generationId, 'A', 'manifest.json');
+  const manifest = JSON.parse(readFileSync(path, 'utf8')) as {
+    version: number; sourceSha256: string; candidateSha256: string;
+  };
+  writeFileSync(path, JSON.stringify({ ...manifest, sourceSha256: '0'.repeat(64) }));
+  await expect(f.authority.get(f.generationId)).rejects.toMatchObject({ statusCode: 409 });
+  writeFileSync(path, JSON.stringify({ ...manifest, version: 1, sourceSha256: undefined, candidateSha256: undefined }));
+  await expect(f.authority.get(f.generationId)).rejects.toMatchObject({
+    statusCode: 409, message: expect.stringContaining('Legacy screenshots lack PNG digests')
+  });
 });

@@ -1,5 +1,5 @@
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import type { CandidateGenerationReport } from '../../packages/candidate-generation/src/types';
 import type { PreviewSession } from '../../packages/preview-runtime/src/previewController';
@@ -77,6 +77,20 @@ function validatePng(image: Buffer) {
   if (!Buffer.isBuffer(image) || image.length > maxPngBytes || image.length < pngHeader.length
     || !image.subarray(0, pngHeader.length).equals(pngHeader)) {
     throw new VisualReviewError(409, 'The browser did not produce a bounded PNG screenshot.');
+  }
+}
+function pngSha256(image: Buffer) { return createHash('sha256').update(image).digest('hex'); }
+async function verifiedImage(path: string, expectedSha256: string, label: string) {
+  try {
+    // Do not read arbitrarily large files or follow a replaced screenshot symlink.
+    const info = await lstat(path);
+    if (!info.isFile() || info.size > maxPngBytes || info.size < pngHeader.length) throw new Error('Unbounded PNG');
+    const image = await readFile(path);
+    validatePng(image);
+    if (pngSha256(image) !== expectedSha256) throw new Error('SHA-256 mismatch');
+    return image;
+  } catch {
+    throw new VisualReviewError(409, 'Local ' + label + ' screenshot is missing or has failed PNG SHA-256 verification. This image is not valid evidence.');
   }
 }
 
@@ -162,14 +176,24 @@ export class VisualSnapshotAuthority {
       throw new VisualReviewError(409, 'Local screenshot metadata cannot be read.');
     }
     const pin = pins.sources[source];
-    if (capture.version !== 1 || capture.source !== source || capture.generationId !== id
+    const storedVersion = (capture as { version?: unknown } | null)?.version;
+    if (storedVersion === 1) {
+      throw new VisualReviewError(409, 'Legacy screenshots lack PNG digests. Generate a new candidate before relying on screenshot evidence.');
+    }
+    if (storedVersion !== 2 || capture.source !== source || capture.generationId !== id
       || capture.planIdentity !== pins.planIdentity || capture.sourceBranch !== pin.branch
       || capture.sourceCommit !== pin.commit || capture.candidateCommit !== pins.candidateCommit
       || capture.candidateTree !== pins.candidateTree || capture.viewport?.width !== viewport.width
       || capture.viewport?.height !== viewport.height || !/^[0-9a-f-]+\.png$/.test(capture.sourceFile)
-      || !/^[0-9a-f-]+\.png$/.test(capture.candidateFile)) {
+      || !/^[0-9a-f-]+\.png$/.test(capture.candidateFile)
+      || !/^[a-f0-9]{64}$/.test(capture.sourceSha256) || !/^[a-f0-9]{64}$/.test(capture.candidateSha256)) {
       throw new VisualReviewError(409, 'Local screenshots do not match the pinned source and candidate.');
     }
+    const folder = join(this.directory(id), source);
+    await Promise.all([
+      verifiedImage(join(folder, capture.sourceFile), capture.sourceSha256, 'source ' + source),
+      verifiedImage(join(folder, capture.candidateFile), capture.candidateSha256, 'candidate ' + source)
+    ]);
     return capture;
   }
 
@@ -226,9 +250,10 @@ export class VisualSnapshotAuthority {
       await writeFile(join(folder, sourceFile), pair.source, { flag: 'wx', mode: 0o600 });
       await writeFile(join(folder, candidateFile), pair.candidate, { flag: 'wx', mode: 0o600 });
       const capture: StoredCapture = {
-        version: 1, generationId: id, source, planIdentity: pins.planIdentity,
+        version: 2, generationId: id, source, planIdentity: pins.planIdentity,
         sourceBranch: sourcePin.branch, sourceCommit: sourcePin.commit,
         candidateCommit: pins.candidateCommit, candidateTree: pins.candidateTree,
+        sourceSha256: pngSha256(pair.source), candidateSha256: pngSha256(pair.candidate),
         capturedAt: new Date().toISOString(), viewport, sourceFile, candidateFile
       };
       try {
@@ -248,6 +273,7 @@ export class VisualSnapshotAuthority {
     if (!pins) throw new VisualReviewError(404, 'No snapshot pins are available.');
     const capture = await this.storedCapture(id, sourceValue, pins);
     if (!capture) throw new VisualReviewError(404, 'No local screenshot was captured.');
-    return await readFile(join(this.directory(id), sourceValue, kind === 'source' ? capture.sourceFile : capture.candidateFile));
+    const expected = kind === 'source' ? capture.sourceSha256 : capture.candidateSha256;
+    return await verifiedImage(join(this.directory(id), sourceValue, kind === 'source' ? capture.sourceFile : capture.candidateFile), expected, kind + ' ' + sourceValue);
   }
 }

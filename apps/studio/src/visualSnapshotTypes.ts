@@ -1,7 +1,10 @@
 export type VisualSnapshotSource = 'A' | 'B';
 
 export interface VisualSnapshotCapture {
-  version: 1;
+  version: 2;
+  /** Digests of the private local PNG bytes, rechecked on every read. */
+  sourceSha256: string;
+  candidateSha256: string;
   generationId: string;
   source: VisualSnapshotSource;
   planIdentity: string;
