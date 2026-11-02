@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import '../setup';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type { CandidateGenerationReport } from '../../packages/candidate-generation/src/types';
 import { formatVerifiedCandidateHandoff } from '../../apps/studio/src/candidateHandoff';
 import { ResultWorkspace } from '../../apps/studio/src/WorkspaceComponents';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+function apiResponse(value: unknown, status = 200) {
+  return Promise.resolve(new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } }));
+}
+beforeEach(() => { vi.spyOn(globalThis, 'fetch').mockImplementation(() => apiResponse({ status: 'pending', receipt: null })); });
 
 function verifiedReport(): CandidateGenerationReport {
   const identity = 'plan-v2-fixture-verified';
@@ -93,9 +97,21 @@ test.each([
 
 const foundation = { repositoryId: 'test-repository', branchRef: 'main', commitSha: '1'.repeat(40), commonAncestorCommit: '1'.repeat(40), role: 'base' as const };
 
+const liveComparisonProps = {
+  onCompare: (_source: 'A' | 'B') => undefined,
+  candidatePreviewReady: true,
+  sourcePins: {
+    A: { branch: 'branch-a', commit: '4'.repeat(40) },
+    B: { branch: 'branch-b', commit: '5'.repeat(40) }
+  },
+  activeSource: 'A' as const,
+  sourcePreviewReady: true,
+  comparisonActive: false
+};
+
 function showResult(report = verifiedReport()) {
   render(<ResultWorkspace report={report} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
-    onOpen={() => undefined} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
+    {...liveComparisonProps} onOpen={() => undefined} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
 }
 
 test('copies only after clipboard permission succeeds and shows accessible feedback', async () => {
@@ -123,4 +139,129 @@ test('does not offer copy action for an unverified result', () => {
   showResult(incomplete);
   expect(screen.getByRole('button', { name: 'Copy verified handoff' })).toBeDisabled();
   expect(screen.getByRole('status')).toHaveTextContent('not fully verified');
+});
+
+test('separates a verified Git result from visual acceptance when no stylesheet is transferred', () => {
+  showResult();
+  const review = screen.getByRole('complementary', { name: 'Visual review status' });
+  expect(review).toHaveTextContent('Visual review pending');
+  expect(review).toHaveTextContent('do not establish that the UI looks and behaves as intended');
+  expect(review).not.toHaveTextContent('transfers');
+  expect(screen.getByRole('button', { name: 'Open combined preview' })).toBeEnabled();
+});
+
+test('flags actual stylesheet operations and keeps the combined-preview action available', () => {
+  const report = verifiedReport();
+  report.plan.operations = ['src/styles/theme.css', 'src/features/Pulse.module.css'].map((path, index) => ({
+    id: `style-${index}`,
+    kind: index === 0 ? 'replace-style-file' as const : 'add-style-file' as const,
+    sliceIds: ['slice-a'],
+    source: { branchCommit: 'a'.repeat(40), path, region: null, contentHash: 'source-hash' },
+    target: { path, region: null, symbol: null },
+    evidenceEdgeIds: [],
+    precondition: { baseContentHash: null, targetContentHash: null, description: 'fixture' },
+    postcondition: { expectedContentHash: 'target-hash', description: 'fixture' },
+    ownership: 'conservative-file-transfer' as const,
+    detail: 'fixture stylesheet operation'
+  }));
+  const open = vi.fn();
+  render(<ResultWorkspace report={report} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} onOpen={open} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
+  const review = screen.getByRole('complementary', { name: 'Visual review status' });
+  expect(review).toHaveTextContent('Visual review pending');
+  expect(review).toHaveTextContent('transfers 2 stylesheets');
+  expect(review).toHaveTextContent('src/features/Pulse.module.css, src/styles/theme.css');
+  expect(review).toHaveTextContent('not automatically accepted');
+  fireEvent.click(screen.getByRole('button', { name: 'Open combined preview' }));
+  expect(open).toHaveBeenCalledOnce();
+});
+
+test('lets reviewers switch to the separately pinned Source B but never labels an in-flight source as compared', () => {
+  const compare = vi.fn();
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} onCompare={compare} onOpen={() => undefined} onEvidence={() => undefined}
+    onCopy={() => undefined} onReturn={() => undefined} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Compare Source B with result' }));
+  expect(compare).toHaveBeenCalledWith('B');
+  cleanup();
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} activeSource="B" sourcePreviewReady={false} comparisonActive
+    onCompare={compare} onOpen={() => undefined} onEvidence={() => undefined}
+    onCopy={() => undefined} onReturn={() => undefined} />);
+  expect(screen.getByRole('note', { name: 'Live comparison evidence' })).toHaveTextContent('Source B is loading or does not match');
+  expect(screen.getByRole('button', { name: 'Compare Source B with result' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Compare Source A with result' })).toBeEnabled();
+});
+
+test('keeps a pending review disabled when the real candidate preview is not at the verified commit', async () => {
+  const opened = vi.fn();
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} candidatePreviewReady={false} onOpen={opened} onEvidence={() => undefined}
+    onCopy={() => undefined} onReturn={() => undefined} />);
+  const record = await screen.findByRole('button', { name: 'Record visual review' });
+  fireEvent.change(screen.getByLabelText('Visual review decision'), { target: { value: 'looks-as-intended' } });
+  fireEvent.change(screen.getByLabelText('Visual observations'), { target: { value: 'The layout appears aligned.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Open combined preview' }));
+  expect(opened).toHaveBeenCalledOnce();
+  expect(record).toBeDisabled();
+  expect(screen.getByText('The combined preview must be running at the exact verified commit before recording.')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Compare Source A with result' })).toBeDisabled();
+  expect(vi.mocked(globalThis.fetch).mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+});
+
+test('records a self-attested review only after the combined preview was opened and notes were provided', async () => {
+  const result = verifiedReport();
+  const receipt = {
+    version: 1, scope: 'local-self-attested-visual-review',
+    generationId: result.generationId, planIdentity: result.integrationPlan!.identity,
+    candidateBranch: result.repository.candidateBranch,
+    candidateCommit: result.repository.candidateCommit, candidateTree: result.repository.candidateTree,
+    decision: 'looks-as-intended', notes: 'Sidebar and header look aligned.', recordedAt: '2026-11-02T00:00:00.000Z'
+  };
+  const posted = vi.fn();
+  vi.mocked(globalThis.fetch).mockImplementation((_input, init) => {
+    if (init?.method === 'POST') {
+      posted(JSON.parse(String(init.body)));
+      return apiResponse({ status: 'recorded', receipt }, 201);
+    }
+    return apiResponse({ status: 'pending', receipt: null });
+  });
+  const open = vi.fn();
+  render(<ResultWorkspace report={result} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} onOpen={open} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
+  const record = await screen.findByRole('button', { name: 'Record visual review' });
+  expect(record).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Visual review decision'), { target: { value: 'looks-as-intended' } });
+  fireEvent.change(screen.getByLabelText('Visual observations'), { target: { value: 'Sidebar and header look aligned.' } });
+  expect(record).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Open combined preview' }));
+  expect(open).toHaveBeenCalledOnce();
+  expect(record).toBeEnabled();
+  fireEvent.click(record);
+  expect(await screen.findByText('Visual review recorded: looks intended')).toBeVisible();
+  expect(screen.getByRole('complementary', { name: 'Visual review status' })).toHaveTextContent('Sidebar and header look aligned.');
+  expect(posted).toHaveBeenCalledWith({ decision: 'looks-as-intended', notes: 'Sidebar and header look aligned.' });
+  expect(screen.queryByRole('button', { name: 'Record visual review' })).not.toBeInTheDocument();
+});
+
+test('renders the exact persisted review and blocks another decision when the branch is stale', async () => {
+  const result = verifiedReport();
+  const receipt = {
+    version: 1, scope: 'local-self-attested-visual-review',
+    generationId: result.generationId, planIdentity: result.integrationPlan!.identity,
+    candidateBranch: result.repository.candidateBranch,
+    candidateCommit: result.repository.candidateCommit, candidateTree: result.repository.candidateTree,
+    decision: 'needs-changes', notes: 'Footer spacing is incorrect.', recordedAt: '2026-11-02T00:00:00.000Z'
+  };
+  vi.mocked(globalThis.fetch).mockImplementation(() => apiResponse({ status: 'recorded', receipt }));
+  showResult(result);
+  expect(await screen.findByText('Visual review recorded: needs changes')).toBeVisible();
+  expect(screen.getByRole('complementary', { name: 'Visual review status' })).toHaveTextContent('Footer spacing is incorrect.');
+  cleanup();
+  vi.mocked(globalThis.fetch).mockImplementation(() => apiResponse({
+    status: 'stale', receipt, reason: 'The candidate branch no longer points to the verified commit and tree.'
+  }));
+  showResult(result);
+  expect(await screen.findByRole('alert')).toHaveTextContent('no longer points');
+  expect(screen.queryByRole('button', { name: 'Record visual review' })).not.toBeInTheDocument();
 });

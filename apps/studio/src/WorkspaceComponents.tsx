@@ -5,6 +5,8 @@ import type { PreviewOperation } from '../../../packages/preview-runtime/src/pre
 import type { PreviewSlot } from './comparisonState';
 import { featureLabel } from './demoScenario';
 import { formatVerifiedCandidateHandoff } from './candidateHandoff';
+import type { ComparisonSource, SourcePreviewPins } from './candidateLiveComparison';
+import { VisualReviewPanel } from './VisualReviewPanel';
 import type { RepositoryResponse } from './studioTypes';
 
 function shortCommit(value: string | null | undefined) { return value ? value.slice(0, 7) : 'pending'; }
@@ -160,21 +162,29 @@ export function ResizableComparison({ layout, left, right }: { layout: 'both' | 
   </main>;
 }
 
-export function ResultWorkspace({ report, foundation, selections, onOpen, onEvidence, onCopy, onReturn }: {
+export function ResultWorkspace({ report, foundation, selections, onOpen, onCompare, onEvidence, onCopy, onReturn, candidatePreviewReady, sourcePins, activeSource, sourcePreviewReady, comparisonActive }: {
   report: CandidateGenerationReport;
   foundation: IntegrationFoundation | null;
   selections: { branch: string; label: string }[];
   onOpen: () => void;
+  onCompare: (source: ComparisonSource) => void;
+  candidatePreviewReady: boolean;
+  sourcePins: SourcePreviewPins;
+  activeSource: ComparisonSource;
+  sourcePreviewReady: boolean;
+  comparisonActive: boolean;
   onEvidence: () => void;
   onCopy: () => void;
   onReturn: () => void;
 }) {
   const [handoffStatus, setHandoffStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   const handoff = formatVerifiedCandidateHandoff(report);
+  const activePin = sourcePins[activeSource];
+  const [previewOpened, setPreviewOpened] = useState(false);
   const handoffRevision = `${report.generationId}:${report.repository.candidateCommit}:${report.integrationPlan?.identity}`;
   const latestRevision = useRef(handoffRevision);
   latestRevision.current = handoffRevision;
-  useEffect(() => { setHandoffStatus('idle'); }, [handoffRevision]);
+  useEffect(() => { setHandoffStatus('idle'); setPreviewOpened(false); }, [handoffRevision]);
 
   async function copyHandoff() {
     if (!handoff) return;
@@ -191,7 +201,23 @@ export function ResultWorkspace({ report, foundation, selections, onOpen, onEvid
   return <section className="result-workspace" aria-labelledby="result-title">
     <div className="result-convergence" aria-label="Selected sources converge into the combined result"><div className="result-sources">{selections.map(selection => <span key={`${selection.branch}:${selection.label}`}><i>✓</i><small>{selection.branch}</small><strong>{selection.label}</strong></span>)}</div><div className="convergence-line" aria-hidden="true"><i /><b>→</b></div><div className="result-identity"><p className="eyebrow">Verified combined result</p><h1 id="result-title">{report.repository.candidateBranch}</h1><code>{shortCommit(report.repository.candidateCommit)}</code><span>Built from <code>{foundation?.branchRef}</code> · <code>{shortCommit(foundation?.commitSha)}</code></span></div></div>
     <div className="result-verification" aria-label="Verification results">{report.verification.map(item => <span className={`verification-${item.status}`} key={item.name}><i aria-hidden="true">{item.status === 'passed' ? '✓' : '!'}</i><small>{item.name}</small><strong>{item.status}</strong></span>)}<span><small>Operations</small><strong>{report.plan.operations.length}</strong></span></div>
-    <div className="result-controls"><button className="primary-action" onClick={onOpen}>Open combined preview</button><button className="quiet-action" onClick={onEvidence}>Inspect evidence</button><button className="quiet-action" onClick={onCopy}>Copy branch name</button><button className="quiet-action" onClick={() => void copyHandoff()} disabled={!handoff}>Copy verified handoff</button><button className="quiet-action" onClick={onReturn}>Return to comparison</button></div>
+    <div className="result-controls"><button className="primary-action" onClick={() => { setPreviewOpened(true); onOpen(); }}>Open combined preview</button>{(['A', 'B'] as const).map(source => <button key={source} className="quiet-action" aria-pressed={comparisonActive && activeSource === source}
+      onClick={() => { setPreviewOpened(true); onCompare(source); }}
+      disabled={!candidatePreviewReady || !sourcePins[source] || (comparisonActive && activeSource === source && !sourcePreviewReady)}>
+      Compare Source {source} with result
+    </button>)}<button className="quiet-action" onClick={onEvidence}>Inspect evidence</button><button className="quiet-action" onClick={onCopy}>Copy branch name</button><button className="quiet-action" onClick={() => void copyHandoff()} disabled={!handoff}>Copy verified handoff</button><button className="quiet-action" onClick={onReturn}>Return to comparison</button></div>
+    <aside className="result-live-comparison" aria-label="Live comparison evidence" role="note">
+      <strong>Live comparison</strong>
+      <p>Source {activeSource} <code>{activePin?.branch ?? 'unavailable'}</code> at <code>{shortCommit(activePin?.commit)}</code> · Result <code>{report.repository.candidateBranch}</code> at <code>{shortCommit(report.repository.candidateCommit)}</code>.</p>
+      <p>{!candidatePreviewReady
+        ? 'The combined preview has not reached the verified candidate commit. Review recording remains unavailable.'
+        : sourcePreviewReady
+          ? comparisonActive
+            ? 'Both exact-commit previews are visible at the Studio viewport preset. Compare matching routes and content before recording observations.'
+            : 'The pinned source and result are running. Choose Compare Source A or B to view them side by side.'
+          : `Source ${activeSource} is loading or does not match its original pinned commit; wait or restart this preview before comparing.`} Source A and B are inspected one at a time; no screenshots or pixel-diff evidence are captured here.</p>
+    </aside>
+    <VisualReviewPanel key={handoffRevision} report={report} previewOpened={previewOpened} candidatePreviewReady={candidatePreviewReady} />
     {handoffStatus !== 'idle' && <p role="status" aria-live="polite">{handoffStatus === 'copied'
       ? 'Verified local candidate handoff copied. No logs or local paths included.'
       : 'Could not copy the handoff. Allow clipboard access, or inspect the evidence here.'}</p>}
