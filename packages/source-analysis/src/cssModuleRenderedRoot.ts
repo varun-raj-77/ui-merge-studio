@@ -78,8 +78,19 @@ export function inspectCssModuleRenderedRoot(source: string, request: CssModuleR
   let problem: string | null = null;
   const visit = (element: t.JSXElement): void => {
     if (problem) return;
-    if (!hostName(element)) {
+    const tag = hostName(element);
+    if (!tag) {
       problem = 'Rendered CSS proof excludes custom component and namespaced JSX targets.';
+      return;
+    }
+    // React can hoist stylesheet-bearing host nodes into document-wide effects.
+    // Their CSS is not represented by the selected module's local rule evidence.
+    const linksStylesheet = tag === 'link' && element.openingElement.attributes.some(attribute =>
+      t.isJSXAttribute(attribute) && t.isJSXIdentifier(attribute.name, { name: 'rel' }) &&
+      t.isStringLiteral(attribute.value) &&
+      attribute.value.value.toLowerCase().split(/\s+/).includes('stylesheet'));
+    if (tag === 'style' || linksStylesheet) {
+      problem = 'Stylesheet-bearing host nodes can affect styles outside the selected rendered root.';
       return;
     }
     const seenAttributes = new Set<string>();

@@ -36,7 +36,10 @@ describe('UMS-24G: selected rendered-host CSS Module proof (no transfer)', () =>
     ['dynamic child', importLine + '\nexport function RevenuePulseBadge({active}:{active:boolean}){return <section className={styles.pulse}>{active && <span>Maybe</span>}</section>}\n', 'Dynamic'],
     ['spread overriding className', importLine + '\nexport function RevenuePulseBadge({props}:{props:object}){return <section className={styles.pulse} {...props}/>}\n', 'spreads'],
     ['dynamic event prop', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse} onClick={() => {}}/>}\n', 'Dynamic'],
-    ['custom component target', importLine + '\nexport function RevenuePulseBadge(){return <section><Other className={styles.pulse}/></section>}\n', 'custom component']
+    ['custom component target', importLine + '\nexport function RevenuePulseBadge(){return <section><Other className={styles.pulse}/></section>}\n', 'custom component'],
+    ['inline imported stylesheet', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><style>@import url("/global.css");</style></section>}\n', 'Stylesheet-bearing'],
+    ['linked stylesheet', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><link rel="stylesheet" href="/global.css" precedence="default"/></section>}\n', 'Stylesheet-bearing'],
+    ['alternate stylesheet token', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><link rel="alternate StyleSheet" href="/global.css"/></section>}\n', 'Stylesheet-bearing']
   ] as const)('refuses %s', (_label, source, reason) => {
     expect(inspectCssModuleRenderedRoot(source, request)).toMatchObject({
       status: 'refused', classes: [], reason: expect.stringContaining(reason)
