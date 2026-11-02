@@ -48,7 +48,7 @@ test('UMS-25A: a real phase0 Git candidate compiles its CSS Module, which shifts
 
   git(root, ['switch', '-c', 'feature']);
   writeFiles(root, {
-    'src/App.tsx': "import { Feature } from './features/Feature';\nexport function App(){return <main style={{display:'flex',width:700}}><Feature/><aside id='unrelated'>Unrelated sibling</aside></main>}\n",
+    'src/App.tsx': "import { Feature } from './features/Feature';\nexport function App(){return <main style={{display:\"flex\",width:700}}><Feature/><aside id='unrelated'>Unrelated sibling</aside></main>}\n",
     'src/features/Feature.tsx': "import styles from './Feature.module.css';\nexport function Feature(){return <section id='selected' className={styles.pulse}>Selected feature</section>}\n",
     'src/features/Feature.module.css': '.pulse{width:320px}\n',
     'src/AccidentalPromotion.tsx': 'export function AccidentalPromotion(){return <p>Unselected promotional change</p>}\n'
