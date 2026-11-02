@@ -325,4 +325,28 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
     expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
   });
 
+  test('UMS-24I refuses a global class beside an otherwise owned CSS Module class', async () => {
+    const root = repository();
+    git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+    addFeature(root, '.pulse{color:green}\n', {
+      [featurePath]: [
+        "import styles from './RevenuePulseBadge.module.css';",
+        'export function RevenuePulseBadge(){return <section className="global"><span className={styles.pulse}>Revenue pulse</span></section>}',
+        ''
+      ].join('\n')
+    });
+    const { artifact, request } = await renderedSlice(root);
+    expect(artifact.slice.status).toBe('refused');
+    expect(artifact.slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+      path: stylePath, edge: 'unsupported-css-module-rendered-root',
+      reason: expect.stringContaining('Literal or missing JSX className')
+    }));
+    const preflight = await new CandidateGenerator(root).preflight(request);
+    expect(preflight.plan.status).toBe('refused');
+    expect(preflight.plan.operations).toEqual([]);
+    expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+    expect(git(root, ['status', '--porcelain'])).toBe('');
+    expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+  });
+
 });

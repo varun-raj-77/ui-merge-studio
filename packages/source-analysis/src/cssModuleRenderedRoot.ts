@@ -105,7 +105,11 @@ export function inspectCssModuleRenderedRoot(source: string, request: CssModuleR
         return;
       }
       seenAttributes.add(key);
-      if (key === 'className' && t.isJSXExpressionContainer(attribute.value)) {
+      if (key === 'className') {
+        if (!t.isJSXExpressionContainer(attribute.value)) {
+          problem = 'Literal or missing JSX className is not owned by the selected CSS Module.';
+          return;
+        }
         const value = attribute.value.expression;
         if (!t.isMemberExpression(value) || value.computed || !t.isIdentifier(value.object, { name: styleName }) ||
             !t.isIdentifier(value.property)) {

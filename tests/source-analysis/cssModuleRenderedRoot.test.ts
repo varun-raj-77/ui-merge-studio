@@ -16,6 +16,8 @@ describe('UMS-24G: selected rendered-host CSS Module proof (no transfer)', () =>
     expect(first).toEqual({ status: 'supported', classes: ['pulse'], reason: null });
     expect(inspectCssModuleRenderedRoot(selectedSource, request)).toEqual(first);
     expect(inspectCssModuleRenderedRoot(selectedSource.replace(/\n/g, '\r\n'), request)).toEqual(first);
+    const plainLabel = importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse} aria-label="Revenue pulse">Revenue pulse</section>}\n';
+    expect(inspectCssModuleRenderedRoot(plainLabel, request)).toEqual(first);
     const nested = importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><span className={styles.label}>Up</span></section>}\n';
     expect(inspectCssModuleRenderedRoot(nested, { ...request, cssClasses: ['label', 'pulse'] })).toEqual({
       status: 'supported', classes: ['label', 'pulse'], reason: null
@@ -39,7 +41,10 @@ describe('UMS-24G: selected rendered-host CSS Module proof (no transfer)', () =>
     ['custom component target', importLine + '\nexport function RevenuePulseBadge(){return <section><Other className={styles.pulse}/></section>}\n', 'custom component'],
     ['inline imported stylesheet', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><style>@import url("/global.css");</style></section>}\n', 'Stylesheet-bearing'],
     ['linked stylesheet', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><link rel="stylesheet" href="/global.css" precedence="default"/></section>}\n', 'Stylesheet-bearing'],
-    ['alternate stylesheet token', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><link rel="alternate StyleSheet" href="/global.css"/></section>}\n', 'Stylesheet-bearing']
+    ['alternate stylesheet token', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><link rel="alternate StyleSheet" href="/global.css"/></section>}\n', 'Stylesheet-bearing'],
+    ['literal global root class', importLine + '\nexport function RevenuePulseBadge(){return <section className="global"><span className={styles.pulse}>Pulse</span></section>}\n', 'Literal or missing JSX className'],
+    ['literal global nested class', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><span className="shared">Pulse</span></section>}\n', 'Literal or missing JSX className'],
+    ['boolean className attribute', importLine + '\nexport function RevenuePulseBadge(){return <section className={styles.pulse}><span className>Pulse</span></section>}\n', 'Literal or missing JSX className']
   ] as const)('refuses %s', (_label, source, reason) => {
     expect(inspectCssModuleRenderedRoot(source, request)).toMatchObject({
       status: 'refused', classes: [], reason: expect.stringContaining(reason)
