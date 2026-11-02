@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import '../setup';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type { CandidateGenerationReport } from '../../packages/candidate-generation/src/types';
 import { formatVerifiedCandidateHandoff } from '../../apps/studio/src/candidateHandoff';
 import { ResultWorkspace } from '../../apps/studio/src/WorkspaceComponents';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+function apiResponse(value: unknown, status = 200) {
+  return Promise.resolve(new Response(JSON.stringify(value), { status, headers: { 'Content-Type': 'application/json' } }));
+}
+beforeEach(() => { vi.spyOn(globalThis, 'fetch').mockImplementation(() => apiResponse({ status: 'pending', receipt: null })); });
 
 function verifiedReport(): CandidateGenerationReport {
   const identity = 'plan-v2-fixture-verified';
@@ -155,7 +159,64 @@ test('flags actual stylesheet operations and keeps the combined-preview action a
   expect(review).toHaveTextContent('Visual review pending');
   expect(review).toHaveTextContent('transfers 2 stylesheets');
   expect(review).toHaveTextContent('src/features/Pulse.module.css, src/styles/theme.css');
-  expect(review).toHaveTextContent('have not been accepted');
+  expect(review).toHaveTextContent('not automatically accepted');
   fireEvent.click(screen.getByRole('button', { name: 'Open combined preview' }));
   expect(open).toHaveBeenCalledOnce();
+});
+
+test('records a self-attested review only after the combined preview was opened and notes were provided', async () => {
+  const result = verifiedReport();
+  const receipt = {
+    version: 1, scope: 'local-self-attested-visual-review',
+    generationId: result.generationId, planIdentity: result.integrationPlan!.identity,
+    candidateBranch: result.repository.candidateBranch,
+    candidateCommit: result.repository.candidateCommit, candidateTree: result.repository.candidateTree,
+    decision: 'looks-as-intended', notes: 'Sidebar and header look aligned.', recordedAt: '2026-11-02T00:00:00.000Z'
+  };
+  const posted = vi.fn();
+  vi.mocked(globalThis.fetch).mockImplementation((_input, init) => {
+    if (init?.method === 'POST') {
+      posted(JSON.parse(String(init.body)));
+      return apiResponse({ status: 'recorded', receipt }, 201);
+    }
+    return apiResponse({ status: 'pending', receipt: null });
+  });
+  const open = vi.fn();
+  render(<ResultWorkspace report={result} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    onOpen={open} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
+  const record = await screen.findByRole('button', { name: 'Record visual review' });
+  expect(record).toBeDisabled();
+  fireEvent.change(screen.getByLabelText('Visual review decision'), { target: { value: 'looks-as-intended' } });
+  fireEvent.change(screen.getByLabelText('Visual observations'), { target: { value: 'Sidebar and header look aligned.' } });
+  expect(record).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Open combined preview' }));
+  expect(open).toHaveBeenCalledOnce();
+  expect(record).toBeEnabled();
+  fireEvent.click(record);
+  expect(await screen.findByText('Visual review recorded: looks intended')).toBeVisible();
+  expect(screen.getByRole('complementary', { name: 'Visual review status' })).toHaveTextContent('Sidebar and header look aligned.');
+  expect(posted).toHaveBeenCalledWith({ decision: 'looks-as-intended', notes: 'Sidebar and header look aligned.' });
+  expect(screen.queryByRole('button', { name: 'Record visual review' })).not.toBeInTheDocument();
+});
+
+test('renders the exact persisted review and blocks another decision when the branch is stale', async () => {
+  const result = verifiedReport();
+  const receipt = {
+    version: 1, scope: 'local-self-attested-visual-review',
+    generationId: result.generationId, planIdentity: result.integrationPlan!.identity,
+    candidateBranch: result.repository.candidateBranch,
+    candidateCommit: result.repository.candidateCommit, candidateTree: result.repository.candidateTree,
+    decision: 'needs-changes', notes: 'Footer spacing is incorrect.', recordedAt: '2026-11-02T00:00:00.000Z'
+  };
+  vi.mocked(globalThis.fetch).mockImplementation(() => apiResponse({ status: 'recorded', receipt }));
+  showResult(result);
+  expect(await screen.findByText('Visual review recorded: needs changes')).toBeVisible();
+  expect(screen.getByRole('complementary', { name: 'Visual review status' })).toHaveTextContent('Footer spacing is incorrect.');
+  cleanup();
+  vi.mocked(globalThis.fetch).mockImplementation(() => apiResponse({
+    status: 'stale', receipt, reason: 'The candidate branch no longer points to the verified commit and tree.'
+  }));
+  showResult(result);
+  expect(await screen.findByRole('alert')).toHaveTextContent('no longer points');
+  expect(screen.queryByRole('button', { name: 'Record visual review' })).not.toBeInTheDocument();
 });
