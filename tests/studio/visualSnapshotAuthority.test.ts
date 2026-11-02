@@ -70,7 +70,7 @@ test('captures opt-in real-preview pairs with immutable generation-time A/B pins
   await f.authority.register(f.report);
   expect((await f.authority.get(f.generationId)).status).toBe('ready');
   f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
-  const result = await f.authority.capture(f.generationId, { source: 'A' });
+  const result = await f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' });
   expect(result.captures.A).toMatchObject({
     generationId: f.generationId, sourceBranch: 'branch-a', sourceCommit: 'a'.repeat(40),
     candidateCommit: f.candidateCommit, viewport: { width: 1280, height: 800 }
@@ -78,16 +78,16 @@ test('captures opt-in real-preview pairs with immutable generation-time A/B pins
   expect(result.captures.B).toBeNull();
   const expectedDigest = createHash('sha256').update(f.png).digest('hex');
   expect(result.captures.A).toMatchObject({
-    version: 2, sourceSha256: expectedDigest, candidateSha256: expectedDigest
+    version: 3, route: '/catalogue', sourceSha256: expectedDigest, candidateSha256: expectedDigest
   });
   expect(f.capturePair).toHaveBeenCalledWith('http://127.0.0.1:48210/catalogue', 'http://127.0.0.1:48212/catalogue');
   expect(await f.authority.image(f.generationId, 'A', 'source')).toEqual(f.png);
   expect(await f.authority.image(f.generationId, 'A', 'candidate')).toEqual(f.png);
-  expect((await f.authority.capture(f.generationId, { source: 'A' })).captures.A).toEqual(result.captures.A);
+  expect((await f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' })).captures.A).toEqual(result.captures.A);
   expect(f.capturePair).toHaveBeenCalledTimes(1);
   // A second source is still bound to the original right-slot SHA after the slot changes.
   f.current.left = f.session('left', 'branch-b', 'b'.repeat(40), 48213);
-  const b = await f.authority.capture(f.generationId, { source: 'B' });
+  const b = await f.authority.capture(f.generationId, { source: 'B', route: '/catalogue' });
   expect(b.captures.B?.sourceCommit).toBe('b'.repeat(40));
   const restarted = new VisualSnapshotAuthority(f.artifactRoot, new VisualReviewAuthority(f.root, f.artifactRoot), {
     session: slot => f.current[slot], isAlive: () => true
@@ -100,24 +100,26 @@ test('refuses forged URLs, commits, stale preview slots and branch movement', as
   const f = fixture();
   await f.authority.register(f.report);
   f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
-  for (const input of [{ source: 'A', url: 'http://example.com' }, { source: 'C' }, { source: 'B', commit: 'c'.repeat(40) }, {}]) {
+  for (const input of [{ source: 'A', route: '/catalogue', url: 'http://example.com' }, { source: 'C', route: '/catalogue' }, { source: 'B', route: '/catalogue', commit: 'c'.repeat(40) }, {},
+    ...['https://example.com', '//example.com', '/../../safe', '/%2e%2e/', '/catalogue?mode=1', '/catalogue#x', '/catalogue//item', '/foo\\bar']
+      .map(route => ({ source: 'A', route }))]) {
     await expect(f.authority.capture(f.generationId, input)).rejects.toMatchObject({ statusCode: 400 });
   }
-  await expect(f.authority.capture('../bad', { source: 'A' })).rejects.toMatchObject({ statusCode: 400 });
-  await expect(f.authority.capture(f.generationId, { source: 'B' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(f.authority.capture('../bad', { source: 'A', route: '/catalogue' })).rejects.toMatchObject({ statusCode: 400 });
+  await expect(f.authority.capture(f.generationId, { source: 'B', route: '/catalogue' })).rejects.toMatchObject({ statusCode: 409 });
   f.current.left = f.session('left', 'branch-a', 'a'.repeat(40), 48210);
   f.current.right.url = 'http://example.com/catalogue';
-  await expect(f.authority.capture(f.generationId, { source: 'A' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' })).rejects.toMatchObject({ statusCode: 409 });
   f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
   f.alive.left = false;
-  await expect(f.authority.capture(f.generationId, { source: 'A' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' })).rejects.toMatchObject({ statusCode: 409 });
   f.alive.left = true;
   git(f.root, ['switch', 'combined-result']);
   writeFiles(f.root, { 'src/Feature.tsx': 'export function Feature(){return <div>new</div>}\n' });
   commit(f.root, 'feat: move candidate branch');
   git(f.root, ['switch', 'main']);
   expect((await f.authority.get(f.generationId)).status).toBe('stale');
-  await expect(f.authority.capture(f.generationId, { source: 'A' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' })).rejects.toMatchObject({ statusCode: 409 });
 });
 
 test('cannot replace pins or capture a report whose verified candidate identity was altered', async () => {
@@ -136,7 +138,7 @@ test('rejects modified, deleted, or replaced local screenshot bytes even when Gi
   const f = fixture();
   await f.authority.register(f.report);
   f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
-  await f.authority.capture(f.generationId, { source: 'A' });
+  await f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' });
   const folder = resolve(f.artifactRoot, '.ums', 'visual-snapshots', f.generationId, 'A');
   const manifest = JSON.parse(readFileSync(resolve(folder, 'manifest.json'), 'utf8')) as {
     sourceFile: string; candidateFile: string; sourceSha256: string; candidateSha256: string; version: number;
@@ -166,15 +168,35 @@ test('refuses digest-forged or legacy manifests instead of silently blessing old
   const f = fixture();
   await f.authority.register(f.report);
   f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
-  await f.authority.capture(f.generationId, { source: 'A' });
+  await f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' });
   const path = resolve(f.artifactRoot, '.ums', 'visual-snapshots', f.generationId, 'A', 'manifest.json');
   const manifest = JSON.parse(readFileSync(path, 'utf8')) as {
     version: number; sourceSha256: string; candidateSha256: string;
   };
   writeFileSync(path, JSON.stringify({ ...manifest, sourceSha256: '0'.repeat(64) }));
   await expect(f.authority.get(f.generationId)).rejects.toMatchObject({ statusCode: 409 });
+  writeFileSync(path, JSON.stringify({ ...manifest, version: 2, route: undefined }));
+  await expect(f.authority.get(f.generationId)).rejects.toMatchObject({
+    statusCode: 409, message: expect.stringContaining('Legacy screenshots lack exact route provenance')
+  });
   writeFileSync(path, JSON.stringify({ ...manifest, version: 1, sourceSha256: undefined, candidateSha256: undefined }));
   await expect(f.authority.get(f.generationId)).rejects.toMatchObject({
-    statusCode: 409, message: expect.stringContaining('Legacy screenshots lack PNG digests')
+    statusCode: 409, message: expect.stringContaining('Legacy screenshots lack exact route provenance')
   });
+});
+
+
+test('captures the same explicit local route on both managed preview origins and refuses route changes', async () => {
+  const f = fixture();
+  await f.authority.register(f.report);
+  f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
+  const captured = await f.authority.capture(f.generationId, { source: 'A', route: '/products/desk-stand' });
+  expect(captured.captures.A).toMatchObject({ version: 3, route: '/products/desk-stand' });
+  expect(f.capturePair).toHaveBeenCalledWith(
+    'http://127.0.0.1:48210/products/desk-stand', 'http://127.0.0.1:48212/products/desk-stand'
+  );
+  await expect(f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' })).rejects.toMatchObject({
+    statusCode: 409, message: expect.stringContaining('already captured at a different route')
+  });
+  expect(f.capturePair).toHaveBeenCalledTimes(1);
 });

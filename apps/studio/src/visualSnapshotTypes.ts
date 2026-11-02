@@ -1,7 +1,9 @@
 export type VisualSnapshotSource = 'A' | 'B';
 
 export interface VisualSnapshotCapture {
-  version: 2;
+  version: 3;
+  /** Immutable relative pathname shown in both managed preview screenshots. */
+  route: string;
   /** Digests of the private local PNG bytes, rechecked on every read. */
   sourceSha256: string;
   candidateSha256: string;

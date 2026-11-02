@@ -5,6 +5,7 @@ import type { CandidateGenerationReport } from '../../packages/candidate-generat
 import type { PreviewSession } from '../../packages/preview-runtime/src/previewController';
 import { formatVerifiedCandidateHandoff } from './src/candidateHandoff';
 import type { ComparisonSource } from './src/candidateLiveComparison';
+import { isSafeCaptureRoute } from './src/visualSnapshotRoutes';
 import type { VisualSnapshotCapture, VisualSnapshotState } from './src/visualSnapshotTypes';
 import { VisualReviewAuthority, VisualReviewError } from './visualReviewAuthority';
 
@@ -72,6 +73,14 @@ function safePreviewUrl(session: PreviewSession): string {
     throw new VisualReviewError(409, 'The managed preview URL is not a local loopback URL.');
   }
   return url.href;
+}
+function localCaptureUrl(session: PreviewSession, route: string) {
+  const trusted = new URL(safePreviewUrl(session));
+  const capture = new URL(route, trusted.origin);
+  if (capture.origin !== trusted.origin || capture.pathname !== route || capture.search || capture.hash) {
+    throw new VisualReviewError(400, 'Capture route must be a normalized same-origin pathname.');
+  }
+  return capture.href;
 }
 function validatePng(image: Buffer) {
   if (!Buffer.isBuffer(image) || image.length > maxPngBytes || image.length < pngHeader.length
@@ -177,10 +186,10 @@ export class VisualSnapshotAuthority {
     }
     const pin = pins.sources[source];
     const storedVersion = (capture as { version?: unknown } | null)?.version;
-    if (storedVersion === 1) {
-      throw new VisualReviewError(409, 'Legacy screenshots lack PNG digests. Generate a new candidate before relying on screenshot evidence.');
+    if (storedVersion === 1 || storedVersion === 2) {
+      throw new VisualReviewError(409, 'Legacy screenshots lack exact route provenance. Generate a new candidate before relying on screenshot evidence.');
     }
-    if (storedVersion !== 2 || capture.source !== source || capture.generationId !== id
+    if (storedVersion !== 3 || !isSafeCaptureRoute(capture.route) || capture.source !== source || capture.generationId !== id
       || capture.planIdentity !== pins.planIdentity || capture.sourceBranch !== pin.branch
       || capture.sourceCommit !== pin.commit || capture.candidateCommit !== pins.candidateCommit
       || capture.candidateTree !== pins.candidateTree || capture.viewport?.width !== viewport.width
@@ -213,13 +222,18 @@ export class VisualSnapshotAuthority {
 
   async capture(id: string, input: unknown): Promise<VisualSnapshotState> {
     if (!input || typeof input !== 'object' || Array.isArray(input)
-      || Object.keys(input).join(',') !== 'source' || !validSource((input as { source?: unknown }).source)) {
-      throw new VisualReviewError(400, 'Only Source A or B may be requested; URLs and commit identities are server-owned.');
+      || Object.keys(input).sort().join(',') !== 'route,source'
+      || !validSource((input as { source?: unknown }).source)
+      || !isSafeCaptureRoute((input as { route?: unknown }).route)) {
+      throw new VisualReviewError(400, 'Only Source A/B and a safe local pathname are accepted. URLs and commit identities are server-owned.');
     }
-    const source = (input as { source: ComparisonSource }).source;
+    const { source, route } = input as { source: ComparisonSource; route: string };
     const before = await this.get(id);
     if (before.status !== 'ready') throw new VisualReviewError(409, before.reason ?? 'The candidate is no longer current.');
-    if (before.captures[source]) return before;
+    if (before.captures[source]) {
+      if (before.captures[source].route !== route) throw new VisualReviewError(409, 'This source was already captured at a different route. Create a new candidate to capture another route.');
+      return before;
+    }
     const pins = (await this.verifiedPins(id))!;
     const left = this.previews.session('left');
     const right = this.previews.session('right');
@@ -234,7 +248,7 @@ export class VisualSnapshotAuthority {
     if (this.activeCaptures.has(key)) throw new VisualReviewError(409, 'A capture of this source is already running.');
     this.activeCaptures.add(key);
     try {
-      const pair = await this.capturePair(safePreviewUrl(left), safePreviewUrl(right));
+      const pair = await this.capturePair(localCaptureUrl(left, route), localCaptureUrl(right, route));
       validatePng(pair.source);
       validatePng(pair.candidate);
       // The preview may have restarted or the branch may have moved during capture.
@@ -242,7 +256,10 @@ export class VisualSnapshotAuthority {
       if (after.status !== 'ready' || this.previews.session('left') !== left
         || this.previews.session('right') !== right || !this.previews.isAlive('left')
         || !this.previews.isAlive('right')) throw new VisualReviewError(409, 'Preview identity changed during capture. Retry with the pinned previews.');
-      if (after.captures[source]) return after;
+      if (after.captures[source]) {
+        if (after.captures[source].route !== route) throw new VisualReviewError(409, 'Another route was already captured for this source.');
+        return after;
+      }
       const folder = join(this.directory(id), source);
       await mkdir(folder, { recursive: true });
       const sourceFile = randomUUID() + '.png';
@@ -250,7 +267,7 @@ export class VisualSnapshotAuthority {
       await writeFile(join(folder, sourceFile), pair.source, { flag: 'wx', mode: 0o600 });
       await writeFile(join(folder, candidateFile), pair.candidate, { flag: 'wx', mode: 0o600 });
       const capture: StoredCapture = {
-        version: 2, generationId: id, source, planIdentity: pins.planIdentity,
+        version: 3, generationId: id, source, route, planIdentity: pins.planIdentity,
         sourceBranch: sourcePin.branch, sourceCommit: sourcePin.commit,
         candidateCommit: pins.candidateCommit, candidateTree: pins.candidateTree,
         sourceSha256: pngSha256(pair.source), candidateSha256: pngSha256(pair.candidate),

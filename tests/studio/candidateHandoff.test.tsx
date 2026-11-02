@@ -278,7 +278,7 @@ test('keeps screenshot capture opt-in and restricted to two running exact-commit
   fetchSpy.mockImplementation((input, init) => {
     if (String(input).includes('/visual-snapshots/') && init?.method === 'POST') {
       return apiResponse({ status: 'ready', captures: {
-        A: { version: 2, generationId: 'f'.repeat(16), source: 'A', planIdentity: 'plan-v2-fixture-verified',
+        A: { version: 3, route: '/catalogue', generationId: 'f'.repeat(16), source: 'A', planIdentity: 'plan-v2-fixture-verified',
           sourceSha256: 'a'.repeat(64), candidateSha256: 'b'.repeat(64),
           sourceBranch: 'branch-a', sourceCommit: '4'.repeat(40), candidateCommit: '2'.repeat(40), candidateTree: '3'.repeat(40),
           capturedAt: '2026-01-01T00:00:00Z', viewport: { width: 1280, height: 800 } },
@@ -290,16 +290,22 @@ test('keeps screenshot capture opt-in and restricted to two running exact-commit
       : { status: 'pending', receipt: null });
   });
   render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
-    {...liveComparisonProps} comparisonActive={true} onOpen={() => undefined} onEvidence={() => undefined}
+    {...liveComparisonProps} activeRoute="/catalogue" comparisonActive={true} onOpen={() => undefined} onEvidence={() => undefined}
     onCopy={() => undefined} onReturn={() => undefined} />);
   const capture = await screen.findByRole('button', { name: 'Capture Source A + result snapshots' });
   await waitFor(() => expect(capture).toBeEnabled());
+  fireEvent.change(screen.getByLabelText('Local screenshot route'), { target: { value: 'https://example.com' } });
+  expect(capture).toBeDisabled();
+  expect(screen.getByText(/Enter a local pathname/)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Local screenshot route'), { target: { value: '/catalogue' } });
+  expect(capture).toBeEnabled();
   fireEvent.click(capture);
   await waitFor(() => expect(fetchSpy).toHaveBeenCalledWith('/api/candidate/visual-snapshots/' + 'f'.repeat(16), expect.objectContaining({
-    method: 'POST', body: JSON.stringify({ source: 'A' })
+    method: 'POST', body: JSON.stringify({ source: 'A', route: '/catalogue' })
   })));
   expect(await screen.findByText('Source A', { selector: 'figcaption' })).toBeInTheDocument();
   expect(screen.getByAltText(/Source A local screenshot/)).toHaveAttribute('src', expect.stringContaining('/A/source.png'));
   expect(screen.getByRole('button', { name: 'Source A captured' })).toBeDisabled();
+  expect(screen.getByText(/route/, { selector: 'small' })).toHaveTextContent('/catalogue');
   expect(screen.getByText(/PNG SHA-256 matches local manifest/)).toBeInTheDocument();
 });

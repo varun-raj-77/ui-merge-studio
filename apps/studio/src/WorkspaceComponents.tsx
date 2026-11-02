@@ -163,7 +163,7 @@ export function ResizableComparison({ layout, left, right }: { layout: 'both' | 
   </main>;
 }
 
-export function ResultWorkspace({ report, foundation, selections, onOpen, onCompare, onEvidence, onCopy, onReturn, candidatePreviewReady, sourcePins, activeSource, sourcePreviewReady, comparisonActive }: {
+export function ResultWorkspace({ report, foundation, selections, onOpen, onCompare, onEvidence, onCopy, onReturn, candidatePreviewReady, sourcePins, activeSource, activeRoute = '/', sourcePreviewReady, comparisonActive }: {
   report: CandidateGenerationReport;
   foundation: IntegrationFoundation | null;
   selections: { branch: string; label: string }[];
@@ -172,6 +172,7 @@ export function ResultWorkspace({ report, foundation, selections, onOpen, onComp
   candidatePreviewReady: boolean;
   sourcePins: SourcePreviewPins;
   activeSource: ComparisonSource;
+  activeRoute?: string;
   sourcePreviewReady: boolean;
   comparisonActive: boolean;
   onEvidence: () => void;
@@ -218,7 +219,7 @@ export function ResultWorkspace({ report, foundation, selections, onOpen, onComp
             : 'The pinned source and result are running. Choose Compare Source A or B to view them side by side.'
           : `Source ${activeSource} is loading or does not match its original pinned commit; wait or restart this preview before comparing.`} Source A and B are inspected one at a time; local screenshots can be captured on request, but no automatic pixel-diff verdict is made.</p>
     </aside>
-    <VisualSnapshotPanel key={handoffRevision} report={report} activeSource={activeSource} comparisonActive={comparisonActive} sourcePreviewReady={sourcePreviewReady} candidatePreviewReady={candidatePreviewReady} />
+    <VisualSnapshotPanel key={handoffRevision} report={report} activeSource={activeSource} activeRoute={activeRoute} comparisonActive={comparisonActive} sourcePreviewReady={sourcePreviewReady} candidatePreviewReady={candidatePreviewReady} />
     <VisualReviewPanel key={handoffRevision} report={report} previewOpened={previewOpened} candidatePreviewReady={candidatePreviewReady} />
     {handoffStatus !== 'idle' && <p role="status" aria-live="polite">{handoffStatus === 'copied'
       ? 'Verified local candidate handoff copied. No logs or local paths included.'

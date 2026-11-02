@@ -157,11 +157,15 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
       return live.sessions.find(session => session.branch === 'branch-b')?.branchCommit ?? null;
     }, { timeout: 120_000 }).toBe(sourceBPin);
     const snapshotsUrl = '/api/candidate/visual-snapshots/' + report.generationId;
+    const rejectedRoute = await request.post(snapshotsUrl, { data: { source: 'B', route: 'https://example.com' } });
+    expect(rejectedRoute.status()).toBe(400);
     const captureB = page.getByRole('button', { name: 'Capture Source B + result snapshots' });
     await expect(captureB).toBeEnabled({ timeout: 120_000 });
     const bCapture = page.waitForResponse(response => response.url().endsWith(snapshotsUrl) && response.request().method() === 'POST');
     await captureB.click();
-    expect((await bCapture).status()).toBe(201);
+    const capturedB = await bCapture;
+    expect(capturedB.status()).toBe(201);
+    expect(capturedB.request().postDataJSON()).toEqual({ source: 'B', route: '/catalogue' });
     await expect(page.getByRole('button', { name: 'Source B captured' })).toBeDisabled();
     const imageB = await request.get(snapshotsUrl + '/B/source.png');
     expect(imageB.status()).toBe(200);
@@ -182,8 +186,8 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
     const snapshotMetadata = await metadataResponse.json() as { captures: Record<'A' | 'B', {
       version: number; sourceCommit: string; candidateCommit: string; sourceSha256: string; candidateSha256: string;
     } | null> };
-    expect(snapshotMetadata.captures.B).toMatchObject({ version: 2, sourceCommit: sourceBPin, candidateCommit: report.repository.candidateCommit });
-    expect(snapshotMetadata.captures.A).toMatchObject({ version: 2, candidateCommit: report.repository.candidateCommit });
+    expect(snapshotMetadata.captures.B).toMatchObject({ version: 3, route: '/catalogue', sourceCommit: sourceBPin, candidateCommit: report.repository.candidateCommit });
+    expect(snapshotMetadata.captures.A).toMatchObject({ version: 3, route: '/catalogue', candidateCommit: report.repository.candidateCommit });
     for (const source of ['A', 'B'] as const) {
       for (const kind of ['source', 'candidate'] as const) {
         const image = await request.get(snapshotsUrl + '/' + source + '/' + kind + '.png');
