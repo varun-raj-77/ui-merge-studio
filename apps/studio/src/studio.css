@@ -277,6 +277,12 @@ code, kbd, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", mon
 .result-verification strong { font-size: 7px; }
 .result-controls { display: flex; align-items: center; gap: 5px; }
 .result-controls button { min-height: 32px; padding-inline: 8px; font-size: 8px; white-space: nowrap; }
+.result-visual-review { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; min-width: 0; margin-top: -8px; padding: 8px 11px; border-left: 3px solid var(--stone-strong); color: var(--ink-soft); background: #f0ede6; }
+.result-visual-review.has-style-transfer { border-left-color: #cb8a23; color: #5d4311; background: #fff3d9; }
+.result-visual-review strong { flex: none; font-size: 10px; }
+.result-visual-review p { min-width: 0; margin: 0; font-size: 9px; line-height: 1.5; overflow-wrap: anywhere; }
+.result-visual-review code { font-size: inherit; }
+
 
 /* Evidence drawer */
 .evidence-drawer { min-width: 320px; max-width: min(560px, 96vw); height: calc(100vh - 10px); position: fixed; z-index: 45; top: 5px; right: 5px; display: grid; grid-template-rows: auto auto 1fr; color: #f3f0e9; border: 1px solid var(--technical-line); border-radius: 7px; background: var(--technical); box-shadow: -18px 0 60px #0007; animation: drawer-enter .18s ease-out; }

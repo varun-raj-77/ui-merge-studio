@@ -204,7 +204,7 @@ test('automatically resolves visual selections into the tray and real combine ac
   expect((await screen.findAllByText('Product Quick View')).length).toBeGreaterThanOrEqual(2);
   await waitFor(() => expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled());
   expect(screen.getByText('2 selected')).toBeVisible();
-  expect(screen.getByText('The selected source slices can be combined safely.')).toBeVisible();
+  expect(screen.getByText('Source preflight passed; verification and visual review still remain.')).toBeVisible();
   const causality = screen.getByRole('list', { name: 'Selection to verification progress' });
   for (const label of ['Selected', 'Source', 'Slice']) expect(within(causality).getByText(label).closest('li')).toHaveClass('causal-complete');
   expect(fetchMock.mock.calls.filter(call => String(call[0]).endsWith('/analysis'))).toHaveLength(2);

@@ -4,6 +4,7 @@ import type { IntegrationFoundation } from '../../../packages/integration-plan/s
 import { canonicalizeLocalIntegrationPlan, localIntegrationPlanIdentity, type LocalIntegrationSelection } from '../../../packages/integration-plan/src/localPlan';
 import type { FeatureSliceArtifact } from '../../../packages/source-analysis/src/types';
 import { featureLabel } from './demoScenario';
+import { transferredStylesheets } from './candidateVisualReview';
 import type { CandidateUiState, EvidenceTab } from './studioTypes';
 
 export type GenerationInput = {
@@ -58,6 +59,7 @@ function stageLabel(state: CausalState) {
 export function IntegrationReadiness({ preflight }: { preflight: CandidatePreflight }) {
   const { plan } = preflight;
   const blocked = plan.status === 'refused';
+  const stylesheets = transferredStylesheets(plan);
   return <section className={blocked ? 'integration-readiness readiness-blocked' : 'integration-readiness'} aria-label="Integration readiness" role="region">
     <div className="readiness-header">
       <strong>{blocked ? 'Integration blocked' : 'Ready to generate'}</strong>
@@ -65,7 +67,8 @@ export function IntegrationReadiness({ preflight }: { preflight: CandidatePrefli
     </div>
     <p>{blocked
       ? 'The server refused this plan. Change selections or resolve the source issue; no candidate was generated.'
-      : 'The server found no known plan conflicts. Candidate verification still has to run before a branch is accepted.'}</p>
+      : 'The server found no known plan conflicts. Candidate verification still has to run; visual acceptance is not established by passing checks.'}</p>
+    {!blocked && stylesheets.length > 0 && <p className="readiness-visual-note" role="note">This plan transfers {stylesheets.length} stylesheet{stylesheets.length === 1 ? '' : 's'}. CSS can affect surrounding layout even with local selectors. Review the combined preview before merging.</p>}
     {blocked && <ul className="readiness-issues" aria-label="Integration blockers">
       {plan.conflicts.map(item => <li key={'conflict:' + item.id}>
         <strong>Conflict · <code>{item.path}</code>{item.symbol ? ' · ' + item.symbol : ''}</strong>
@@ -151,7 +154,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
         if (result.integrationPlan?.identity !== planIdentity) throw new Error('The server returned evidence for a different integration plan.');
         if (typeof result.generationId !== 'string' || !result.generationId) throw new Error('The server returned a safety check without a generation identity.');
         setPreflightRecord({ evidenceKey, value: result });
-        setProgress(result.plan.status === 'ready' ? 'The selected source slices can be combined safely.' : 'These selections cannot be combined safely.');
+        setProgress(result.plan.status === 'ready' ? 'Source preflight passed; verification and visual review still remain.' : 'These selections cannot be combined safely.');
       })
       .catch(value => {
         if (!controller.signal.aborted && latestEvidenceKey.current === evidenceKey && (value as Error).name !== 'AbortError') {
@@ -188,7 +191,7 @@ export function CandidatePanel({ inputs, foundation, onLaunch, onRevise, onEvide
     setError(null);
     if (result.verification.length > 0) setVerificationStarted(true);
     if (isVerifiedCandidateReport(result)) {
-      setProgress('Combined branch created and verified.');
+      setProgress('Combined Git branch passed configured checks; review its visual layout.');
       onLaunch(result);
     } else setProgress(failedCandidateMessage(result));
   }
