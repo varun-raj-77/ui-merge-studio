@@ -98,10 +98,14 @@ test.each([
 const foundation = { repositoryId: 'test-repository', branchRef: 'main', commitSha: '1'.repeat(40), commonAncestorCommit: '1'.repeat(40), role: 'base' as const };
 
 const liveComparisonProps = {
-  onCompare: () => undefined,
+  onCompare: (_source: 'A' | 'B') => undefined,
   candidatePreviewReady: true,
-  sourceAPin: { branch: 'branch-a', commit: '4'.repeat(40) },
-  sourceAPreviewReady: true,
+  sourcePins: {
+    A: { branch: 'branch-a', commit: '4'.repeat(40) },
+    B: { branch: 'branch-b', commit: '5'.repeat(40) }
+  },
+  activeSource: 'A' as const,
+  sourcePreviewReady: true,
   comparisonActive: false
 };
 
@@ -170,6 +174,23 @@ test('flags actual stylesheet operations and keeps the combined-preview action a
   expect(review).toHaveTextContent('not automatically accepted');
   fireEvent.click(screen.getByRole('button', { name: 'Open combined preview' }));
   expect(open).toHaveBeenCalledOnce();
+});
+
+test('lets reviewers switch to the separately pinned Source B but never labels an in-flight source as compared', () => {
+  const compare = vi.fn();
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} onCompare={compare} onOpen={() => undefined} onEvidence={() => undefined}
+    onCopy={() => undefined} onReturn={() => undefined} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Compare Source B with result' }));
+  expect(compare).toHaveBeenCalledWith('B');
+  cleanup();
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} activeSource="B" sourcePreviewReady={false} comparisonActive
+    onCompare={compare} onOpen={() => undefined} onEvidence={() => undefined}
+    onCopy={() => undefined} onReturn={() => undefined} />);
+  expect(screen.getByRole('note', { name: 'Live comparison evidence' })).toHaveTextContent('Source B is loading or does not match');
+  expect(screen.getByRole('button', { name: 'Compare Source B with result' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Compare Source A with result' })).toBeEnabled();
 });
 
 test('keeps a pending review disabled when the real candidate preview is not at the verified commit', async () => {

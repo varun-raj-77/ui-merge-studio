@@ -1,5 +1,8 @@
 import type { PreviewSlot } from './comparisonState';
 
+export type ComparisonSource = 'A' | 'B';
+export type SourcePreviewPins = Record<ComparisonSource, LivePreviewPin | null>;
+
 export interface LivePreviewPin {
   branch: string;
   commit: string;

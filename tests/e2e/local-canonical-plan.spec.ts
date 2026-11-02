@@ -137,12 +137,27 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   if (beforeStatus.status === 'pending') {
     const recordButton = page.getByRole('button', { name: 'Record visual review' });
     await expect(recordButton).toBeDisabled();
-    const compareButton = page.getByRole('button', { name: 'Compare Source A with result' });
-    await expect(compareButton).toBeEnabled({ timeout: 120_000 });
-    await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('Both exact-commit previews are running');
-    await compareButton.click();
+    const compareA = page.getByRole('button', { name: 'Compare Source A with result' });
+    const compareB = page.getByRole('button', { name: 'Compare Source B with result' });
+    await expect(compareA).toBeEnabled({ timeout: 120_000 });
+    await expect(compareB).toBeEnabled();
+    await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('The pinned source and result are running');
+
+    // Source B was displaced from the right slot by the candidate. Reopen the
+    // original pinned B revision on the left before returning to A for review.
+    await compareB.click();
     await expect(page.locator('.preview-comparison')).toHaveClass(/layout-both/);
-    await expect(page.locator('[data-preview-id="left"]')).toContainText('branch-a');
+    await expect(page.getByTitle('Source B · branch-b live application')).toBeVisible({ timeout: 120_000 });
+    await expect(leftCard).toContainText('Running', { timeout: 120_000 });
+    await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('Both exact-commit previews are visible');
+    const sourceBPin = outgoing.plan.selections.find(selection => selection.sourceBranch === 'branch-b')!.sourceCommitSha;
+    await expect.poll(async () => {
+      const live = await request.get('/api/repository').then(response => response.json()) as { sessions: Array<{ branch: string; branchCommit: string }> };
+      return live.sessions.find(session => session.branch === 'branch-b')?.branchCommit ?? null;
+    }, { timeout: 120_000 }).toBe(sourceBPin);
+    await compareA.click();
+    await expect(page.getByTitle('Source A · branch-a live application')).toBeVisible({ timeout: 120_000 });
+    await expect(leftCard).toContainText('Running', { timeout: 120_000 });
     await expect(page.locator('[data-preview-id="right"]')).toContainText(candidateBranch);
     await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('Both exact-commit previews are visible');
     await page.getByLabel('Visual review decision').selectOption('needs-changes');
@@ -167,6 +182,16 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
       candidateTree: report.repository.candidateTree, decision: 'needs-changes', notes: testObservation
     }
   });
+
+  // Returning from a Source B comparison restores the original A/B pair.
+  await page.getByRole('button', { name: 'Compare Source B with result' }).click();
+  await expect(page.getByTitle('Source B · branch-b live application')).toBeVisible({ timeout: 120_000 });
+  await expect(leftCard).toContainText('Running', { timeout: 120_000 });
+  await page.getByRole('button', { name: 'Return to comparison' }).click();
+  await expect(leftCard.locator('iframe[title="Source A · branch-a live application"]')).toBeVisible({ timeout: 120_000 });
+  await expect(rightCard.locator('iframe[title="Source B · branch-b live application"]')).toBeVisible({ timeout: 120_000 });
+  await expect(leftCard).toContainText('Running', { timeout: 120_000 });
+  await expect(rightCard).toContainText('Running', { timeout: 120_000 });
 
   await stopPreviews(request);
   await removeCandidate();
