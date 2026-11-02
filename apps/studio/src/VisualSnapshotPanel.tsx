@@ -32,7 +32,7 @@ export function VisualSnapshotPanel({ report, activeSource, comparisonActive, so
   }, [url]);
 
   async function capture() {
-    if (busy || state?.status !== 'ready' || state.captures[activeSource]
+    if (busy || state?.status !== 'ready' || state.captures?.[activeSource]
       || !comparisonActive || !sourcePreviewReady || !candidatePreviewReady) return;
     setBusy(true);
     setError(null);
@@ -56,16 +56,16 @@ export function VisualSnapshotPanel({ report, activeSource, comparisonActive, so
     <strong>Local screenshot evidence</strong>
     <p>Capture is optional. Each pair shows the selected generation-pinned source and the exact verified candidate at a fixed 1280 × 800 viewport. Images stay in the ignored local .ums folder; they are neither pixel-diff proof nor visual approval.</p>
     <button className="quiet-action" type="button" onClick={() => void capture()}
-      disabled={busy || state?.status !== 'ready' || Boolean(state?.captures[activeSource])
+      disabled={busy || state?.status !== 'ready' || Boolean(state?.captures?.[activeSource])
         || !comparisonActive || !sourcePreviewReady || !candidatePreviewReady}>
-      {busy ? 'Capturing local screenshots…' : state?.captures[activeSource] ? 'Source ' + activeSource + ' captured' : 'Capture Source ' + activeSource + ' + result snapshots'}
+      {busy ? 'Capturing local screenshots…' : state?.captures?.[activeSource] ? 'Source ' + activeSource + ' captured' : 'Capture Source ' + activeSource + ' + result snapshots'}
     </button>
     {!comparisonActive && <small>Choose Compare Source A or B to show both exact-commit previews before capture.</small>}
     {comparisonActive && (!sourcePreviewReady || !candidatePreviewReady) && <small>Both pinned previews must be running at their original commits.</small>}
     {state?.status === 'stale' && <p role="alert">{state.reason ?? 'The candidate branch has moved; no new capture is allowed.'}</p>}
     {state?.status === 'unavailable' && <p>{state.reason}</p>}
     {(['A', 'B'] as const).map(source => {
-      const capture = state?.captures[source];
+      const capture = state?.captures?.[source];
       if (!capture) return null;
       return <div className="visual-snapshot-pair" key={source}>
         <strong>Source {source} · {capture.sourceBranch} @ {capture.sourceCommit.slice(0, 12)} versus result @ {capture.candidateCommit.slice(0, 12)}</strong>
