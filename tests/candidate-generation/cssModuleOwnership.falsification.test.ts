@@ -205,4 +205,29 @@ describe('UMS-24B: external CSS Module ownership falsification', () => {
     }
   });
 
+  test('refuses non-owned CSS Module class references before candidate mutation', async () => {
+    const variants = [
+      { name: 'dynamic class', source: featureSource.replace('styles.pulse', 'styles[variant]'), css: '.pulse{color:green}\n' },
+      { name: 'unreferenced extra rule', source: featureSource, css: '.pulse{color:green}\n.unrelated{display:none}\n' },
+      { name: 'undefined class', source: featureSource.replace('styles.pulse', 'styles.missing'), css: '.pulse{color:green}\n' },
+      { name: 'composed class', source: featureSource.replace('styles.pulse', "styles.pulse + ' extra'"), css: '.pulse{color:green}\n' }
+    ];
+    for (const variant of variants) {
+      const root = repository();
+      git(root, ['switch', '-c', 'prompt020-revenue-pulse']);
+      addFeature(root, variant.css, { [featurePath]: variant.source });
+      const { artifact, request } = await renderedSlice(root);
+      expect(artifact.slice.status, variant.name).toBe('refused');
+      expect(artifact.slice.unresolvedDependencies, variant.name).toContainEqual(expect.objectContaining({
+        path: stylePath, edge: 'unsupported-css-module-class-usage'
+      }));
+      const preflight = await new CandidateGenerator(root).preflight(request);
+      expect(preflight.plan.status, variant.name).toBe('refused');
+      expect(preflight.plan.operations).toEqual([]);
+      expect(() => git(root, ['rev-parse', 'combined-result'])).toThrow();
+      expect(git(root, ['status', '--porcelain'])).toBe('');
+      expect(git(root, ['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+    }
+  });
+
 });

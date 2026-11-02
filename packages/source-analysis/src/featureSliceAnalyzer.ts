@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { isSourceIdentity } from '../../shared/src/sourceIdentity';
 import { buildSourceIndex, resolveImportedDeclaration, type DeclarationRecord, type ModuleRecord, type SourceIndex } from './sourceIndex';
 import { inspectCssModuleSyntax } from './cssModuleSyntax';
+import { inspectCssModuleUsage } from './cssModuleUsage';
 import { analyzeTestFile } from './testSlicing';
 import { featureSliceVersion, type AnalyzeFeatureRequest, type ChangeCategory, type ChangedFile, type ExcludedChange, type FeatureSlice, type FeatureSliceArtifact, type IncludedChange, type SliceEvidence, type SourceRegion, type SymbolIdentity, type TestFileSlice, type UnresolvedDependency } from './types';
 import { GitSourceRepository, validateRepositoryPath } from './gitModel';
@@ -140,6 +141,7 @@ export class FeatureSliceAnalyzer {
       if (module) styleModules.set(module.path, module);
     }
     const checkedCssModuleSyntax = new Map<string, string | null>();
+    const checkedCssModuleClasses = new Map<string, string[]>();
     const checkedCssModuleImporters = new Map<string, string | null>();
     const cssModuleImporterIssue = (stylePath: string, file: ChangedFile) => {
       if (checkedCssModuleImporters.has(stylePath)) return checkedCssModuleImporters.get(stylePath)!;
@@ -168,15 +170,34 @@ export class FeatureSliceAnalyzer {
             const css = await this.repository.readFile(branchCommit, stylePath);
             const evidence = inspectCssModuleSyntax(css, stylePath);
             syntaxIssue = evidence.status === 'refused' ? evidence.reason : null;
+            checkedCssModuleClasses.set(stylePath, evidence.classes);
           } catch {
             syntaxIssue = 'CSS Module source cannot be read for strict syntax inspection.';
           }
           checkedCssModuleSyntax.set(stylePath, syntaxIssue);
         }
       }
-      included.set(`${stylePath}#<file>`, { path: stylePath, category: 'style', symbol: null, branchChangeId: `${branchCommit}:${stylePath}:file`, wholeFile: true, reason: issue ? 'CSS Module import ownership is not uniquely supported by the selected dependency graph.' : syntaxIssue ? 'CSS Module syntax is outside the bounded local-only rule grammar.' : 'The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported.', evidenceEdgeIds: [id], confidence: issue || syntaxIssue ? 'unresolved' : 'conservative' });
+      let usageIssue: string | null = null;
+      if (policy.strictExternal && stylePath.endsWith('.module.css') && !issue && !syntaxIssue) {
+        const importer = branchIndex.modules.flatMap(candidate => candidate.imports
+          .filter(binding => binding.kind === 'style' && binding.resolvedPath === stylePath)
+          .map(binding => ({ module: candidate, binding })))[0];
+        const owner = importer?.module.declarations.find(declaration => declaration.dependencies.includes(importer.binding.local));
+        if (!importer || !owner) usageIssue = 'CSS Module has no uniquely resolved declaration for static class usage inspection.';
+        else {
+          try {
+            const code = await this.repository.readFile(branchCommit, importer.module.path);
+            const evidence = inspectCssModuleUsage(code, importer.module.path, owner, importer.binding.local, checkedCssModuleClasses.get(stylePath) ?? []);
+            usageIssue = evidence.status === 'refused' ? evidence.reason : null;
+          } catch {
+            usageIssue = 'CSS Module importer cannot be read for static class usage inspection.';
+          }
+        }
+      }
+      included.set(`${stylePath}#<file>`, { path: stylePath, category: 'style', symbol: null, branchChangeId: `${branchCommit}:${stylePath}:file`, wholeFile: true, reason: issue ? 'CSS Module import ownership is not uniquely supported by the selected dependency graph.' : syntaxIssue ? 'CSS Module syntax is outside the bounded local-only rule grammar.' : usageIssue ? 'CSS Module class usage is not exclusively established by the selected declaration.' : 'The changed stylesheet is statically imported on the analyzed application integration chain; rule-level extraction is not supported.', evidenceEdgeIds: [id], confidence: issue || syntaxIssue || usageIssue ? 'unresolved' : 'conservative' });
       if (issue && !unresolved.some(item => item.path === stylePath && item.edge === 'non-exclusive-style-dependency')) unresolved.push({ path: stylePath, symbol: null, reason: issue, edge: 'non-exclusive-style-dependency', manualNextStep: 'Use a newly added, uniquely imported CSS Module owned by the selected declaration graph; CSS syntax and rule ownership still require separate proof.', ancestorBoundaryMayHelp: false });
       if (syntaxIssue && !unresolved.some(item => item.path === stylePath && item.edge === 'unsupported-css-module-syntax')) unresolved.push({ path: stylePath, symbol: null, reason: syntaxIssue, edge: 'unsupported-css-module-syntax', manualNextStep: 'Use a bounded local-class-only CSS Module without at-rules, global selectors, composition, dynamic values, or external resource references.', ancestorBoundaryMayHelp: false });
+      if (usageIssue && !unresolved.some(item => item.path === stylePath && item.edge === 'unsupported-css-module-class-usage')) unresolved.push({ path: stylePath, symbol: null, reason: usageIssue, edge: 'unsupported-css-module-class-usage', manualNextStep: 'Use direct JSX className={styles.localClass} references in the selected declaration for every stylesheet class; shared, dynamic, or unreferenced rules require manual review.', ancestorBoundaryMayHelp: false });
       if (!baseIndex.moduleByPath.get(module.path)?.imports.some(item => item.kind === 'style' && item.resolvedPath === stylePath) && changedByPath.has(module.path)) included.set(`${module.path}#<module>`, { path: module.path, category: 'integration', symbol: null, branchChangeId: `${branchCommit}:${module.path}:module`, wholeFile: true, reason: 'This changed module-level import registers the feature stylesheet on the application integration chain.', evidenceEdgeIds: [id], confidence: 'conservative' });
     }
     const checkedAssets = new Map<string, string | null>();
