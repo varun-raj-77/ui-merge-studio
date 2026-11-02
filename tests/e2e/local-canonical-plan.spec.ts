@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
@@ -127,8 +128,114 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
   await expect(candidate.getByText('Seasonal edit')).toHaveCount(0);
   await expect(candidate.getByText('5 products ready')).toHaveCount(0);
 
+  // Exercise the real localhost UI-to-server review handoff. This automated
+  // fixture deliberately records NEEDS CHANGES, never a false human approval.
+  const reviewUrl = '/api/candidate/visual-reviews/' + report.generationId;
+  const testObservation = 'Automated browser test only; no human visual acceptance was performed.';
+  const beforeReview = await request.get(reviewUrl);
+  expect(beforeReview.status(), await beforeReview.text()).toBe(200);
+  const beforeStatus = await beforeReview.json() as { status: string; receipt?: { decision: string; notes: string } | null };
+  if (beforeStatus.status === 'pending') {
+    const recordButton = page.getByRole('button', { name: 'Record visual review' });
+    await expect(recordButton).toBeDisabled();
+    const compareA = page.getByRole('button', { name: 'Compare Source A with result' });
+    const compareB = page.getByRole('button', { name: 'Compare Source B with result' });
+    await expect(compareA).toBeEnabled({ timeout: 120_000 });
+    await expect(compareB).toBeEnabled();
+    await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('The pinned source and result are running');
+
+    // Source B was displaced from the right slot by the candidate. Reopen the
+    // original pinned B revision on the left before returning to A for review.
+    await compareB.click();
+    await expect(page.locator('.preview-comparison')).toHaveClass(/layout-both/);
+    await expect(page.getByTitle('Source B · branch-b live application')).toBeVisible({ timeout: 120_000 });
+    await expect(leftCard).toContainText('Running', { timeout: 120_000 });
+    await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('Both exact-commit previews are visible');
+    const sourceBPin = outgoing.plan.selections.find(selection => selection.sourceBranch === 'branch-b')!.sourceCommitSha;
+    await expect.poll(async () => {
+      const live = await request.get('/api/repository').then(response => response.json()) as { sessions: Array<{ branch: string; branchCommit: string }> };
+      return live.sessions.find(session => session.branch === 'branch-b')?.branchCommit ?? null;
+    }, { timeout: 120_000 }).toBe(sourceBPin);
+    const snapshotsUrl = '/api/candidate/visual-snapshots/' + report.generationId;
+    const captureB = page.getByRole('button', { name: 'Capture Source B + result snapshots' });
+    await expect(captureB).toBeEnabled({ timeout: 120_000 });
+    const bCapture = page.waitForResponse(response => response.url().endsWith(snapshotsUrl) && response.request().method() === 'POST');
+    await captureB.click();
+    expect((await bCapture).status()).toBe(201);
+    await expect(page.getByRole('button', { name: 'Source B captured' })).toBeDisabled();
+    const imageB = await request.get(snapshotsUrl + '/B/source.png');
+    expect(imageB.status()).toBe(200);
+    expect(imageB.headers()['content-type']).toBe('image/png');
+    expect((await imageB.body()).subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    await compareA.click();
+    await expect(page.getByTitle('Source A · branch-a live application')).toBeVisible({ timeout: 120_000 });
+    await expect(leftCard).toContainText('Running', { timeout: 120_000 });
+    await expect(page.locator('[data-preview-id="right"]')).toContainText(candidateBranch);
+    await expect(page.getByRole('note', { name: 'Live comparison evidence' })).toContainText('Both exact-commit previews are visible');
+    const captureA = page.getByRole('button', { name: 'Capture Source A + result snapshots' });
+    await expect(captureA).toBeEnabled({ timeout: 120_000 });
+    const aCapture = page.waitForResponse(response => response.url().endsWith(snapshotsUrl) && response.request().method() === 'POST');
+    await captureA.click();
+    expect((await aCapture).status()).toBe(201);
+    const metadataResponse = await request.get(snapshotsUrl);
+    expect(metadataResponse.status()).toBe(200);
+    const snapshotMetadata = await metadataResponse.json() as { captures: Record<'A' | 'B', {
+      version: number; sourceCommit: string; candidateCommit: string; sourceSha256: string; candidateSha256: string;
+    } | null> };
+    expect(snapshotMetadata.captures.B).toMatchObject({ version: 2, sourceCommit: sourceBPin, candidateCommit: report.repository.candidateCommit });
+    expect(snapshotMetadata.captures.A).toMatchObject({ version: 2, candidateCommit: report.repository.candidateCommit });
+    for (const source of ['A', 'B'] as const) {
+      for (const kind of ['source', 'candidate'] as const) {
+        const image = await request.get(snapshotsUrl + '/' + source + '/' + kind + '.png');
+        expect(image.status()).toBe(200);
+        const computed = createHash('sha256').update(await image.body()).digest('hex');
+        const expected = kind === 'source' ? snapshotMetadata.captures[source]!.sourceSha256 : snapshotMetadata.captures[source]!.candidateSha256;
+        expect(computed).toBe(expected);
+      }
+    }
+    await expect(page.getByText(/PNG SHA-256 matches local manifest/).first()).toBeVisible();
+    await expect(page.getByAltText(/Candidate local screenshot.*Source B/)).toBeVisible();
+    await page.getByLabel('Visual review decision').selectOption('needs-changes');
+    await page.getByLabel('Visual observations').fill(testObservation);
+    await expect(recordButton).toBeEnabled();
+    const reviewResponse = page.waitForResponse(response => response.url().endsWith(reviewUrl) && response.request().method() === 'POST');
+    await recordButton.click();
+    const saved = await reviewResponse;
+    expect(saved.status(), await saved.text()).toBe(201);
+    expect(saved.request().postDataJSON()).toEqual({ decision: 'needs-changes', notes: testObservation });
+  } else {
+    // A repeated local test may encounter the same immutable receipt.
+    expect(beforeStatus).toMatchObject({ status: 'recorded', receipt: { decision: 'needs-changes', notes: testObservation } });
+  }
+  const persistedResponse = await request.get(reviewUrl);
+  expect(persistedResponse.status()).toBe(200);
+  expect(await persistedResponse.json()).toMatchObject({
+    status: 'recorded',
+    receipt: {
+      scope: 'local-self-attested-visual-review', generationId: report.generationId,
+      planIdentity: outgoing.planIdentity, candidateCommit: report.repository.candidateCommit,
+      candidateTree: report.repository.candidateTree, decision: 'needs-changes', notes: testObservation
+    }
+  });
+
+  // Returning from a Source B comparison restores the original A/B pair.
+  await page.getByRole('button', { name: 'Compare Source B with result' }).click();
+  await expect(page.getByTitle('Source B · branch-b live application')).toBeVisible({ timeout: 120_000 });
+  await expect(leftCard).toContainText('Running', { timeout: 120_000 });
+  await page.getByRole('button', { name: 'Return to comparison' }).click();
+  await expect(leftCard.locator('iframe[title="Source A · branch-a live application"]')).toBeVisible({ timeout: 120_000 });
+  await expect(rightCard.locator('iframe[title="Source B · branch-b live application"]')).toBeVisible({ timeout: 120_000 });
+  await expect(leftCard).toContainText('Running', { timeout: 120_000 });
+  await expect(rightCard).toContainText('Running', { timeout: 120_000 });
+
   await stopPreviews(request);
   await removeCandidate();
+  const staleReviewResponse = await request.get(reviewUrl);
+  expect(staleReviewResponse.status()).toBe(200);
+  expect(await staleReviewResponse.json()).toMatchObject({
+    status: 'stale', receipt: { candidateCommit: report.repository.candidateCommit },
+    reason: expect.stringContaining('no longer points')
+  });
   const repositoryState = await request.get('/api/repository').then(response => response.json()) as { sessions: Array<{ status: string }> };
   expect(repositoryState.sessions).toHaveLength(2);
   expect(repositoryState.sessions.every(session => session.status === 'stopped')).toBe(true);

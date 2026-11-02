@@ -97,6 +97,23 @@ jobs:
           npx playwright test -c apps/studio/playwright.config.ts
           tests/e2e/two-feature-candidate-browser.spec.ts
 
+      # Scoped to a synthesized app; never captures arbitrary repository UI.
+      # The same viewport is recorded before transfer, with compiled CSS,
+      # and after disabling only the compiled stylesheet.
+      - name: Capture CSS Module Git candidate visual counterexample
+        run: >-
+          npx playwright test -c apps/studio/playwright.config.ts
+          tests/e2e/css-module-real-candidate.spec.ts
+
+      - name: Publish controlled CSS visual evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ums-css-visual-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: UI merge studio/test-results/ums-css-module-visual-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Recheck generated fixture after real candidate cleanup
         run: npm run fixture:verify
 

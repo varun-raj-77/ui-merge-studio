@@ -44,7 +44,7 @@ test('runs safety checking automatically, creates the candidate, and exposes ver
   render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={launch} />);
   const button = screen.getByRole('button', { name: 'Create combined branch' });
   await waitFor(() => expect(button).toBeEnabled());
-  expect(screen.getByText(/selected source slices can be combined safely/)).toBeVisible();
+  expect(screen.getByText(/Source preflight passed/)).toBeVisible();
   fireEvent.click(button);
   await waitFor(() => expect(launch).toHaveBeenCalledWith(expect.objectContaining({ repository: expect.objectContaining({ candidateBranch: 'combined-result' }) })));
   const causality = screen.getByRole('list', { name: 'Selection to verification progress' });
@@ -191,6 +191,21 @@ test('presents a safe-to-generate plan without claiming runtime verification', a
   expect(readiness).toHaveTextContent('0 conflicts');
   expect(readiness).toHaveTextContent('0 unresolved');
   expect(readiness).toHaveTextContent('Candidate verification still has to run');
+  expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled();
+  expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
+});
+
+test('keeps stylesheet visual impact unaccepted even when source preflight is ready', async () => {
+  const ready = preflight();
+  ready.plan.operations[0].kind = 'add-style-file';
+  ready.plan.operations[0].target.path = 'src/features/RevenuePulse.module.css';
+  vi.spyOn(globalThis, 'fetch').mockImplementation(() => response(ready));
+  render(<CandidatePanel inputs={inputs()} foundation={foundation} onLaunch={() => undefined} />);
+  const readiness = await screen.findByRole('region', { name: 'Integration readiness' });
+  expect(readiness).toHaveTextContent('Ready to generate');
+  expect(readiness).toHaveTextContent('This plan transfers 1 stylesheet');
+  expect(readiness).toHaveTextContent('CSS can affect surrounding layout');
+  expect(readiness).toHaveTextContent('Review the combined preview before merging');
   expect(screen.getByRole('button', { name: 'Create combined branch' })).toBeEnabled();
   expect(screen.getByText('Verified').closest('li')).not.toHaveClass('causal-complete');
 });
