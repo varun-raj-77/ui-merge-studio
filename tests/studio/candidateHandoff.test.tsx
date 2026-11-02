@@ -97,9 +97,17 @@ test.each([
 
 const foundation = { repositoryId: 'test-repository', branchRef: 'main', commitSha: '1'.repeat(40), commonAncestorCommit: '1'.repeat(40), role: 'base' as const };
 
+const liveComparisonProps = {
+  onCompare: () => undefined,
+  candidatePreviewReady: true,
+  sourceAPin: { branch: 'branch-a', commit: '4'.repeat(40) },
+  sourceAPreviewReady: true,
+  comparisonActive: false
+};
+
 function showResult(report = verifiedReport()) {
   render(<ResultWorkspace report={report} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
-    onOpen={() => undefined} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
+    {...liveComparisonProps} onOpen={() => undefined} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
 }
 
 test('copies only after clipboard permission succeeds and shows accessible feedback', async () => {
@@ -154,7 +162,7 @@ test('flags actual stylesheet operations and keeps the combined-preview action a
   }));
   const open = vi.fn();
   render(<ResultWorkspace report={report} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
-    onOpen={open} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
+    {...liveComparisonProps} onOpen={open} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
   const review = screen.getByRole('complementary', { name: 'Visual review status' });
   expect(review).toHaveTextContent('Visual review pending');
   expect(review).toHaveTextContent('transfers 2 stylesheets');
@@ -162,6 +170,22 @@ test('flags actual stylesheet operations and keeps the combined-preview action a
   expect(review).toHaveTextContent('not automatically accepted');
   fireEvent.click(screen.getByRole('button', { name: 'Open combined preview' }));
   expect(open).toHaveBeenCalledOnce();
+});
+
+test('keeps a pending review disabled when the real candidate preview is not at the verified commit', async () => {
+  const opened = vi.fn();
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} candidatePreviewReady={false} onOpen={opened} onEvidence={() => undefined}
+    onCopy={() => undefined} onReturn={() => undefined} />);
+  const record = await screen.findByRole('button', { name: 'Record visual review' });
+  fireEvent.change(screen.getByLabelText('Visual review decision'), { target: { value: 'looks-as-intended' } });
+  fireEvent.change(screen.getByLabelText('Visual observations'), { target: { value: 'The layout appears aligned.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Open combined preview' }));
+  expect(opened).toHaveBeenCalledOnce();
+  expect(record).toBeDisabled();
+  expect(screen.getByText('The combined preview must be running at the exact verified commit before recording.')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Compare Source A with result' })).toBeDisabled();
+  expect(vi.mocked(globalThis.fetch).mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
 });
 
 test('records a self-attested review only after the combined preview was opened and notes were provided', async () => {
@@ -183,7 +207,7 @@ test('records a self-attested review only after the combined preview was opened 
   });
   const open = vi.fn();
   render(<ResultWorkspace report={result} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
-    onOpen={open} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
+    {...liveComparisonProps} onOpen={open} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
   const record = await screen.findByRole('button', { name: 'Record visual review' });
   expect(record).toBeDisabled();
   fireEvent.change(screen.getByLabelText('Visual review decision'), { target: { value: 'looks-as-intended' } });
