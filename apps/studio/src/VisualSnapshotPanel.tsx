@@ -62,7 +62,7 @@ export function VisualSnapshotPanel({ report, activeSource, comparisonActive, so
     </button>
     {!comparisonActive && <small>Choose Compare Source A or B to show both exact-commit previews before capture.</small>}
     {comparisonActive && (!sourcePreviewReady || !candidatePreviewReady) && <small>Both pinned previews must be running at their original commits.</small>}
-    {state?.status === 'stale' && <p role="alert">{state.reason ?? 'The candidate branch has moved; no new capture is allowed.'}</p>}
+    {state?.status === 'stale' && <p>{state.reason ?? 'The candidate branch has moved; no new capture is allowed.'}</p>}
     {state?.status === 'unavailable' && <p>{state.reason}</p>}
     {(['A', 'B'] as const).map(source => {
       const capture = state?.captures?.[source];
