@@ -14,6 +14,7 @@ import { loadRepositoryConfiguration, resolveStudioOrigin } from './repositoryCo
 import { LocalPlanAuthority, localPlanErrorStatus, localRepositoryId } from './localPlanAuthority';
 import { CandidateGenerationGate } from './candidateGenerationGate';
 import { CandidateProgressTracker } from './candidateProgress';
+import { VisualReviewAuthority, VisualReviewError } from './visualReviewAuthority';
 
 const workspaceRoot = resolve(import.meta.dirname, '../..');
 const configuration = loadRepositoryConfiguration(workspaceRoot);
@@ -30,6 +31,7 @@ const analyzer = new FeatureSliceAnalyzer(repositoryPath, workspaceRoot);
 const planAuthority = new LocalPlanAuthority(repositoryPath, localRepositoryId(repositoryPath), baseRef, candidateBranch, previewId => previews.session(previewId), () => previews.sessions(), externalFeatureSlices ? 'external-react-vite' : 'phase0');
 const candidateProgress = new CandidateProgressTracker();
 const candidateGenerationGate = new CandidateGenerationGate();
+const visualReviewAuthority = new VisualReviewAuthority(repositoryPath, workspaceRoot);
 // Read-only preflight analysis can overlap a generation without sharing a
 // progress callback. Each generation gets a callback bound to its own token.
 const candidateGenerator = new CandidateGenerator(repositoryPath, { artifactRoot: workspaceRoot, verificationCommands });
@@ -43,6 +45,7 @@ function analysisPreviewRoute(url: string | undefined) { const match = url?.matc
 function instrumentationPreviewRoute(url: string | undefined) { const match = url?.match(/^\/api\/internal\/previews\/([a-z][a-z0-9-]*)\/instrumentation$/); return match?.[1] ?? null; }
 function artifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/analysis\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
 function generationArtifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/reports\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
+function visualReviewRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/visual-reviews\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
 const server = createServer(async (request, response) => {
   try {
     const instrumentationPreviewId = instrumentationPreviewRoute(request.url);
@@ -100,6 +103,13 @@ const server = createServer(async (request, response) => {
       }
     }
     if (request.url === '/api/candidate/status' && request.method === 'GET') return json(response, 200, candidateProgress.get());
+    const reviewId = visualReviewRoute(request.url);
+    if (reviewId && request.method === 'GET') return json(response, 200, await visualReviewAuthority.get(reviewId));
+    if (reviewId && request.method === 'POST') {
+      if (request.headers.origin && request.headers.origin !== studioOrigin) return json(response, 403, { error: 'Visual review requires the local Studio origin.' });
+      if (!String(request.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return json(response, 415, { error: 'Visual review requires JSON input.' });
+      return json(response, 201, await visualReviewAuthority.record(reviewId, await body(request)));
+    }
     const generationId=generationArtifactRoute(request.url);if(generationId&&request.method==='GET'){const artifact=await readFile(resolve(workspaceRoot,'.ums','generation',generationId,'candidate-report.json'));response.writeHead(200,{'Content-Type':'application/json','Content-Disposition':`attachment; filename="candidate-report-${generationId}.json"`});return response.end(artifact);}
     const previewOperationId = previewOperationRoute(request.url);
     if (previewOperationId && request.method === 'GET') {
@@ -123,7 +133,7 @@ const server = createServer(async (request, response) => {
     if (previewId && request.method === 'DELETE') { await previewOperations.stop(previewId); return json(response, 200, { stopped: true, previewId }); }
     if (request.url === '/api/preview' && request.method === 'DELETE') { await previewOperations.stopAll(); return json(response, 200, { stopped: true }); }
     vite.middlewares(request, response, (error?: Error) => { if (error) json(response, 500, { error: error.message }); else { response.statusCode = 404; response.end(); } });
-  } catch (error) { json(response, error instanceof FeatureSliceRefusal ? 409 : localPlanErrorStatus(error), { error: error instanceof Error ? error.message : String(error) }); }
+  } catch (error) { json(response, error instanceof VisualReviewError ? error.statusCode : error instanceof FeatureSliceRefusal ? 409 : localPlanErrorStatus(error), { error: error instanceof Error ? error.message : String(error) }); }
 });
 server.listen(port, host, () => console.log(`UI Merge Studio: http://${host}:${port}`));
 async function shutdown() { await previewOperations.stopAll().catch(error => console.error(error)); await vite.close(); server.close(); }

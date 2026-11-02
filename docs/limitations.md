@@ -1,6 +1,7 @@
 # Limitations
 
 - The hosted sample cannot access a visitor’s repository or perform Git, package-manager, source-mutation, branch-creation, or verification operations.
+- Local visual review receipts are developer **self-attestations** stored under the Studio workspace, pinned to a verified candidate report and the current local Git branch commit/tree. A moved or missing branch invalidates the current review. Notes do not prove a screenshot was inspected, reviewer identity, visual correctness, or permission to merge. The hosted sample has no such write capability, and the Studio does not gate Git merging on these receipts.
 - Hosted outcomes are bounded to committed controlled evidence. Arbitrary selected combinations must be evaluated locally.
 - Local preview support targets React + TypeScript + Vite repositories with a declared `dev` script. npm command resolution, real installation, and real Vite launch are verified. pnpm/yarn command and forwarded-argument resolution are implemented, but their real install and Vite execution paths are not verified; default candidate verification remains npm-specific.
 - Package-manager installs run inside a detached worktree and do not mutate the original checkout. They are ordinary mutable installs: network access and repository lifecycle scripts may run, and the result is not claimed to be immutable or reproducible.
