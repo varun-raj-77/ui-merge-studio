@@ -18,17 +18,26 @@ jobs:
   verify:
     name: Typecheck, tests, build, and browser journeys
     runs-on: ubuntu-24.04
+    # Match the locked @playwright/test version. The official Playwright image
+    # already contains Chromium and its Linux libraries, so browser CI does
+    # not depend on the runner's occasionally unreachable Ubuntu apt mirror.
+    container:
+      image: mcr.microsoft.com/playwright:v1.53.1-noble
+      # Reap orphaned Vite/npm descendants. Without an init process, group
+      # probes can keep seeing container zombies even after SIGKILL.
+      options: --init
     timeout-minutes: 40
-    # Keep a space in the checkout path: the preview-runtime integration
-    # regression exercises Vite instrumentation under spaced workspaces.
+    # GitHub's container-runner command wrapper does not support spaces in its
+    # working-directory. The preview-runtime test creates a disposable
+    # spaced-path alias itself, so this checkout remains representative.
     defaults:
       run:
-        working-directory: UI merge studio
+        working-directory: ui-merge-studio
     steps:
       - name: Checkout source
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
-          path: UI merge studio
+          path: ui-merge-studio
           persist-credentials: false
 
       - name: Configure Node (matches Vercel)
@@ -36,7 +45,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: UI merge studio/package-lock.json
+          cache-dependency-path: ui-merge-studio/package-lock.json
 
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
@@ -59,19 +68,17 @@ jobs:
       - name: Build hosted Showcase
         run: npm run build
 
-      - name: Install Chromium for bounded browser journeys
-        # Includes Playwright's required Linux libraries. Keeping --with-deps
-        # matters more than shaving minutes by skipping system dependencies.
-        # Bound this independently so an OS-package mirror cannot consume the
-        # full job timeout without yielding a diagnosable failed step.
-        timeout-minutes: 20
+      - name: Verify pinned Chromium and dependency environment
+        shell: bash
         run: |
           set -euo pipefail
-          npx playwright --version
-          started="$(date +%s)"
-          npx playwright install --with-deps chromium
-          finished="$(date +%s)"
-          echo "Chromium and system dependencies installed in $((finished - started)) seconds."
+          test "$(node -p 'require("@playwright/test/package.json").version')" = '1.53.1'
+          node --input-type=module -e '
+            import { chromium } from "@playwright/test";
+            const browser = await chromium.launch();
+            console.log(`Playwright Chromium launch succeeded: ${browser.version()}`);
+            await browser.close();
+          '
 
       - name: Check real Showcase journeys, configured plans, and safe refusal in browser
         run: >-
@@ -96,6 +103,23 @@ jobs:
         run: >-
           npx playwright test -c apps/studio/playwright.config.ts
           tests/e2e/two-feature-candidate-browser.spec.ts
+
+      # Scoped to a synthesized app; never captures arbitrary repository UI.
+      # The same viewport is recorded before transfer, with compiled CSS,
+      # and after disabling only the compiled stylesheet.
+      - name: Capture CSS Module Git candidate visual counterexample
+        run: >-
+          npx playwright test -c apps/studio/playwright.config.ts
+          tests/e2e/css-module-real-candidate.spec.ts
+
+      - name: Publish controlled CSS visual evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ums-css-visual-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: ui-merge-studio/test-results/ums-css-module-visual-evidence/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Recheck generated fixture after real candidate cleanup
         run: npm run fixture:verify

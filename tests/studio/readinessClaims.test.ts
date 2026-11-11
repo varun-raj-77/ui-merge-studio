@@ -20,14 +20,17 @@ describe('UMS-21 honest product readiness claims', () => {
   test('CI documentation accounts for every exact browser spec without implying external tests ran', () => {
     const expected = [
       'guided-experience', 'showcase-evidence', 'integration-plan', 'foundation-support',
-      'local-canonical-plan', 'local-selection-provenance', 'two-feature-candidate-browser'
+      'local-canonical-plan', 'local-selection-provenance', 'two-feature-candidate-browser',
+      'css-module-real-candidate'
     ];
     for (const name of expected) {
       const path = `tests/e2e/${name}.spec.ts`;
       expect(workflow).toContain(path);
 
     }
-    expect(ci).toContain('seven explicitly named specs');
+    expect(ci).toContain('eight explicitly named specs');
+    expect(workflow).toContain('ui-merge-studio/test-results/ums-css-module-visual-evidence/');
+    expect(ci).toContain('inspection evidence, not a visual-acceptance result');
     expect(ci).toContain('14 Showcase browser tests');
     expect(ci).toContain('external:prepare');
     expect(workflow).not.toContain('test:e2e:external');

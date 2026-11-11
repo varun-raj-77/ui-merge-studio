@@ -1,13 +1,15 @@
 // @vitest-environment node
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmdirSync, symlinkSync, unlinkSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { PreviewController, isProcessAlive } from '../../packages/preview-runtime/src/previewController';
 import { RepositoryController } from '../../packages/repository-controller/src/repositoryController';
 
 const controllers: PreviewController[] = [];
+const spacedAliases: Array<{ directory: string; alias: string }> = [];
 
 function worktreePaths(root: string) {
   return execFileSync('git', ['-C', root, 'worktree', 'list', '--porcelain'], { encoding: 'utf8' })
@@ -27,11 +29,20 @@ async function eventually(check: () => boolean | Promise<boolean>, timeoutMs = 8
 
 afterEach(async () => {
   for (const controller of controllers.splice(0)) await controller.stopAll();
+  for (const { directory, alias } of spacedAliases.splice(0)) {
+    unlinkSync(alias);
+    rmdirSync(directory);
+  }
 });
 
 describe('controlled Phase 0 preview regression', () => {
   test('loads the Studio instrumentation config from a spaced workspace path and cleans the real npm/Vite tree', async () => {
-    const workspaceRoot = resolve(import.meta.dirname, '../..');
+    // Exercise spaces even when contributors clone into a conventional hyphenated directory.
+    const checkout = resolve(import.meta.dirname, '../..');
+    const directory = mkdtempSync(join(tmpdir(), 'ums-preview-path-'));
+    const workspaceRoot = join(directory, 'UI merge studio');
+    symlinkSync(checkout, workspaceRoot, 'dir');
+    spacedAliases.push({ directory, alias: workspaceRoot });
     expect(workspaceRoot).toContain('UI merge studio');
     const repositoryPath = resolve(workspaceRoot, 'fixtures/generated/product-catalogue');
     const baselineWorktrees = worktreePaths(repositoryPath);

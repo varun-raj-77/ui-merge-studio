@@ -266,11 +266,17 @@ npm run dev -- --repository /absolute/path/to/react-vite-repository
 
 The path must be the clean root of a local Git repository that passes the current React + TypeScript + Vite discovery checks and declares a `dev` script. `UI_MERGE_REPOSITORY_PATH` is also available for scripted startup.
 
-Install Playwright's browser only when running browser tests:
+Install Playwright's browser to run browser tests or opt-in local candidate screenshot capture:
 
 ```sh
 npx playwright install chromium
 ```
+
+### Capture local candidate snapshots (opt-in)
+
+After a verified local candidate is generated, select **Compare Source A with result** or **Compare Source B with result**. Once both exact-commit previews are ready, confirm the **Capture route** path (suggested from the live comparison context) and use **Capture Source A/B + result snapshots** in the Result workspace. Studio navigates both managed loopback previews to the exact same validated relative pathname and captures with Chromium at a fixed 1280 × 800 viewport. Hostnames, schemes, queries, fragments, encoded paths, and traversal are not accepted. Each captured route is immutable. Capture up to three distinct routes per source and candidate generation; the first screenshot pair stays in place and later routes are stored separately. Generate a fresh candidate after reaching this bound. The original generation-time A/B branch SHAs remain pinned, and the pair appears beside the visual review receipt. Switch sources and repeat to capture both A and B.
+
+Captures are manual, one-time per distinct route, and live only under ignored `.ums/visual-snapshots/<generation-id>/` with private file permissions. Each PNG has a SHA-256 digest and an exact route in its version-3 local manifest. Additional routes use a deterministic SHA-256-derived route identity in their local image URLs; Studio verifies both PNGs on every snapshot status request and verifies the exact bytes again before serving an image. Missing, changed, or oversized images are refused as evidence (HTTP 409). Previously captured version-1/2 image pairs lack the version-3 route-plus-digest contract and are deliberately refused; generate a fresh candidate to capture new verified pairs. These hashes detect accidental or unaccompanied image changes, **not** malicious coordinated edits to the local manifest, cryptographic signatures, or human visual acceptance. They are **not** uploaded, added to Git, merged, compared pixel-by-pixel, or treated as an approval. Review the actual app interaction and nearby layout yourself, then record the separate local visual self-attestation if appropriate. Capture runs your local app in a headless browser; use trusted repositories and avoid private content on the captured route. If Chromium is not installed, run `npx playwright install chromium` before retrying.
 
 ## Repository and Generated Data Notes
 

@@ -18,17 +18,22 @@ describe('read-only GitHub verification workflow guardrails', () => {
     expect(workflow).toContain('npm run fixture:create');
     expect(workflow).toContain('npm run fixture:verify');
     expect(workflow).toContain('git diff --exit-code');
-    expect(workflow).toContain('working-directory: UI merge studio');
+    expect(workflow).toContain('working-directory: ui-merge-studio');
+    expect(workflow).toContain('path: ui-merge-studio');
   });
 
-  test('bounds Chromium installation without removing its OS dependencies', () => {
-    const step = workflow.split('      - name: Install Chromium for bounded browser journeys\n')[1]
+  test('requires pinned browser and Linux dependencies with a real launch preflight', () => {
+    expect(workflow).toContain('image: mcr.microsoft.com/playwright:v1.53.1-noble');
+    expect(workflow).toContain('options: --init');
+    const step = workflow.split('      - name: Verify pinned Chromium and dependency environment\n')[1]
       ?.split('      - name: Check real Showcase journeys')[0];
     expect(step).toBeDefined();
-    expect(step).toContain('timeout-minutes: 20');
-    expect(step).toContain('npx playwright --version');
-    expect(step).toContain('npx playwright install --with-deps chromium');
-    expect(step).toContain('Chromium and system dependencies installed in');
+    expect(step).toContain('shell: bash');
+    expect(step).toContain("require(\"@playwright/test/package.json\").version");
+    expect(step).toContain("= '1.53.1'");
+    expect(step).toContain('await chromium.launch()');
+    expect(step).toContain('await browser.close()');
+    expect(workflow).not.toContain('playwright install --with-deps');
   });
 
   test('preserves all three bounded browser suites rather than replacing them with smoke-only checks', () => {
