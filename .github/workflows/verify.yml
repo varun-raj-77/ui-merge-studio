@@ -69,6 +69,7 @@ jobs:
         run: npm run build
 
       - name: Verify pinned Chromium and dependency environment
+        shell: bash
         run: |
           set -euo pipefail
           test "$(node -p 'require("@playwright/test/package.json").version')" = '1.53.1'

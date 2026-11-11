@@ -28,6 +28,7 @@ describe('read-only GitHub verification workflow guardrails', () => {
     const step = workflow.split('      - name: Verify pinned Chromium and dependency environment\n')[1]
       ?.split('      - name: Check real Showcase journeys')[0];
     expect(step).toBeDefined();
+    expect(step).toContain('shell: bash');
     expect(step).toContain("require(\"@playwright/test/package.json\").version");
     expect(step).toContain("= '1.53.1'");
     expect(step).toContain('await chromium.launch()');
