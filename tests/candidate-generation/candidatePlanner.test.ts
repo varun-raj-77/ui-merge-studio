@@ -22,6 +22,44 @@ async function realArtifacts(){
 describe('candidate transformation utilities',()=>{
   test('reconciles named aliases and exports without duplication and replaces declarations by AST identity',()=>{let code="import { A } from './dep';\nexport function View(){return <A/>}\n";code=reconcileImport(code,'src/View.tsx',{source:'./dep',local:'Renamed',imported:'B',kind:'value',reason:'test'});code=reconcileImport(code,'src/View.tsx',{source:'./dep',local:'Renamed',imported:'B',kind:'value',reason:'test'});code=reconcileExport(code,'src/View.tsx','View','./View');code=reconcileExport(code,'src/View.tsx','View','./View');code=replaceDeclaration(code,'src/View.tsx','View','function View(){return <Renamed/>}');expect(code.match(/Renamed/g)?.length).toBe(2);expect(code.match(/export \{ View \}/g)?.length).toBe(1);expect(findDeclarationRange(code,'src/View.tsx','View')).not.toBeNull();expect(()=>parseModule(code,'src/View.tsx')).not.toThrow();});
   test('projects the same JSX child from LF preflight text and CRLF worktree text',()=>{const base="export function App(){\n  return <main><section>Foundation</section></main>\n}\n";const source="import { Selected } from './Selected';\nexport function App(){\n  return <main><Selected/><section>Foundation</section><p>Unrelated</p></main>\n}\n";const boundary={path:'src/Selected.tsx',symbol:'Selected'};const lf=projectJsxRegion(base,source,'src/App.tsx','App',boundary);const crlf=projectJsxRegion(base.replace(/\n/g,'\r\n'),source,'src/App.tsx','App',boundary);expect(crlf.evidence).toEqual(lf.evidence);expect(crlf.code).toContain('<Selected/>');expect(crlf.code).not.toContain('Unrelated');});
+  test('UMS-24A proves a uniquely anchored direct child excludes an unrelated source sibling byte-for-byte',()=>{
+    const path='src/components/layout/contentbar.tsx';
+    const boundary={path:'src/components/layout/status/Status.tsx',symbol:'Status'};
+    const base='export function PageContent(){return <main><header>Ready</header><Card data-testid="baseline-card"/></main>}\n';
+    const source='import { Status } from "./status/Status";\nexport function PageContent(){return <main><header>Ready</header><Status/><Card data-testid="baseline-card"/><p data-testid="unselected-density">Unselected density option</p></main>}\n';
+    const projected=projectJsxRegion(base,source,path,'PageContent',boundary);
+    expect(projected.code).toBe(base.replace('<Card data-testid="baseline-card"/>','<Status/><Card data-testid="baseline-card"/>'));
+    expect(projected.evidence).toMatchObject({
+      mode:'insert-child',renderedBoundary:boundary,integrationBoundary:{path,symbol:'PageContent'},
+      excludedSourceSiblingCount:1,anchor:{side:'before'},requiredBindings:['Status']
+    });
+    expect(projected.sourceSnippet).toBe('<Status/>');
+    expect(projected.code).not.toContain('Unselected density option');
+    expect(projected.code).not.toContain('unselected-density');
+    expect(projectJsxRegion(base,source,path,'PageContent',boundary)).toEqual(projected);
+    expect(projectJsxRegion(base.replace(/\n/g,'\r\n'),source,path,'PageContent',boundary)).toEqual(projected);
+  });
+
+  test('UMS-24A refuses ambiguous duplicate anchors instead of guessing where to insert',()=>{
+    const base='export function PageContent(){return <main><Card/><Card/></main>}\n';
+    const source='export function PageContent(){return <main><Status/><Card/><Card/><p>Unselected note</p></main>}\n';
+    expect(()=>projectJsxRegion(base,source,'src/PageContent.tsx','PageContent',{path:'src/Status.tsx',symbol:'Status'}))
+      .toThrow('no unique unchanged sibling anchor');
+  });
+
+  test('UMS-24A refuses reordered JSX anchors and unrelated declaration changes outside the integration parent',()=>{
+    const path='src/PageContent.tsx';
+    const boundary={path:'src/Status.tsx',symbol:'Status'};
+    const base='export function PageContent(){return <main><Header/><Card/></main>}\n';
+    const reordered='export function PageContent(){return <main><Card/><Status/><Header/><p>Unselected note</p></main>}\n';
+    expect(()=>projectJsxRegion(base,reordered,path,'PageContent',boundary))
+      .toThrow('incompatible order');
+    const stableBase='export function PageContent(){const theme="stable";return <main><Card/></main>}\n';
+    const unrelatedDeclarationChange='export function PageContent(){const theme="modified";return <main><Status/><Card/></main>}\n';
+    expect(()=>projectJsxRegion(stableBase,unrelatedDeclarationChange,path,'PageContent',boundary))
+      .toThrow('declaration structure outside the selected JSX parent also changed');
+  });
+
   test('refuses selected JSX nested inside an expression instead of replacing the enclosing expression',()=>{const base="export function Grid({enabled}:{enabled:boolean}){return <main>{enabled ? <span>Foundation</span> : null}</main>}\n";const source="import { Selected } from './Selected';\nexport function Grid({enabled}:{enabled:boolean}){return <main>{enabled ? <span>UNRELATED SOURCE CHANGE</span> : <Selected/>}</main>}\n";const boundary={path:'src/Selected.tsx',symbol:'Selected'};expect(()=>projectJsxRegion(base,source,'src/Grid.tsx','Grid',boundary)).toThrow('overlaps an expression or enclosing child replacement');});
   test('writes a typed exported const deterministically without duplicate values',()=>{const source="export const quickViewTargetIds = ['p-101', 'p-102'] as const;\n";const first=configureExportedConst(source,'src/config.ts','quickViewTargetIds',['p-102','p-104']);const second=configureExportedConst(source,'src/config.ts','quickViewTargetIds',['p-102','p-104']);expect(first).toBe(second);expect(first).toContain('\"p-102\", \"p-104\"');expect(first).not.toContain('p-101');});
   test('writes the exact category object deterministically and refuses malformed source shapes',()=>{
