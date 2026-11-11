@@ -29,7 +29,7 @@ describe('UMS-21 honest product readiness claims', () => {
 
     }
     expect(ci).toContain('eight explicitly named specs');
-    expect(workflow).toContain('UI merge studio/test-results/ums-css-module-visual-evidence/');
+    expect(workflow).toContain('ui-merge-studio/test-results/ums-css-module-visual-evidence/');
     expect(ci).toContain('inspection evidence, not a visual-acceptance result');
     expect(ci).toContain('14 Showcase browser tests');
     expect(ci).toContain('external:prepare');
