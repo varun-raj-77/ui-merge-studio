@@ -23,6 +23,9 @@ jobs:
     # not depend on the runner's occasionally unreachable Ubuntu apt mirror.
     container:
       image: mcr.microsoft.com/playwright:v1.53.1-noble
+      # Reap orphaned Vite/npm descendants. Without an init process, group
+      # probes can keep seeing container zombies even after SIGKILL.
+      options: --init
     timeout-minutes: 40
     # GitHub's container-runner command wrapper does not support spaces in its
     # working-directory. The preview-runtime test creates a disposable

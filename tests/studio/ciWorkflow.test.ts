@@ -24,6 +24,7 @@ describe('read-only GitHub verification workflow guardrails', () => {
 
   test('requires pinned browser and Linux dependencies with a real launch preflight', () => {
     expect(workflow).toContain('image: mcr.microsoft.com/playwright:v1.53.1-noble');
+    expect(workflow).toContain('options: --init');
     const step = workflow.split('      - name: Verify pinned Chromium and dependency environment\n')[1]
       ?.split('      - name: Check real Showcase journeys')[0];
     expect(step).toBeDefined();
