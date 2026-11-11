@@ -2,21 +2,17 @@ import { execFile } from 'node:child_process';
 import { mkdir, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { promisify } from 'node:util';
+import { defaultExternalViteSource, validateExternalCheckoutOutput } from './external-validation-paths';
 
 const execFileAsync = promisify(execFile);
 const workspaceRoot = resolve(import.meta.dirname, '..');
-const source = process.env.UI_MERGE_EXTERNAL_SOURCE ?? 'https://github.com/larry-xue/react-admin-dashboard.git';
-const output = resolve(process.env.UI_MERGE_EXTERNAL_REPOSITORY ?? resolve(workspaceRoot, '.validation-worktrees/prompt015-external-vite'));
-const managedRoot = resolve(workspaceRoot, '.validation-worktrees');
+const source = process.env.UI_MERGE_EXTERNAL_SOURCE ?? defaultExternalViteSource;
+const output = validateExternalCheckoutOutput(workspaceRoot, resolve(process.env.UI_MERGE_EXTERNAL_REPOSITORY ?? resolve(workspaceRoot, '.validation-worktrees/prompt015-external-vite')));
 const foundationCommit = '8223897259151c450f954e462c57df3703d5508d';
 const patches = [
   { branch: 'prompt014-workspace-status', file: resolve(workspaceRoot, 'tests/external-vite/workspace-status.patch'), date: '2026-08-14T12:00:00Z' },
   { branch: 'prompt014-revenue-pulse', file: resolve(workspaceRoot, 'tests/external-vite/revenue-pulse.patch'), date: '2026-08-14T12:01:00Z' }
 ];
-
-if (output !== managedRoot && !output.startsWith(`${managedRoot}\\`) && !output.startsWith(`${managedRoot}/`)) {
-  throw new Error(`Refusing to replace external validation output outside ${managedRoot}: ${output}`);
-}
 
 async function git(args: string[], cwd = workspaceRoot, environment: NodeJS.ProcessEnv = process.env) {
   const result = await execFileAsync('git', args, { cwd, env: environment, encoding: 'utf8', maxBuffer: 20 * 1024 * 1024, windowsHide: true });

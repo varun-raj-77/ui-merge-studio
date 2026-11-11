@@ -3,13 +3,13 @@ import { existsSync } from 'node:fs';
 import { mkdir, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { promisify } from 'node:util';
+import { defaultExternalViteSource, validateExternalCheckoutOutput } from './external-validation-paths';
 
 const execFileAsync = promisify(execFile);
 const workspaceRoot = resolve(import.meta.dirname, '..');
-const defaultSource = 'C:/Users/rekha/OneDrive/Documents/ui-merge-vite-validation';
-const source = resolve(process.env.UI_MERGE_EXTERNAL_SOURCE ?? defaultSource);
+const source = process.env.UI_MERGE_EXTERNAL_SOURCE ?? defaultExternalViteSource;
 const managedRoot = resolve(workspaceRoot, '.validation-worktrees');
-const output = resolve(process.env.UI_MERGE_EXTERNAL_CANDIDATE_REPOSITORY ?? resolve(managedRoot, 'prompt020-external-vite'));
+const output = validateExternalCheckoutOutput(workspaceRoot, resolve(process.env.UI_MERGE_EXTERNAL_CANDIDATE_REPOSITORY ?? resolve(managedRoot, 'prompt020-external-vite')));
 const foundationCommit = '8223897259151c450f954e462c57df3703d5508d';
 const featureBranch = 'prompt020-revenue-pulse';
 const patches = [
@@ -17,9 +17,8 @@ const patches = [
   resolve(workspaceRoot, 'tests/external-feature-slice/revenue-pulse-dependencies.patch')
 ];
 
-if (!existsSync(resolve(source, '.git'))) throw new Error(`External React/Vite repository is unavailable: ${source}`);
-if (output !== managedRoot && !output.startsWith(`${managedRoot}\\`) && !output.startsWith(`${managedRoot}/`)) {
-  throw new Error(`Refusing to replace external candidate output outside ${managedRoot}: ${output}`);
+if (!/^(?:https?:\/\/|git@)/.test(source) && !existsSync(resolve(source, '.git'))) {
+  throw new Error(`External React/Vite repository is unavailable: ${source}`);
 }
 
 async function git(args: string[], cwd = workspaceRoot, environment: NodeJS.ProcessEnv = process.env) {
