@@ -1,4 +1,4 @@
-import { expect, test, afterEach } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 import { CandidateGenerator } from '../../packages/candidate-generation/src/candidateGenerator';
 import { FeatureSliceAnalyzer } from '../../packages/source-analysis/src/featureSliceAnalyzer';
 import { GitSourceRepository } from '../../packages/source-analysis/src/gitModel';
@@ -7,40 +7,43 @@ import { cleanupRepositories, commit, createRepository, git, writeFiles } from '
 
 afterEach(cleanupRepositories);
 
-test('external profile refuses an owned-looking CSS Module and unrelated JSX sibling without making a branch', async () => {
+test.each([
+  { label: 'CSS Module alone', hasStyles: true, hasUnselectedSibling: false },
+  { label: 'unrelated JSX sibling alone', hasStyles: false, hasUnselectedSibling: true },
+  { label: 'CSS Module and unrelated JSX sibling together', hasStyles: true, hasUnselectedSibling: true }
+])('external profile refuses $label before creating a candidate branch', async ({ hasStyles, hasUnselectedSibling }) => {
   const root = createRepository({
     '.gitignore': '.ums/\n',
     'src/App.tsx': 'export function App(){return <main><section>Foundation</section></main>}\n'
   });
   git(root, ['switch', '-c', 'feature']);
   const selectedFile = [
-    "import styles from './StatusBanner.module.css';",
-    'export function StatusBanner(){return <aside className={styles.banner}>Selected feature</aside>}',
+    ...(hasStyles ? ["import styles from './StatusBanner.module.css';"] : []),
+    `export function StatusBanner(){return <aside${hasStyles ? ' className={styles.banner}' : ''}>Selected feature</aside>}`,
     ''
   ].join('\n');
   writeFiles(root, {
     'src/App.tsx': [
       "import { StatusBanner } from './StatusBanner';",
-      'export function App(){return <main><StatusBanner/><section>Foundation</section><p>Unselected sibling</p></main>}',
+      `export function App(){return <main><StatusBanner/><section>Foundation</section>${hasUnselectedSibling ? '<p>Unselected sibling</p>' : ''}</main>}`,
       ''
     ].join('\n'),
     'src/StatusBanner.tsx': selectedFile,
-    'src/StatusBanner.module.css': '.banner { display: flex; margin-bottom: 10px; }\n'
+    ...(hasStyles ? { 'src/StatusBanner.module.css': '.banner { display: flex; margin-bottom: 10px; }\n' } : {})
   });
-  const sourceCommit = commit(root, 'feature with CSS Module and unrelated sibling');
+  const sourceCommit = commit(root, 'selected feature with adversarial dependency shape');
   const selection: SourceIdentity = {
     boundaryId: 'status-banner', instanceId: 'status-banner-1',
     repositoryRelativePath: 'src/StatusBanner.tsx',
-    line: 2, column: 8, componentName: 'StatusBanner', exportName: 'StatusBanner',
+    line: hasStyles ? 2 : 1, column: 8, componentName: 'StatusBanner', exportName: 'StatusBanner',
     branch: 'feature', previewId: 'left', sessionId: 'external-profile-test',
     generation: 1, confidence: 'exact'
   };
-  const analyzer = new FeatureSliceAnalyzer(root);
-  const artifact = await analyzer.analyze({
+  const artifact = await new FeatureSliceAnalyzer(root).analyze({
     baseRef: 'main', branchRef: 'feature', expectedBranchCommit: sourceCommit, selection
   });
   expect(artifact.slice.status, JSON.stringify(artifact.slice.unresolvedDependencies)).toBe('resolved');
-  expect(artifact.slice.includedChanges.map(change => change.path)).toContain('src/StatusBanner.module.css');
+  if (hasStyles) expect(artifact.slice.includedChanges.map(change => change.path)).toContain('src/StatusBanner.module.css');
 
   const repository = new GitSourceRepository(root);
   const generator = new CandidateGenerator(root);
@@ -56,18 +59,25 @@ test('external profile refuses an owned-looking CSS Module and unrelated JSX sib
   };
   const preflight = await generator.preflight(request);
   expect(preflight.plan.status).toBe('refused');
-  expect(preflight.plan.operations).toEqual(expect.arrayContaining([
-    expect.objectContaining({
-      kind: 'replace-jsx-region',
-      target: expect.objectContaining({ path: 'src/App.tsx', symbol: 'App' }),
-      jsxProjection: expect.objectContaining({ mode: 'insert-child', excludedSourceSiblingCount: 1 })
-    }),
-    expect.objectContaining({ kind: 'add-style-file', target: expect.objectContaining({ path: 'src/StatusBanner.module.css' }) })
-  ]));
+  expect(preflight.plan.operations).toContainEqual(expect.objectContaining({
+    kind: 'replace-jsx-region',
+    target: expect.objectContaining({ path: 'src/App.tsx', symbol: 'App' }),
+    jsxProjection: expect.objectContaining({
+      mode: 'insert-child', excludedSourceSiblingCount: hasUnselectedSibling ? 1 : 0
+    })
+  }));
+
   const reasons = preflight.plan.unresolved.map(item => item.reason).join('\n');
-  expect(reasons).toContain('CSS rule ownership is not implemented');
-  expect(reasons).toContain('outside the bounded external React/Vite transform grammar');
-  expect(reasons).toContain('Unrelated source changes modify the same JSX integration parent');
+  if (hasStyles) {
+    expect(preflight.plan.operations).toContainEqual(expect.objectContaining({
+      kind: 'add-style-file', target: expect.objectContaining({ path: 'src/StatusBanner.module.css' })
+    }));
+    expect(reasons).toContain('CSS rule ownership is not implemented');
+    expect(reasons).toContain('outside the bounded external React/Vite transform grammar');
+  }
+  if (hasUnselectedSibling) {
+    expect(reasons).toContain('Unrelated source changes modify the same JSX integration parent');
+  }
 
   const report = await generator.generate(request);
   expect(report).toMatchObject({
