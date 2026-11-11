@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { lstat, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import type { CandidateGenerationReport } from '../../packages/candidate-generation/src/types';
 import type { PreviewSession } from '../../packages/preview-runtime/src/previewController';
 import { formatVerifiedCandidateHandoff } from './src/candidateHandoff';
@@ -14,6 +14,9 @@ const commitPattern = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
 const pngHeader = Buffer.from('89504e470d0a1a0a', 'hex');
 const viewport = { width: 1280, height: 800 } as const;
 const maxPngBytes = 8 * 1024 * 1024;
+const maxRoutesPerSource = 3;
+const routeKeyPattern = /^[a-f0-9]{16}$/;
+function routeKey(route: string) { return createHash('sha256').update(route).digest('hex').slice(0, 16); }
 
 interface SourcePin { branch: string; commit: string }
 interface GenerationPins {
@@ -123,6 +126,10 @@ export class VisualSnapshotAuthority {
     return join(this.artifactRoot, '.ums', 'visual-snapshots', id);
   }
   private capturePath(id: string, source: ComparisonSource) { return join(this.directory(id), source, 'manifest.json'); }
+  private routeFolder(id: string, source: ComparisonSource, key: string) {
+    if (!routeKeyPattern.test(key)) throw new VisualReviewError(400, 'Invalid screenshot route identity.');
+    return join(this.directory(id), source, 'routes', key);
+  }
 
   /** Called before the candidate displaces Source B in the right preview slot. */
   async register(report: CandidateGenerationReport) {
@@ -181,11 +188,12 @@ export class VisualSnapshotAuthority {
     return pins;
   }
 
-  private async storedCapture(id: string, source: ComparisonSource, pins: GenerationPins): Promise<StoredCapture | null> {
+  private async storedCapture(id: string, source: ComparisonSource, pins: GenerationPins, key?: string): Promise<StoredCapture | null> {
+    const path = key ? join(this.routeFolder(id, source, key), 'manifest.json') : this.capturePath(id, source);
     let capture: StoredCapture;
-    try { capture = JSON.parse(await readFile(this.capturePath(id, source), 'utf8')) as StoredCapture; }
+    try { capture = JSON.parse(await readFile(path, 'utf8')) as StoredCapture; }
     catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT' && !key) return null;
       throw new VisualReviewError(409, 'Local screenshot metadata cannot be read.');
     }
     const pin = pins.sources[source];
@@ -199,27 +207,55 @@ export class VisualSnapshotAuthority {
       || capture.candidateTree !== pins.candidateTree || capture.viewport?.width !== viewport.width
       || capture.viewport?.height !== viewport.height || !/^[0-9a-f-]+\.png$/.test(capture.sourceFile)
       || !/^[0-9a-f-]+\.png$/.test(capture.candidateFile)
-      || !/^[a-f0-9]{64}$/.test(capture.sourceSha256) || !/^[a-f0-9]{64}$/.test(capture.candidateSha256)) {
-      throw new VisualReviewError(409, 'Local screenshots do not match the pinned source and candidate.');
+      || !/^[a-f0-9]{64}$/.test(capture.sourceSha256) || !/^[a-f0-9]{64}$/.test(capture.candidateSha256)
+      || (capture.routeKey !== undefined && capture.routeKey !== routeKey(capture.route))
+      || (key !== undefined && key !== routeKey(capture.route))) {
+      throw new VisualReviewError(409, 'Local screenshots do not match the pinned source, candidate and route.');
     }
-    const folder = join(this.directory(id), source);
+    const folder = dirname(path);
     await Promise.all([
       verifiedImage(join(folder, capture.sourceFile), capture.sourceSha256, 'source ' + source),
       verifiedImage(join(folder, capture.candidateFile), capture.candidateSha256, 'candidate ' + source)
     ]);
-    return capture;
+    return { ...capture, routeKey: routeKey(capture.route) };
+  }
+
+  private async additionalCaptures(id: string, source: ComparisonSource, pins: GenerationPins): Promise<StoredCapture[]> {
+    const folder = join(this.directory(id), source, 'routes');
+    let entries: import('node:fs').Dirent[];
+    try { entries = await readdir(folder, { withFileTypes: true }); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw new VisualReviewError(409, 'Additional screenshot route metadata cannot be read.');
+    }
+    if (entries.length > maxRoutesPerSource - 1 || entries.some(entry => !entry.isDirectory() || !routeKeyPattern.test(entry.name))) {
+      throw new VisualReviewError(409, 'Local screenshot route metadata exceeds the allowed limit or contains unexpected entries.');
+    }
+    return await Promise.all(entries.map(entry => this.storedCapture(id, source, pins, entry.name).then(capture => {
+      if (!capture) throw new VisualReviewError(409, 'A recorded screenshot route is missing.');
+      return capture;
+    })));
   }
 
   async get(id: string): Promise<VisualSnapshotState> {
     const review = await this.reviews.get(id);
     const pins = await this.verifiedPins(id);
-    if (!pins) return { status: 'unavailable', captures: { A: null, B: null }, reason: 'Generation-time source pins were not saved for this candidate.' };
-    const [a, b] = await Promise.all([this.storedCapture(id, 'A', pins), this.storedCapture(id, 'B', pins)]);
+    if (!pins) return { status: 'unavailable', captures: { A: null, B: null }, additionalCaptures: { A: [], B: [] }, reason: 'Generation-time source pins were not saved for this candidate.' };
+    const [a, b, additionalA, additionalB] = await Promise.all([
+      this.storedCapture(id, 'A', pins), this.storedCapture(id, 'B', pins),
+      this.additionalCaptures(id, 'A', pins), this.additionalCaptures(id, 'B', pins)
+    ]);
+    if ((!a && additionalA.length) || (!b && additionalB.length)
+      || (a && additionalA.some(capture => capture.route === a.route))
+      || (b && additionalB.some(capture => capture.route === b.route))) {
+      throw new VisualReviewError(409, 'Local screenshot routes have conflicting or missing original evidence.');
+    }
     return {
       status: review.status === 'stale' ? 'stale' : 'ready',
       candidateCommit: pins.candidateCommit,
       sourcePins: pins.sources,
       captures: { A: a, B: b },
+      additionalCaptures: { A: additionalA.sort((x, y) => x.route.localeCompare(y.route)), B: additionalB.sort((x, y) => x.route.localeCompare(y.route)) },
       reason: review.status === 'stale' ? review.reason : undefined
     };
   }
@@ -234,10 +270,9 @@ export class VisualSnapshotAuthority {
     const { source, route } = input as { source: ComparisonSource; route: string };
     const before = await this.get(id);
     if (before.status !== 'ready') throw new VisualReviewError(409, before.reason ?? 'The candidate is no longer current.');
-    if (before.captures[source]) {
-      if (before.captures[source].route !== route) throw new VisualReviewError(409, 'This source was already captured at a different route. Create a new candidate to capture another route.');
-      return before;
-    }
+    const prior = [before.captures[source], ...(before.additionalCaptures?.[source] ?? [])].filter(Boolean);
+    if (prior.some(capture => capture?.route === route)) return before;
+    if (prior.length >= maxRoutesPerSource) throw new VisualReviewError(409, 'Maximum of three screenshot routes per source reached. Generate a new candidate for further routes.');
     const pins = (await this.verifiedPins(id))!;
     const left = this.previews.session('left');
     const right = this.previews.session('right');
@@ -260,25 +295,26 @@ export class VisualSnapshotAuthority {
       if (after.status !== 'ready' || this.previews.session('left') !== left
         || this.previews.session('right') !== right || !this.previews.isAlive('left')
         || !this.previews.isAlive('right')) throw new VisualReviewError(409, 'Preview identity changed during capture. Retry with the pinned previews.');
-      if (after.captures[source]) {
-        if (after.captures[source].route !== route) throw new VisualReviewError(409, 'Another route was already captured for this source.');
-        return after;
-      }
-      const folder = join(this.directory(id), source);
+      const existing = [after.captures[source], ...(after.additionalCaptures?.[source] ?? [])].filter(Boolean);
+      if (existing.some(capture => capture?.route === route)) return after;
+      if (existing.length >= maxRoutesPerSource) throw new VisualReviewError(409, 'Maximum of three screenshot routes per source reached.');
+      const folder = after.captures[source]
+        ? this.routeFolder(id, source, routeKey(route))
+        : join(this.directory(id), source);
       await mkdir(folder, { recursive: true });
       const sourceFile = randomUUID() + '.png';
       const candidateFile = randomUUID() + '.png';
       await writeFile(join(folder, sourceFile), pair.source, { flag: 'wx', mode: 0o600 });
       await writeFile(join(folder, candidateFile), pair.candidate, { flag: 'wx', mode: 0o600 });
       const capture: StoredCapture = {
-        version: 3, generationId: id, source, route, planIdentity: pins.planIdentity,
+        version: 3, generationId: id, source, route, routeKey: routeKey(route), planIdentity: pins.planIdentity,
         sourceBranch: sourcePin.branch, sourceCommit: sourcePin.commit,
         candidateCommit: pins.candidateCommit, candidateTree: pins.candidateTree,
         sourceSha256: pngSha256(pair.source), candidateSha256: pngSha256(pair.candidate),
         capturedAt: new Date().toISOString(), viewport, sourceFile, candidateFile
       };
       try {
-        await writeFile(this.capturePath(id, source), JSON.stringify(capture, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+        await writeFile(join(folder, 'manifest.json'), JSON.stringify(capture, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
       }
@@ -288,13 +324,23 @@ export class VisualSnapshotAuthority {
     }
   }
 
-  async image(id: string, sourceValue: unknown, kind: 'source' | 'candidate') {
+  async image(id: string, sourceValue: unknown, kind: 'source' | 'candidate', key?: unknown) {
     if (!validSource(sourceValue)) throw new VisualReviewError(400, 'Source A or B is required.');
+    if (key !== undefined && (typeof key !== 'string' || !routeKeyPattern.test(key))) {
+      throw new VisualReviewError(400, 'Invalid screenshot route identity.');
+    }
+    const state = await this.get(id);
+    const first = state.captures[sourceValue];
+    const capture = key === undefined ? first
+      : [first, ...(state.additionalCaptures?.[sourceValue] ?? [])].find(item => item?.routeKey === key);
+    if (!capture) throw new VisualReviewError(404, 'No local screenshot was captured for that route.');
+    const folder = capture === first ? join(this.directory(id), sourceValue) : this.routeFolder(id, sourceValue, key as string);
+    // File names are private manifest data, not returned in the public snapshot response.
     const pins = await this.verifiedPins(id);
     if (!pins) throw new VisualReviewError(404, 'No snapshot pins are available.');
-    const capture = await this.storedCapture(id, sourceValue, pins);
-    if (!capture) throw new VisualReviewError(404, 'No local screenshot was captured.');
-    const expected = kind === 'source' ? capture.sourceSha256 : capture.candidateSha256;
-    return await verifiedImage(join(this.directory(id), sourceValue, kind === 'source' ? capture.sourceFile : capture.candidateFile), expected, kind + ' ' + sourceValue);
+    const stored = await this.storedCapture(id, sourceValue, pins, capture === first ? undefined : key as string);
+    if (!stored) throw new VisualReviewError(404, 'No local screenshot was captured.');
+    const expected = kind === 'source' ? stored.sourceSha256 : stored.candidateSha256;
+    return await verifiedImage(join(folder, kind === 'source' ? stored.sourceFile : stored.candidateFile), expected, kind + ' ' + sourceValue);
   }
 }

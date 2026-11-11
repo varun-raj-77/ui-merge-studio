@@ -186,17 +186,65 @@ test('refuses digest-forged or legacy manifests instead of silently blessing old
 });
 
 
-test('captures the same explicit local route on both managed preview origins and refuses route changes', async () => {
+test('preserves the first screenshot and captures two independent additional routes at the exact pinned commits', async () => {
   const f = fixture();
   await f.authority.register(f.report);
   f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
-  const captured = await f.authority.capture(f.generationId, { source: 'A', route: '/products/desk-stand' });
-  expect(captured.captures.A).toMatchObject({ version: 3, route: '/products/desk-stand' });
-  expect(f.capturePair).toHaveBeenCalledWith(
-    'http://127.0.0.1:48210/products/desk-stand', 'http://127.0.0.1:48212/products/desk-stand'
-  );
-  await expect(f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' })).rejects.toMatchObject({
-    statusCode: 409, message: expect.stringContaining('already captured at a different route')
+  f.capturePair.mockImplementation(async (sourceUrl, candidateUrl) => ({
+    source: Buffer.concat([f.png, Buffer.from(sourceUrl)]),
+    candidate: Buffer.concat([f.png, Buffer.from(candidateUrl)])
+  }));
+  const first = await f.authority.capture(f.generationId, { source: 'A', route: '/products/desk-stand' });
+  const original = await f.authority.image(f.generationId, 'A', 'source');
+  const second = await f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' });
+  expect(second.captures.A).toEqual(first.captures.A);
+  expect(second.additionalCaptures?.A).toHaveLength(1);
+  expect(second.additionalCaptures?.A[0]).toMatchObject({
+    route: '/catalogue', candidateCommit: f.candidateCommit, sourceCommit: 'a'.repeat(40),
+    routeKey: createHash('sha256').update('/catalogue').digest('hex').slice(0, 16)
   });
-  expect(f.capturePair).toHaveBeenCalledTimes(1);
+  const secondKey = second.additionalCaptures!.A[0].routeKey;
+  expect(await f.authority.image(f.generationId, 'A', 'source', secondKey)).toEqual(
+    Buffer.concat([f.png, Buffer.from('http://127.0.0.1:48210/catalogue')])
+  );
+  expect(await f.authority.image(f.generationId, 'A', 'source')).toEqual(original);
+  expect(await f.authority.image(f.generationId, 'A', 'candidate', secondKey)).toEqual(
+    Buffer.concat([f.png, Buffer.from('http://127.0.0.1:48212/catalogue')])
+  );
+  const third = await f.authority.capture(f.generationId, { source: 'A', route: '/products/lamp' });
+  expect(third.additionalCaptures?.A.map(capture => capture.route)).toEqual(['/catalogue', '/products/lamp']);
+  expect(f.capturePair).toHaveBeenCalledTimes(3);
+  expect(await f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' })).toEqual(third);
+  await expect(f.authority.capture(f.generationId, { source: 'A', route: '/fourth' })).rejects.toMatchObject({
+    statusCode: 409, message: expect.stringContaining('Maximum of three')
+  });
+  expect(f.capturePair).toHaveBeenCalledTimes(3);
+  await expect(f.authority.image(f.generationId, 'A', 'source', 'f'.repeat(16))).rejects.toMatchObject({ statusCode: 404 });
+  await expect(f.authority.image(f.generationId, 'A', 'source', '../bad')).rejects.toMatchObject({ statusCode: 400 });
+  const restarted = new VisualSnapshotAuthority(f.artifactRoot, new VisualReviewAuthority(f.root, f.artifactRoot), {
+    session: slot => f.current[slot], isAlive: () => true
+  }, f.capturePair);
+  expect((await restarted.get(f.generationId)).additionalCaptures).toEqual(third.additionalCaptures);
+  expect(await restarted.image(f.generationId, 'A', 'source')).toEqual(original);
+  expect(git(f.root, ['status', '--porcelain'])).toBe('');
+});
+
+test('refuses tampered additional PNGs and manifests or a forged route directory', async () => {
+  const f = fixture();
+  await f.authority.register(f.report);
+  f.current.right = f.session('right', 'combined-result', f.candidateCommit, 48212);
+  await f.authority.capture(f.generationId, { source: 'A', route: '/catalogue' });
+  const state = await f.authority.capture(f.generationId, { source: 'A', route: '/products/lamp' });
+  const key = state.additionalCaptures!.A[0].routeKey;
+  const folder = resolve(f.artifactRoot, '.ums', 'visual-snapshots', f.generationId, 'A', 'routes', key);
+  const path = resolve(folder, 'manifest.json');
+  const metadata = JSON.parse(readFileSync(path, 'utf8')) as { sourceFile: string; route: string; sourceSha256: string };
+  writeFileSync(resolve(folder, metadata.sourceFile), Buffer.concat([f.png, Buffer.from('changed')]));
+  await expect(f.authority.get(f.generationId)).rejects.toMatchObject({ statusCode: 409 });
+  await expect(f.authority.image(f.generationId, 'A', 'source', key)).rejects.toMatchObject({ statusCode: 409 });
+  writeFileSync(resolve(folder, metadata.sourceFile), f.png);
+  writeFileSync(path, JSON.stringify({ ...metadata, route: '/another-route' }));
+  await expect(f.authority.get(f.generationId)).rejects.toMatchObject({
+    statusCode: 409, message: expect.stringContaining('pinned source, candidate and route')
+  });
 });

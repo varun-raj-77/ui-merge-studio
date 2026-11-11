@@ -49,7 +49,7 @@ function artifactRoute(url: string | undefined) { const match = url?.match(/^\/a
 function generationArtifactRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/reports\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
 function visualReviewRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/visual-reviews\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
 function visualSnapshotRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/visual-snapshots\/([a-f0-9]{16})$/); return match?.[1] ?? null; }
-function visualSnapshotImageRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/visual-snapshots\/([a-f0-9]{16})\/(A|B)\/(source|candidate)\.png$/); return match ? { id: match[1], source: match[2], kind: match[3] as 'source' | 'candidate' } : null; }
+function visualSnapshotImageRoute(url: string | undefined) { const match = url?.match(/^\/api\/candidate\/visual-snapshots\/([a-f0-9]{16})\/(A|B)\/(?:([a-f0-9]{16})\/)?(source|candidate)\.png$/); return match ? { id: match[1], source: match[2], routeKey: match[3], kind: match[4] as 'source' | 'candidate' } : null; }
 const server = createServer(async (request, response) => {
   try {
     const instrumentationPreviewId = instrumentationPreviewRoute(request.url);
@@ -120,7 +120,7 @@ const server = createServer(async (request, response) => {
     }
     const snapshotImage = visualSnapshotImageRoute(request.url);
     if (snapshotImage && request.method === 'GET') {
-      const png = await visualSnapshotAuthority.image(snapshotImage.id, snapshotImage.source, snapshotImage.kind);
+      const png = await visualSnapshotAuthority.image(snapshotImage.id, snapshotImage.source, snapshotImage.kind, snapshotImage.routeKey);
       response.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
       return response.end(png);
     }
