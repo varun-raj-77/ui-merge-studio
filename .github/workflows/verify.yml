@@ -18,6 +18,11 @@ jobs:
   verify:
     name: Typecheck, tests, build, and browser journeys
     runs-on: ubuntu-24.04
+    # Match the locked @playwright/test version. The official Playwright image
+    # already contains Chromium and its Linux libraries, so browser CI does
+    # not depend on the runner's occasionally unreachable Ubuntu apt mirror.
+    container:
+      image: mcr.microsoft.com/playwright:v1.53.1-noble
     timeout-minutes: 40
     # Keep a space in the checkout path: the preview-runtime integration
     # regression exercises Vite instrumentation under spaced workspaces.
@@ -59,19 +64,16 @@ jobs:
       - name: Build hosted Showcase
         run: npm run build
 
-      - name: Install Chromium for bounded browser journeys
-        # Includes Playwright's required Linux libraries. Keeping --with-deps
-        # matters more than shaving minutes by skipping system dependencies.
-        # Bound this independently so an OS-package mirror cannot consume the
-        # full job timeout without yielding a diagnosable failed step.
-        timeout-minutes: 20
+      - name: Verify pinned Chromium and dependency environment
         run: |
           set -euo pipefail
-          npx playwright --version
-          started="$(date +%s)"
-          npx playwright install --with-deps chromium
-          finished="$(date +%s)"
-          echo "Chromium and system dependencies installed in $((finished - started)) seconds."
+          test "$(node -p 'require("@playwright/test/package.json").version')" = '1.53.1'
+          node --input-type=module -e '
+            import { chromium } from "@playwright/test";
+            const browser = await chromium.launch();
+            console.log(`Playwright Chromium launch succeeded: ${browser.version()}`);
+            await browser.close();
+          '
 
       - name: Check real Showcase journeys, configured plans, and safe refusal in browser
         run: >-
