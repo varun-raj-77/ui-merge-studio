@@ -311,6 +311,44 @@ test('keeps screenshot capture opt-in and restricted to two running exact-commit
 });
 
 
+test('allows another route without replacing the original rendered screenshot pair', async () => {
+  const first = {
+    version: 3, route: '/catalogue', routeKey: 'a'.repeat(16), generationId: 'f'.repeat(16),
+    source: 'A', planIdentity: 'plan-v2-fixture-verified',
+    sourceSha256: 'a'.repeat(64), candidateSha256: 'b'.repeat(64),
+    sourceBranch: 'branch-a', sourceCommit: '4'.repeat(40),
+    candidateCommit: '2'.repeat(40), candidateTree: '3'.repeat(40),
+    capturedAt: '2026-01-01T00:00:00Z', viewport: { width: 1280, height: 800 }
+  };
+  const second = { ...first, route: '/products/lamp', routeKey: 'b'.repeat(16), capturedAt: '2026-01-02T00:00:00Z' };
+  const spy = vi.mocked(globalThis.fetch);
+  spy.mockImplementation((input, init) => {
+    const route = init?.method === 'POST' ? (JSON.parse(String(init.body)) as { route: string }).route : null;
+    return apiResponse(String(input).includes('/visual-snapshots/')
+      ? { status: 'ready', captures: { A: route ? first : null, B: null },
+        additionalCaptures: { A: route === '/products/lamp' ? [second] : [], B: [] } }
+      : { status: 'pending', receipt: null });
+  });
+  render(<ResultWorkspace report={verifiedReport()} foundation={foundation} selections={[{ branch: 'branch-a', label: 'Sidebar' }]}
+    {...liveComparisonProps} activeRoute="/catalogue" comparisonActive={true} onOpen={() => undefined} onEvidence={() => undefined}
+    onCopy={() => undefined} onReturn={() => undefined} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Capture Source A + result snapshots' }));
+  await screen.findByRole('button', { name: 'Source A captured' });
+  const firstImage = screen.getByAltText(/Source A local screenshot.*catalogue/);
+  expect(firstImage).toHaveAttribute('src', expect.stringContaining('/A/source.png'));
+  fireEvent.change(screen.getByLabelText('Local screenshot route'), { target: { value: '/products/lamp' } });
+  const secondCapture = screen.getByRole('button', { name: 'Capture Source A + result snapshots' });
+  expect(secondCapture).toBeEnabled();
+  fireEvent.click(secondCapture);
+  await waitFor(() => expect(spy).toHaveBeenCalledWith('/api/candidate/visual-snapshots/' + 'f'.repeat(16), expect.objectContaining({
+    method: 'POST', body: JSON.stringify({ source: 'A', route: '/products/lamp' })
+  })));
+  expect(await screen.findByAltText(/Source A local screenshot.*products\/lamp/)).toHaveAttribute('src', expect.stringContaining('/A/' + 'b'.repeat(16) + '/source.png'));
+  expect(firstImage).toHaveAttribute('src', expect.stringContaining('/A/source.png'));
+  expect(screen.getAllByText(/PNG SHA-256 matches local manifest/)).toHaveLength(2);
+  expect(screen.getByRole('button', { name: 'Source A captured' })).toBeDisabled();
+});
+
 test('follows the live route until the reviewer overrides the capture pathname', () => {
   const props = {
     report: verifiedReport(), foundation, selections: [{ branch: 'branch-a', label: 'Sidebar' }],

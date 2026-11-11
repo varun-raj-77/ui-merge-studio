@@ -181,13 +181,35 @@ test('a rendered two-branch decision causes one canonical plan and a verified re
     const aCapture = page.waitForResponse(response => response.url().endsWith(snapshotsUrl) && response.request().method() === 'POST');
     await captureA.click();
     expect((await aCapture).status()).toBe(201);
+    // Additional route capture must preserve the first pair and use a separate verified URL.
+    await expect(page.getByRole('button', { name: 'Source A captured' })).toBeDisabled();
+    await page.getByLabel('Local screenshot route').fill('/');
+    const anotherRoute = page.getByRole('button', { name: 'Capture Source A + result snapshots' });
+    await expect(anotherRoute).toBeEnabled();
+    const additionalResponse = page.waitForResponse(response => response.url().endsWith(snapshotsUrl) && response.request().method() === 'POST');
+    await anotherRoute.click();
+    expect((await additionalResponse).status()).toBe(201);
     const metadataResponse = await request.get(snapshotsUrl);
     expect(metadataResponse.status()).toBe(200);
-    const snapshotMetadata = await metadataResponse.json() as { captures: Record<'A' | 'B', {
-      version: number; sourceCommit: string; candidateCommit: string; sourceSha256: string; candidateSha256: string;
-    } | null> };
+    const snapshotMetadata = await metadataResponse.json() as {
+      captures: Record<'A' | 'B', {
+        version: number; route: string; sourceCommit: string; candidateCommit: string; sourceSha256: string; candidateSha256: string;
+      } | null>;
+      additionalCaptures: Record<'A' | 'B', Array<{
+        route: string; routeKey: string; sourceCommit: string; candidateCommit: string; sourceSha256: string; candidateSha256: string;
+      }>>;
+    };
     expect(snapshotMetadata.captures.B).toMatchObject({ version: 3, route: '/catalogue', sourceCommit: sourceBPin, candidateCommit: report.repository.candidateCommit });
     expect(snapshotMetadata.captures.A).toMatchObject({ version: 3, route: '/catalogue', candidateCommit: report.repository.candidateCommit });
+    expect(snapshotMetadata.additionalCaptures.A).toHaveLength(1);
+    expect(snapshotMetadata.additionalCaptures.A[0]).toMatchObject({ route: '/', candidateCommit: report.repository.candidateCommit });
+    const extra = snapshotMetadata.additionalCaptures.A[0];
+    expect(extra.routeKey).toBe(createHash('sha256').update('/').digest('hex').slice(0, 16));
+    for (const kind of ['source', 'candidate'] as const) {
+      const image = await request.get(snapshotsUrl + '/A/' + extra.routeKey + '/' + kind + '.png');
+      expect(image.status()).toBe(200);
+      expect(createHash('sha256').update(await image.body()).digest('hex')).toBe(kind === 'source' ? extra.sourceSha256 : extra.candidateSha256);
+    }
     for (const source of ['A', 'B'] as const) {
       for (const kind of ['source', 'candidate'] as const) {
         const image = await request.get(snapshotsUrl + '/' + source + '/' + kind + '.png');
