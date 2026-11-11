@@ -1,6 +1,6 @@
 import { realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 type GitCommand = (args: string[]) => Promise<string>;
@@ -8,8 +8,17 @@ type GitCommand = (args: string[]) => Promise<string>;
 async function isRegisteredWorktree(porcelain: string, target: string) {
   // Git can report the real path of a symlinked OS temp directory (notably on macOS).
   // Resolve parent directories so this stays accurate even if Git partially removed target.
+  // A failed Git removal is not enough to establish that Git deregistered the
+  // worktree. Never treat an empty, truncated-header, or relative-path inventory
+  // as evidence that it is safe to remove a residual directory directly.
+  const records = porcelain.split(/\r?\n/).filter(line => line.startsWith('worktree '));
+  if (!porcelain.startsWith('worktree ') ||
+      records.length === 0 ||
+      records.some(line => !isAbsolute(line.slice('worktree '.length)))) {
+    throw new Error('Refusing orphan cleanup: invalid Git worktree inventory');
+  }
   const canonicalTarget = resolve(await realpath(dirname(target)), basename(target));
-  for (const line of porcelain.split(/\r?\n/)) {
+  for (const line of records) {
     if (!line.startsWith('worktree ')) continue;
     const listed = line.slice('worktree '.length);
     if (basename(listed) !== basename(target)) continue;
