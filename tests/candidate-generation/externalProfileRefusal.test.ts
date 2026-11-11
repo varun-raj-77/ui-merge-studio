@@ -8,10 +8,11 @@ import { cleanupRepositories, commit, createRepository, git, writeFiles } from '
 afterEach(cleanupRepositories);
 
 test.each([
+  { label: 'safe direct-child insertion', hasStyles: false, hasUnselectedSibling: false },
   { label: 'CSS Module alone', hasStyles: true, hasUnselectedSibling: false },
   { label: 'unrelated JSX sibling alone', hasStyles: false, hasUnselectedSibling: true },
   { label: 'CSS Module and unrelated JSX sibling together', hasStyles: true, hasUnselectedSibling: true }
-])('external profile refuses $label before creating a candidate branch', async ({ hasStyles, hasUnselectedSibling }) => {
+])('external profile checks $label with exact branch outcomes', async ({ hasStyles, hasUnselectedSibling }) => {
   const root = createRepository({
     '.gitignore': '.ums/\n',
     'package.json': '{"scripts":{"dev":"vite"},"dependencies":{"@vitejs/plugin-react":"latest","react":"latest","vite":"latest"}}\n',
@@ -48,7 +49,9 @@ test.each([
   if (hasStyles) expect(artifact.slice.includedChanges.map(change => change.path)).toContain('src/StatusBanner.module.css');
 
   const repository = new GitSourceRepository(root);
-  const generator = new CandidateGenerator(root);
+  const generator = new CandidateGenerator(root, {
+    verificationCommands: [{ name: 'bounded-git-control', executable: process.execPath, args: ['-e', 'process.exit(0)'] }]
+  });
   const request = {
     repositoryRoot: root,
     baseRef: 'main',
@@ -60,6 +63,27 @@ test.each([
     integrationPlan: { version: 2 as const, identity: 'plan-v2-01234567' }
   };
   const preflight = await generator.preflight(request);
+  if (!hasStyles && !hasUnselectedSibling) {
+    expect(preflight.plan.status, JSON.stringify(preflight.plan.unresolved)).toBe('ready');
+    const first = await generator.generate(request);
+    expect(first.status, first.message).toBe('succeeded');
+    expect(first.repository.candidateCommit).toBeTruthy();
+    expect(first.verification).toContainEqual(expect.objectContaining({
+      name: 'bounded-git-control', status: 'passed'
+    }));
+    const output = await repository.readFile('external-unsafe-result', 'src/App.tsx');
+    expect(output).toContain('<StatusBanner');
+    expect(output).toContain('Foundation');
+    expect(output).not.toContain('Unselected sibling');
+    const replay = await generator.generate(request);
+    expect(replay).toMatchObject({ status: 'succeeded', repository: {
+      candidateCommit: first.repository.candidateCommit,
+      candidateTree: first.repository.candidateTree,
+      idempotent: true
+    } });
+    expect(await repository.git(['worktree', 'list', '--porcelain'])).not.toContain('ui-merge-studio-candidate-');
+    return;
+  }
   expect(preflight.plan.status).toBe('refused');
   expect(preflight.plan.operations).toContainEqual(expect.objectContaining({
     kind: 'replace-jsx-region',
