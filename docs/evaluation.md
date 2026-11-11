@@ -1,5 +1,9 @@
 # Engineering evaluation
 
+## UMS-25J bounded local screenshot route evaluation
+
+The local snapshot authority now keeps the first exact-route source/candidate PNG pair and accepts two additional immutable routes for each source at the same generation-time A/B and candidate Git identities. Unit regressions exercise independent preview origins, original-image preservation, exact pathname-derived route keys, restart persistence, idempotence, fourth-route refusal, forged route identity and missing/tampered PNG bytes. Result-workspace tests exercise the editable route input and separate image URLs; the canonical real-browser journey requests a second route, then fetches and SHA-256-checks both image identities while keeping the first URL usable. This test coverage is a bounded local evidence check, not a visual-difference engine or permission to merge.
+
 ## Controlled engine
 
 The controlled React/TypeScript/Vite proof covers isolated worktrees, live preview synchronization, rendered React mapping, dependency-aware feature slicing, unrelated-change exclusion, deterministic candidate generation, idempotence, verification, and refusal before unsafe mutation.

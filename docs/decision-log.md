@@ -1,5 +1,7 @@
 # Decision log
 
+- UMS-25J: Allow at most three explicit local screenshot routes for each pinned Source A/B versus verified candidate. Preserve the first version-3 capture and its image URLs; subsequent routes use SHA-256-derived route identifiers and independent immutable manifests. Idempotent replays do not recapture, and a fourth route refuses. A route selection is not a merge selection, visual acceptance, pixel diff, or signed evidence.
+
 - Keep the execution engine local because repository access, Git worktrees, package installation, source mutation, and verification cannot honestly run in a static hosted browser.
 - Present the hosted experience as an interactive Product Catalogue sample backed by generated, committed controlled-engine evidence.
 - Keep the baseline visible beside the focused branch on desktop and one action away on smaller screens.

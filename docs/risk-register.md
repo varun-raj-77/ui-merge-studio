@@ -2,6 +2,7 @@
 
 | Risk | Mitigation |
 |---|---|
+| Repeated local screenshots silently overwrite or mislabel an earlier route | UMS-25J preserves the original v3 capture, stores later routes under SHA-256-derived pathname keys, checks each manifest against pinned Git commits, route key and PNG digest, refuses more than three distinct routes per source, and retains first-route image URLs. The checksum is local change detection only; forged manifests, semantic visual regressions, and captured secrets remain outside this guarantee. |
 | Hosted replay appears to perform Git operations | Persistent sample label, explicit local-engine explanation, and replay wording near evaluation. |
 | Visual highlight misses the real control | Linked feature regions and browser assertions that required control centres fall inside their regions. |
 | Evidence drifts from selections | Instrumented browser selections drive analysis; preparation writes a hashed run report and typed replay manifest that build validation checks. |
