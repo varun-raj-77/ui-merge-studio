@@ -76,6 +76,26 @@ test('preserves the registered worktree and reports a persistent ENOTEMPTY', asy
   }
 });
 
+test.each([
+  ['empty', ''],
+  ['missing worktree records', 'HEAD abcdef\ndetached\n'],
+  ['blank worktree path', 'worktree \nHEAD abcdef\n'],
+  ['relative worktree path', 'worktree ./not-an-absolute-path\nHEAD abcdef\n'],
+])('refuses orphan removal when Git returns an %s inventory', async (_label, inventory) => {
+  const { repository, target } = await preparedWorktree();
+  try {
+    await expect(removeTemporaryCandidateWorktree(target, async args => {
+      if (args[1] === 'remove') throw new Error('Directory not empty');
+      if (args[1] === 'list') return inventory;
+      return git(repository, args);
+    })).rejects.toThrow('Refusing orphan cleanup: invalid Git worktree inventory');
+    expect(git(repository, ['worktree', 'list', '--porcelain'])).toContain(`worktree ${target}`);
+    await expect(access(target)).resolves.toBeUndefined();
+  } finally {
+    git(repository, ['worktree', 'remove', '--force', target]);
+  }
+});
+
 test('refuses unowned paths and does not hide unrelated Git errors', async () => {
   const { repository, target } = await preparedWorktree();
   const unrelated = await mkdtemp(join(tmpdir(), 'unrelated-worktree-'));
