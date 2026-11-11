@@ -219,8 +219,8 @@ export function ResultWorkspace({ report, foundation, selections, onOpen, onComp
             : 'The pinned source and result are running. Choose Compare Source A or B to view them side by side.'
           : `Source ${activeSource} is loading or does not match its original pinned commit; wait or restart this preview before comparing.`} Source A and B are inspected one at a time; local screenshots can be captured on request, but no automatic pixel-diff verdict is made.</p>
     </aside>
-    <VisualSnapshotPanel key={handoffRevision} report={report} activeSource={activeSource} activeRoute={activeRoute} comparisonActive={comparisonActive} sourcePreviewReady={sourcePreviewReady} candidatePreviewReady={candidatePreviewReady} />
-    <VisualReviewPanel key={handoffRevision} report={report} previewOpened={previewOpened} candidatePreviewReady={candidatePreviewReady} />
+    <VisualSnapshotPanel key={'snapshot:' + handoffRevision} report={report} activeSource={activeSource} activeRoute={activeRoute} comparisonActive={comparisonActive} sourcePreviewReady={sourcePreviewReady} candidatePreviewReady={candidatePreviewReady} />
+    <VisualReviewPanel key={'review:' + handoffRevision} report={report} previewOpened={previewOpened} candidatePreviewReady={candidatePreviewReady} />
     {handoffStatus !== 'idle' && <p role="status" aria-live="polite">{handoffStatus === 'copied'
       ? 'Verified local candidate handoff copied. No logs or local paths included.'
       : 'Could not copy the handoff. Allow clipboard access, or inspect the evidence here.'}</p>}

@@ -117,6 +117,14 @@ function showResult(report = verifiedReport()) {
     {...liveComparisonProps} onOpen={() => undefined} onEvidence={() => undefined} onCopy={() => undefined} onReturn={() => undefined} />);
 }
 
+test('mounts independent snapshot and review panels without duplicate React sibling keys', () => {
+  const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  showResult();
+  expect(screen.getByRole('complementary', { name: 'Local visual snapshots' })).toBeInTheDocument();
+  expect(screen.getByRole('complementary', { name: 'Visual review status' })).toBeInTheDocument();
+  expect(consoleError.mock.calls.filter(args => String(args[0]).includes('same key'))).toEqual([]);
+});
+
 test('copies only after clipboard permission succeeds and shows accessible feedback', async () => {
   const writeText = vi.fn().mockResolvedValue(undefined);
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
