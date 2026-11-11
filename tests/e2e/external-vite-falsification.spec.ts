@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const foundationBranch = 'prompt014-foundation';
@@ -15,7 +16,7 @@ test.afterEach(async ({ request }) => {
   await request.delete('/api/preview').catch(() => undefined);
 });
 
-test('projects selected JSX regions without copying co-located or separate unrelated behavior', async ({ page, request }) => {
+test('refuses a two-feature external selection with CSS and co-located JSX exclusions before mutation', async ({ page, request }) => {
   const consoleErrors: string[] = [];
   page.on('console', message => {
     const text = message.text();
@@ -81,42 +82,65 @@ test('projects selected JSX regions without copying co-located or separate unrel
   expect(preflight.request.plan.version).toBe(2);
   expect(preflight.request.plan.foundation).toMatchObject({ branchRef: foundationBranch, commitSha: foundationCommit, commonAncestorCommit: foundationCommit });
   expect(preflight.request.plan.selections).toHaveLength(2);
-  expect(preflight.value.plan.status, JSON.stringify(preflight.value.plan, null, 2)).toBe('ready');
+  expect(preflight.value.plan.status, JSON.stringify(preflight.value.plan, null, 2)).toBe('refused');
   const operations = preflight.value.plan.operations as Array<{ kind: string; target: { path: string; symbol: string | null }; jsxProjection?: { mode: string; renderedBoundary: { path: string; symbol: string }; integrationBoundary: { path: string; symbol: string }; excludedSourceSiblingCount: number; anchor: { side: string } } }>;
   expect(operations).toContainEqual(expect.objectContaining({ kind: 'replace-jsx-region', target: expect.objectContaining({ path: 'src/components/layout/contentbar.tsx', symbol: 'PageContent' }), jsxProjection: expect.objectContaining({ mode: 'insert-child', renderedBoundary: { path: 'src/components/layout/workspace-status/WorkspaceStatusBanner.tsx', symbol: 'WorkspaceStatusBanner' }, integrationBoundary: { path: 'src/components/layout/contentbar.tsx', symbol: 'PageContent' }, excludedSourceSiblingCount: 1, anchor: expect.objectContaining({ side: 'before' }) }) }));
   expect(operations).toContainEqual(expect.objectContaining({ kind: 'replace-jsx-region', target: expect.objectContaining({ path: 'src/views/dashboard/index.tsx', symbol: 'RevenueTrendChart' }), jsxProjection: expect.objectContaining({ mode: 'insert-child', renderedBoundary: { path: 'src/views/dashboard/RevenuePulseBadge.tsx', symbol: 'RevenuePulseBadge' }, integrationBoundary: { path: 'src/views/dashboard/index.tsx', symbol: 'RevenueTrendChart' }, excludedSourceSiblingCount: 0, anchor: expect.objectContaining({ side: 'before' }) }) }));
   expect(operations.some(operation => operation.target.path === 'src/components/layout/index.tsx')).toBe(false);
 
-  const generationResponse = page.waitForResponse(response => response.url().endsWith('/api/candidate/generate') && response.request().method() === 'POST', { timeout: 480_000 });
-  await page.getByRole('button', { name: 'Create combined branch' }).click();
-  const firstReport = await generationResponse.then(response => response.json());
-  expect(firstReport.status, firstReport.message).toBe('succeeded');
-  expect(firstReport.integrationPlan.identity).toBe(preflight.request.planIdentity);
-  expect(firstReport.repository).toMatchObject({ baseCommit: foundationCommit, candidateBranch, idempotent: false });
-  expect(firstReport.verification.map((item: { name: string; status: string }) => [item.name, item.status])).toEqual([
-    ['install', 'passed'],
-    ['lint', 'passed'],
-    ['production-build-with-typescript', 'passed']
-  ]);
+  const unresolved = preflight.value.plan.unresolved as Array<{ path: string; reason: string }>;
+  expect(unresolved).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      path: 'src/components/layout/contentbar.tsx',
+      reason: expect.stringContaining('Unrelated source changes modify the same JSX integration parent')
+    }),
+    expect.objectContaining({
+      path: 'src/components/layout/workspace-status/WorkspaceStatusBanner.module.css',
+      reason: expect.stringContaining('CSS rule ownership is not implemented')
+    }),
+    expect.objectContaining({
+      path: 'src/components/layout/workspace-status/WorkspaceStatusBanner.module.css',
+      reason: expect.stringContaining('outside the bounded external React/Vite transform grammar')
+    })
+  ]));
 
-  const secondResponse = await request.post('/api/candidate/generate', { data: preflight.request });
-  const secondReport = await secondResponse.json();
-  expect(secondReport.status, secondReport.message).toBe('succeeded');
-  expect(secondReport.repository.idempotent).toBe(true);
-  expect(secondReport.repository.candidateTree).toBe(firstReport.repository.candidateTree);
+  // Submitting the same server-validated plan cannot bypass the refusal.
+  const refusedResponse = await request.post('/api/candidate/generate', { data: preflight.request });
+  expect(refusedResponse.ok()).toBe(true);
+  const refusedReport = await refusedResponse.json();
+  expect(refusedReport).toMatchObject({
+    status: 'refused',
+    stage: 'plan',
+    repository: { candidateBranch },
+    appliedOperations: [],
+    verification: []
+  });
+  expect(refusedReport.repository.candidateCommit).toBeUndefined();
+  expect(refusedReport.repository.candidateTree).toBeUndefined();
 
-  const candidateDiff = execFileSync('git', ['diff', `${foundationBranch}..${candidateBranch}`, '--', 'src/components/layout/contentbar.tsx', 'src/components/layout/index.tsx', 'src/views/dashboard/index.tsx'], { cwd: externalRepository, encoding: 'utf8', windowsHide: true });
-  expect(candidateDiff).toContain('WorkspaceStatusBanner');
-  expect(candidateDiff).toContain('RevenuePulseBadge');
-  expect(candidateDiff).not.toContain('Experimental density controls enabled');
-  expect(candidateDiff).not.toContain('revenue experiment footer');
-
-  await expect(card(page, 'right')).toContainText(candidateBranch);
-  rightFrame = page.frameLocator('iframe').nth(1);
-  await rightFrame.getByRole('button', { name: 'Login as Demo User' }).click();
-  await expect(rightFrame.getByText('Release workspace ready')).toBeVisible();
-  await expect(rightFrame.getByText('Revenue pulse: healthy')).toBeVisible();
-  await expect(rightFrame.getByText('Experimental density controls enabled')).toHaveCount(0);
-  await expect(rightFrame.getByText(/revenue experiment footer/)).toHaveCount(0);
+  const candidateRefs = execFileSync('git', ['branch', '--list', candidateBranch], {
+    cwd: externalRepository, encoding: 'utf8', windowsHide: true
+  }).trim();
+  expect(candidateRefs).toBe('');
+  const worktrees = execFileSync('git', ['worktree', 'list', '--porcelain'], {
+    cwd: externalRepository, encoding: 'utf8', windowsHide: true
+  });
+  expect(worktrees).not.toContain('ui-merge-studio-candidate-');
+  expect(execFileSync('git', ['status', '--porcelain'], {
+    cwd: externalRepository, encoding: 'utf8', windowsHide: true
+  }).trim()).toBe('');
   expect(consoleErrors).toEqual([]);
+
+  const evidencePath = resolve(import.meta.dirname, '../../test-results/ums-external-vite-refusal/refusal.json');
+  await mkdir(dirname(evidencePath), { recursive: true });
+  await writeFile(evidencePath, JSON.stringify({
+    outcome: 'correct-refusal',
+    foundationCommit,
+    selectedBranches: [leftBranch, rightBranch],
+    selectedComponents: ['WorkspaceStatusBanner', 'RevenuePulseBadge'],
+    candidateBranch,
+    candidateCreated: false,
+    generationStatus: refusedReport.status,
+    refusalReasons: unresolved.map(item => ({ path: item.path, reason: item.reason }))
+  }, null, 2) + '\n');
 });
