@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -10,6 +10,7 @@ import { featureSliceVersion, type FeatureSliceArtifact, type ImportRequirement 
 import { isSourceIdentity } from '../../shared/src/sourceIdentity';
 import { configureExportedConst, findDeclarationRange, insertDeclaration, parseModule, projectJsxRegion, reconcileExport, reconcileImport, reconstructAddedModule, reconstructTestModule, replaceDeclaration } from './astTransform';
 import { candidateGenerationVersion, type AppliedOperation, type CandidateConflict, type CandidateGenerationReport, type CandidateGenerationRequest, type CandidateOperation, type CandidatePlan, type CandidatePreflight, type CandidateUnresolved, type ExcludedSourceChange, type VerificationResult } from './types';
+import { removeTemporaryCandidateWorktree } from './worktreeCleanup';
 
 const execFileAsync = promisify(execFile);
 const textHash = (value: string | Buffer) => createHash('sha256').update((Buffer.isBuffer(value)?value.toString('utf8'):value).replace(/\r\n/g,'\n')).digest('hex');
@@ -434,5 +435,5 @@ export class CandidateGenerator {
   private async gitBlobText(commit:string,path:string){return(await this.gitBlob(commit,path)).toString('utf8');}
   private async pathExistsAtCommit(commit:string,path:string){return(await this.git(['ls-tree','--name-only',commit,'--',validateRepositoryPath(path)]))===path;}
   private async tryResolve(ref:string){try{return await this.repository.resolveRef(ref);}catch{return null;}}
-  private async removeWorktree(path:string){const target=resolve(path),prefix=resolve(tmpdir());if(!target.startsWith(`${prefix}\\ui-merge-studio-candidate-`)&&!target.startsWith(`${prefix}/ui-merge-studio-candidate-`))throw new Error(`Refusing to remove unrecognized candidate worktree ${target}.`);await this.git(['worktree','remove','--force',target]);await rm(target,{recursive:true,force:true});}
+  private async removeWorktree(path:string){await removeTemporaryCandidateWorktree(path,args=>this.git(args));}
 }
