@@ -1,6 +1,6 @@
-import { access, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, expect, test } from 'vitest';
 import { removeTemporaryCandidateWorktree } from '../../packages/candidate-generation/src/worktreeCleanup';
 import { cleanupRepositories, createRepository, git } from '../source-analysis/testRepository';
@@ -24,6 +24,26 @@ test('retries a transient ENOTEMPTY only while the real Git worktree remains reg
   expect(removals).toBe(2);
   expect(git(repository, ['worktree', 'list', '--porcelain'])).not.toContain(target);
   await expect(access(target)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+test('recognizes a still-registered worktree through a symlinked temp directory', async () => {
+  const { repository, target } = await preparedWorktree();
+  const aliasRoot = await mkdtemp(join(tmpdir(), 'ums-temp-alias-'));
+  const alias = join(aliasRoot, 'temp-link');
+  await symlink(tmpdir(), alias, 'dir');
+  let removals = 0;
+  try {
+    await removeTemporaryCandidateWorktree(target, async args => {
+      if (args[1] === 'remove' && removals++ === 0) throw new Error('Directory not empty');
+      if (args[1] === 'list') return `worktree ${join(alias, basename(target))}\nHEAD abcdef\ndetached\n`;
+      return git(repository, args);
+    });
+    expect(removals).toBe(2);
+    expect(git(repository, ['worktree', 'list', '--porcelain'])).not.toContain(target);
+    await expect(access(target)).rejects.toMatchObject({ code: 'ENOENT' });
+  } finally {
+    await rm(aliasRoot, { recursive: true, force: true });
+  }
 });
 
 test('removes a residual directory only after Git has already deregistered the worktree', async () => {

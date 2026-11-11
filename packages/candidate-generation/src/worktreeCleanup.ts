@@ -1,12 +1,22 @@
-import { rm } from 'node:fs/promises';
+import { realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
 type GitCommand = (args: string[]) => Promise<string>;
 
-function isRegisteredWorktree(porcelain: string, target: string) {
-  return porcelain.split(/\r?\n/).some(line => line === `worktree ${target}`);
+async function isRegisteredWorktree(porcelain: string, target: string) {
+  // Git can report the real path of a symlinked OS temp directory (notably on macOS).
+  // Resolve parent directories so this stays accurate even if Git partially removed target.
+  const canonicalTarget = resolve(await realpath(dirname(target)), basename(target));
+  for (const line of porcelain.split(/\r?\n/)) {
+    if (!line.startsWith('worktree ')) continue;
+    const listed = line.slice('worktree '.length);
+    if (basename(listed) !== basename(target)) continue;
+    const canonicalListed = resolve(await realpath(dirname(listed)), basename(listed));
+    if (canonicalListed === canonicalTarget) return true;
+  }
+  return false;
 }
 
 function isTransientRemovalError(error: unknown) {
@@ -30,7 +40,7 @@ export async function removeTemporaryCandidateWorktree(path: string, git: GitCom
       // Git can deregister a worktree before reporting ENOTEMPTY while a process exits.
       // Never treat it as removed if Git still owns the path.
       const porcelain = await git(['worktree', 'list', '--porcelain']);
-      if (!isRegisteredWorktree(porcelain, target)) break;
+      if (!await isRegisteredWorktree(porcelain, target)) break;
       if (attempt === 2) throw error;
       await delay(75 * (attempt + 1));
     }
