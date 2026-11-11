@@ -1,0 +1,108 @@
+name: Pinned external Vite candidate evidence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/external-vite-candidate.yml'
+      - 'scripts/external-validation-paths.ts'
+      - 'scripts/prepare-external-candidate-falsification.ts'
+      - 'apps/studio/playwright.external-candidate.config.ts'
+      - 'tests/e2e/external-candidate-generation.spec.ts'
+      - 'tests/external-vite/**'
+      - 'tests/external-feature-slice/**'
+  workflow_dispatch:
+
+# The external app runs only inside an ephemeral CI runner with no secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: ums-external-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  external-candidate:
+    name: Rendered external selection to verified Git candidate
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.53.1-noble
+      options: --init
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ui-merge-studio
+    steps:
+      - name: Checkout source without persisted credentials
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          path: ui-merge-studio
+          persist-credentials: false
+
+      - name: Configure Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: ui-merge-studio/package-lock.json
+
+      - name: Install locked Studio dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck Studio
+        run: npm run typecheck
+
+      - name: Prepare pinned unrelated React/Vite repository
+        shell: bash
+        env:
+          UI_MERGE_EXTERNAL_SOURCE: https://github.com/larry-xue/react-admin-dashboard.git
+        run: |
+          set -euo pipefail
+          npm run external:candidate:prepare
+          target=.validation-worktrees/prompt020-external-vite
+          test "$(git -C "$target" rev-parse main)" = '8223897259151c450f954e462c57df3703d5508d'
+          test "$(git -C "$target" branch --show-current)" = main
+          test -z "$(git -C "$target" status --porcelain)"
+          git -C "$target" show prompt020-revenue-pulse:src/components/layout/index.tsx | grep -F 'revenue experiment footer'
+
+      - name: Select rendered feature and verify external combined branch in Chromium
+        run: npm run test:e2e:external-candidate
+
+      - name: Record candidate source, exclusion and deterministic tree evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=.validation-worktrees/prompt020-external-vite
+          test "$(git -C "$target" rev-parse main)" = '8223897259151c450f954e462c57df3703d5508d'
+          git -C "$target" rev-parse --verify combined-result
+          test -z "$(git -C "$target" status --porcelain)"
+          test "$(git -C "$target" rev-parse main:src/components/layout/index.tsx)" = "$(git -C "$target" rev-parse combined-result:src/components/layout/index.tsx)"
+          git -C "$target" show combined-result:src/views/dashboard/index.tsx | grep -F 'RevenuePulseBadge'
+          git -C "$target" show combined-result:src/views/dashboard/RevenuePulseBadge.tsx | grep -F 'useRevenuePulse'
+          mkdir -p test-results/ums-external-vite-candidate
+          {
+            printf 'Foundation commit: '
+            git -C "$target" rev-parse main
+            printf 'Source feature commit: '
+            git -C "$target" rev-parse prompt020-revenue-pulse
+            printf 'Candidate commit: '
+            git -C "$target" rev-parse combined-result
+            printf 'Candidate tree: '
+            git -C "$target" rev-parse 'combined-result^{tree}'
+            printf '\nIncluded paths relative to pinned foundation:\n'
+            git -C "$target" diff --name-status main..combined-result
+          } > test-results/ums-external-vite-candidate/provenance.txt
+
+      - name: Publish external candidate evidence and failure traces
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ums-external-vite-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ui-merge-studio/test-results/ums-external-vite-candidate/
+            ui-merge-studio/test-results/**/*.zip
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Confirm CI did not change tracked Studio source
+        run: git diff --exit-code
