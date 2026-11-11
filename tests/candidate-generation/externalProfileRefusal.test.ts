@@ -14,6 +14,8 @@ test.each([
 ])('external profile refuses $label before creating a candidate branch', async ({ hasStyles, hasUnselectedSibling }) => {
   const root = createRepository({
     '.gitignore': '.ums/\n',
+    'package.json': '{"scripts":{"dev":"vite"},"dependencies":{"@vitejs/plugin-react":"latest","react":"latest","vite":"latest"}}\n',
+    'vite.config.ts': "import react from '@vitejs/plugin-react'; import { defineConfig } from 'vite'; export default defineConfig({plugins:[react()]});\n",
     'src/App.tsx': 'export function App(){return <main><section>Foundation</section></main>}\n'
   });
   git(root, ['switch', '-c', 'feature']);
@@ -39,7 +41,7 @@ test.each([
     branch: 'feature', previewId: 'left', sessionId: 'external-profile-test',
     generation: 1, confidence: 'exact'
   };
-  const artifact = await new FeatureSliceAnalyzer(root).analyze({
+  const artifact = await new FeatureSliceAnalyzer(root).analyzeExternal({
     baseRef: 'main', branchRef: 'feature', expectedBranchCommit: sourceCommit, selection
   });
   expect(artifact.slice.status, JSON.stringify(artifact.slice.unresolvedDependencies)).toBe('resolved');
