@@ -61,6 +61,10 @@ jobs:
           npm run external:candidate:prepare
           target=.validation-worktrees/prompt020-external-vite
           test "$(git -C "$target" rev-parse main)" = '8223897259151c450f954e462c57df3703d5508d'
+          # Studio requires TWO non-foundation source branches; the baseline
+          # remains unchanged and the feature branch contains the selected UI.
+          test "$(git -C "$target" rev-parse prompt020-baseline)" = '8223897259151c450f954e462c57df3703d5508d'
+          git -C "$target" show-ref --verify --quiet refs/heads/prompt020-revenue-pulse
           test "$(git -C "$target" branch --show-current)" = main
           test -z "$(git -C "$target" status --porcelain)"
           git -C "$target" show prompt020-revenue-pulse:src/components/layout/index.tsx | grep -F 'revenue experiment footer'
