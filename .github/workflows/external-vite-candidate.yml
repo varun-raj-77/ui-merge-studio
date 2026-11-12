@@ -80,11 +80,11 @@ jobs:
           test -z "$(git -C "$target" status --porcelain)"
           # Do not accept an extra unselected file even if TypeScript and browser
           # checks happen to pass. This is the exact bounded external slice.
-          expected_paths="$(printf '%s\\n' \\
-            'src/views/dashboard/RevenuePulseBadge.tsx' \\
-            'src/views/dashboard/index.tsx' \\
-            'src/views/dashboard/revenue-pulse.svg' \\
-            'src/views/dashboard/revenuePulseConfig.ts' \\
+          expected_paths="$(printf '%s\n' \
+            'src/views/dashboard/RevenuePulseBadge.tsx' \
+            'src/views/dashboard/index.tsx' \
+            'src/views/dashboard/revenue-pulse.svg' \
+            'src/views/dashboard/revenuePulseConfig.ts' \
             'src/views/dashboard/useRevenuePulse.ts')"
           actual_paths="$(git -C "$target" diff --name-only main..combined-result | LC_ALL=C sort)"
           test "$actual_paths" = "$expected_paths"
