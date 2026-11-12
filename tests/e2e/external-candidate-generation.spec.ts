@@ -57,20 +57,8 @@ test('selects RevenuePulseBadge from rendered UI and creates the deterministic e
   expect(first.verification.map((item:{name:string,status:string})=>[item.name,item.status]))
     .toEqual([['install','passed'],['typecheck','passed'],['production-build','passed']]);
 
-  const replayResponse=await request.post('/api/candidate/generate',{data:generationRequest,timeout:300_000});
-  expect(replayResponse.ok(),await replayResponse.text()).toBe(true);
-  const replay=await replayResponse.json();
-  expect(replay).toMatchObject({
-    status:'succeeded',
-    repository:{
-      idempotent:true,
-      candidateCommit:first.repository.candidateCommit,
-      candidateTree:first.repository.candidateTree
-    }
-  });
-
-  // The visible combine action must use the same evidence, recognize the
-  // equivalent branch, and launch the real candidate preview.
+  // The visible combine action must replay the same server-owned plan,
+  // recognize the equivalent branch, and launch the real candidate preview.
   const uiGeneration=page.waitForResponse(response=>response.url().endsWith('/api/candidate/generate')&&response.request().method()==='POST',{timeout:300_000});
   await page.getByRole('button',{name:'Create combined branch'}).click();
   const displayed=await uiGeneration.then(response=>response.json());
@@ -87,4 +75,11 @@ test('selects RevenuePulseBadge from rendered UI and creates the deterministic e
   await candidateFrame.getByRole('button',{name:'Login as Demo User'}).click();
   await expect(candidateFrame.getByLabel('Revenue pulse')).toBeVisible({timeout:30_000});
   await expect(candidateFrame.getByText(/revenue experiment footer/)).toHaveCount(0);
+
+  // The original selection may no longer authorize another generation after
+  // the UI replaces Source B with the candidate. This is a critical refusal,
+  // not an idempotence failure of the source-anchored generation engine.
+  const staleResponse=await request.post('/api/candidate/generate',{data:generationRequest});
+  expect(staleResponse.status()).toBe(409);
+  expect((await staleResponse.json()).error).toContain('stale preview session');
 });
