@@ -1,0 +1,91 @@
+name: External source-analysis safe-refusal evidence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/external-vite-refusal.yml'
+      - 'scripts/external-validation-paths.ts'
+      - 'scripts/prepare-external-vite-falsification.ts'
+      - 'tests/e2e/external-vite-falsification.spec.ts'
+      - 'apps/studio/playwright.external.config.ts'
+      - 'tests/external-vite/**'
+  workflow_dispatch:
+
+# The source branches are public, and the runner has no credentials or secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: ums-external-refusal-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  external-refusal:
+    name: Refuse unsupported external CSS before candidate mutation
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.53.1-noble
+      options: --init
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ui-merge-studio
+    steps:
+      - name: Checkout source without persisted credentials
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          path: ui-merge-studio
+          persist-credentials: false
+
+      - name: Configure Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: ui-merge-studio/package-lock.json
+
+      - name: Install locked Studio dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck Studio
+        run: npm run typecheck
+
+      - name: Prepare two pinned unrelated React/Vite feature branches
+        shell: bash
+        env:
+          UI_MERGE_EXTERNAL_SOURCE: https://github.com/larry-xue/react-admin-dashboard.git
+        run: |
+          set -euo pipefail
+          npm run external:prepare
+          target=.validation-worktrees/prompt015-external-vite
+          test "$(git -C "$target" rev-parse prompt014-foundation)" = '8223897259151c450f954e462c57df3703d5508d'
+          test -z "$(git -C "$target" status --porcelain)"
+          git -C "$target" show prompt014-workspace-status:src/components/layout/contentbar.tsx | grep -F 'Experimental density controls enabled'
+          git -C "$target" show prompt014-revenue-pulse:src/components/layout/index.tsx | grep -F 'revenue experiment footer'
+
+      - name: Confirm trusted rendered selection and CSS source-analysis refusal in Chromium
+        run: npm run test:e2e:external
+
+      - name: Assert no candidate ref or untracked modification was created
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=.validation-worktrees/prompt015-external-vite
+          test -z "$(git -C "$target" branch --list prompt015-external-candidate)"
+          test -z "$(git -C "$target" status --porcelain)"
+          test -s test-results/ums-external-vite-refusal/refusal.json
+
+      - name: Publish reasoned refusal and failure traces
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ums-external-refusal-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            ui-merge-studio/test-results/ums-external-vite-refusal/
+            ui-merge-studio/test-results/**/*.zip
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Confirm checks did not change tracked Studio source
+        run: git diff --exit-code

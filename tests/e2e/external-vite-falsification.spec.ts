@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { expect, test, type Page } from '@playwright/test';
 
 const foundationBranch = 'prompt014-foundation';
 const leftBranch = 'prompt014-workspace-status';
@@ -9,19 +10,12 @@ const candidateBranch = 'prompt015-external-candidate';
 const foundationCommit = '8223897259151c450f954e462c57df3703d5508d';
 const externalRepository = resolve(process.env.UI_MERGE_EXTERNAL_REPOSITORY ?? resolve(import.meta.dirname, '../../.validation-worktrees/prompt015-external-vite'));
 const card = (page: Page, side: 'left' | 'right') => page.locator(`[data-preview-id="${side}"]`);
-const field = (panel: Locator, name: string) => panel.locator('dt', { hasText: new RegExp('^' + name + '$') }).locator('xpath=following-sibling::dd[1]');
 
 test.afterEach(async ({ request }) => {
   await request.delete('/api/preview').catch(() => undefined);
 });
 
-test('projects selected JSX regions without copying co-located or separate unrelated behavior', async ({ page, request }) => {
-  const consoleErrors: string[] = [];
-  page.on('console', message => {
-    const text = message.text();
-    if (message.type() === 'error' && !text.startsWith('Warning: [antd:')) consoleErrors.push(text);
-  });
-
+test('refuses unsupported external CSS source analysis without altering the valid selection or Git refs', async ({ page, request }) => {
   await page.goto('/?mode=local');
   await page.getByRole('button', { name: /Continue to comparison/ }).click();
   await expect(page.getByText('Two running versions', { exact: true })).toBeVisible({ timeout: 180_000 });
@@ -33,15 +27,13 @@ test('projects selected JSX regions without copying co-located or separate unrel
     sessions: Array<{ branch: string; branchCommit: string; worktreePath: string }>;
   };
   expect(repository.foundation).toMatchObject({
-    branchRef: foundationBranch,
-    commitSha: foundationCommit,
-    commonAncestorCommit: foundationCommit
+    branchRef: foundationBranch, commitSha: foundationCommit, commonAncestorCommit: foundationCommit
   });
   expect(repository.sessions).toHaveLength(2);
   expect(new Set(repository.sessions.map(session => session.worktreePath)).size).toBe(2);
 
-  let leftFrame = page.frameLocator('iframe').nth(0);
-  let rightFrame = page.frameLocator('iframe').nth(1);
+  const leftFrame = page.frameLocator('[data-preview-id="left"] iframe');
+  const rightFrame = page.frameLocator('[data-preview-id="right"] iframe');
   await leftFrame.getByRole('button', { name: 'Login as Demo User' }).click();
   await rightFrame.getByRole('button', { name: 'Login as Demo User' }).click();
   await expect(leftFrame.getByText('Release workspace ready')).toBeVisible();
@@ -50,73 +42,79 @@ test('projects selected JSX regions without copying co-located or separate unrel
   await expect(rightFrame.getByText(/revenue experiment footer/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Select parts' }).click();
-  await leftFrame.getByText('Release workspace ready').click();
-  await expect(card(page, 'left').locator('.attached-selection')).toBeVisible({ timeout: 120_000 });
-  const preflightResponse = page.waitForResponse(response => response.url().endsWith('/api/candidate/preflight') && response.request().method() === 'POST');
-  await rightFrame.getByText('Revenue pulse: healthy').click();
+
+  // The other feature remains independently analyzable. This is not a
+  // pretense that the blocked CSS feature reached candidate preflight.
+  const acceptedResponse = page.waitForResponse(response =>
+    response.url().endsWith('/api/previews/right/analysis') && response.request().method() === 'POST'
+  );
+  await rightFrame.getByLabel('Revenue pulse').click();
+  const accepted = await acceptedResponse.then(async response => ({
+    request: response.request().postDataJSON(), value: await response.json()
+  }));
+  expect(accepted.request).toEqual({
+    selectionReceipt: expect.stringMatching(/^rendered-[A-Za-z0-9_-]{32}$/)
+  });
+  expect(accepted.value.artifact.slice).toMatchObject({
+    status: 'resolved',
+    selection: { componentName: 'RevenuePulseBadge', branch: rightBranch }
+  });
   await expect(card(page, 'right').locator('.attached-selection')).toBeVisible({ timeout: 120_000 });
 
-  await page.getByRole('button', { name: 'Inspect evidence' }).click();
-  const versions = page.getByRole('dialog').locator('.evidence-section');
-  const leftSelection = versions.nth(0);
-  const rightSelection = versions.nth(1);
-  await expect(field(leftSelection, 'Component')).toHaveText('WorkspaceStatusBanner');
-  await expect(field(leftSelection, 'Source')).toHaveText(/WorkspaceStatusBanner\.tsx:\d+:\d+/);
-  await expect(field(leftSelection, 'Source commit')).toHaveCount(1);
-  await expect(field(rightSelection, 'Component')).toHaveText('RevenuePulseBadge');
-  await expect(field(rightSelection, 'Source')).toHaveText(/RevenuePulseBadge\.tsx:\d+:\d+/);
-  await expect(versions.nth(0)).toContainText('Expanded from WorkspaceStatusBanner to PageContent');
-  await expect(versions.nth(1)).toContainText('Expanded from RevenuePulseBadge to RevenueTrendChart');
-  await page.getByRole('tab', { name: 'Dependencies' }).click();
-  const dependencySections = page.getByRole('dialog').locator('.evidence-section');
-  await expect(dependencySections.nth(0)).toContainText('WorkspaceStatusBanner.module.css');
-  await expect(dependencySections.nth(0)).toContainText('useWorkspaceStatus');
-  await expect(dependencySections.nth(0)).toContainText('workspaceStatusConfig');
-  await expect(dependencySections.nth(1)).toContainText('useRevenuePulse');
-  await expect(dependencySections.nth(1)).toContainText('revenuePulseConfig');
-  await expect(dependencySections.nth(1)).toContainText('src/components/layout/index.tsx');
-  await page.getByRole('button', { name: 'Close evidence drawer' }).click();
+  const refusedResponse = page.waitForResponse(response =>
+    response.url().endsWith('/api/previews/left/analysis') && response.request().method() === 'POST'
+  );
+  await leftFrame.getByText('Release workspace ready').click();
+  const refused = await refusedResponse.then(async response => ({
+    request: response.request().postDataJSON(), value: await response.json()
+  }));
+  expect(refused.request).toEqual({
+    selectionReceipt: expect.stringMatching(/^rendered-[A-Za-z0-9_-]{32}$/)
+  });
+  const slice = refused.value.artifact.slice as {
+    status: string;
+    selection: { componentName: string; branch: string };
+    includedChanges: Array<{ path: string }>;
+    unresolvedDependencies: Array<{ path: string; reason: string }>;
+  };
+  expect(slice).toMatchObject({
+    status: 'refused',
+    selection: { componentName: 'WorkspaceStatusBanner', branch: leftBranch }
+  });
+  expect(slice.includedChanges.map(change => change.path)).toContain(
+    'src/components/layout/workspace-status/WorkspaceStatusBanner.module.css'
+  );
+  expect(slice.unresolvedDependencies).toContainEqual(expect.objectContaining({
+    path: 'src/components/layout/workspace-status/WorkspaceStatusBanner.module.css',
+    reason: expect.stringContaining('CSS Module declaration property is outside the bounded local-property set')
+  }));
+  await expect(card(page, 'right').locator('.attached-selection')).toBeVisible();
 
-  const preflight = await preflightResponse.then(async response => ({ request: response.request().postDataJSON(), value: await response.json() }));
-  expect(preflight.request.plan.version).toBe(2);
-  expect(preflight.request.plan.foundation).toMatchObject({ branchRef: foundationBranch, commitSha: foundationCommit, commonAncestorCommit: foundationCommit });
-  expect(preflight.request.plan.selections).toHaveLength(2);
-  expect(preflight.value.plan.status, JSON.stringify(preflight.value.plan, null, 2)).toBe('ready');
-  const operations = preflight.value.plan.operations as Array<{ kind: string; target: { path: string; symbol: string | null }; jsxProjection?: { mode: string; renderedBoundary: { path: string; symbol: string }; integrationBoundary: { path: string; symbol: string }; excludedSourceSiblingCount: number; anchor: { side: string } } }>;
-  expect(operations).toContainEqual(expect.objectContaining({ kind: 'replace-jsx-region', target: expect.objectContaining({ path: 'src/components/layout/contentbar.tsx', symbol: 'PageContent' }), jsxProjection: expect.objectContaining({ mode: 'insert-child', renderedBoundary: { path: 'src/components/layout/workspace-status/WorkspaceStatusBanner.tsx', symbol: 'WorkspaceStatusBanner' }, integrationBoundary: { path: 'src/components/layout/contentbar.tsx', symbol: 'PageContent' }, excludedSourceSiblingCount: 1, anchor: expect.objectContaining({ side: 'before' }) }) }));
-  expect(operations).toContainEqual(expect.objectContaining({ kind: 'replace-jsx-region', target: expect.objectContaining({ path: 'src/views/dashboard/index.tsx', symbol: 'RevenueTrendChart' }), jsxProjection: expect.objectContaining({ mode: 'insert-child', renderedBoundary: { path: 'src/views/dashboard/RevenuePulseBadge.tsx', symbol: 'RevenuePulseBadge' }, integrationBoundary: { path: 'src/views/dashboard/index.tsx', symbol: 'RevenueTrendChart' }, excludedSourceSiblingCount: 0, anchor: expect.objectContaining({ side: 'before' }) }) }));
-  expect(operations.some(operation => operation.target.path === 'src/components/layout/index.tsx')).toBe(false);
+  // The strict source-graph refusal occurs BEFORE a two-feature plan can
+  // legitimately exist. Keep both original Git branches and all worktrees.
+  const candidateRefs = execFileSync('git', ['branch', '--list', candidateBranch], {
+    cwd: externalRepository, encoding: 'utf8', windowsHide: true
+  }).trim();
+  expect(candidateRefs).toBe('');
+  const worktrees = execFileSync('git', ['worktree', 'list', '--porcelain'], {
+    cwd: externalRepository, encoding: 'utf8', windowsHide: true
+  });
+  expect(worktrees).not.toContain('ui-merge-studio-candidate-');
+  expect(execFileSync('git', ['status', '--porcelain'], {
+    cwd: externalRepository, encoding: 'utf8', windowsHide: true
+  }).trim()).toBe('');
 
-  const generationResponse = page.waitForResponse(response => response.url().endsWith('/api/candidate/generate') && response.request().method() === 'POST', { timeout: 480_000 });
-  await page.getByRole('button', { name: 'Create combined branch' }).click();
-  const firstReport = await generationResponse.then(response => response.json());
-  expect(firstReport.status, firstReport.message).toBe('succeeded');
-  expect(firstReport.integrationPlan.identity).toBe(preflight.request.planIdentity);
-  expect(firstReport.repository).toMatchObject({ baseCommit: foundationCommit, candidateBranch, idempotent: false });
-  expect(firstReport.verification.map((item: { name: string; status: string }) => [item.name, item.status])).toEqual([
-    ['install', 'passed'],
-    ['lint', 'passed'],
-    ['production-build-with-typescript', 'passed']
-  ]);
-
-  const secondResponse = await request.post('/api/candidate/generate', { data: preflight.request });
-  const secondReport = await secondResponse.json();
-  expect(secondReport.status, secondReport.message).toBe('succeeded');
-  expect(secondReport.repository.idempotent).toBe(true);
-  expect(secondReport.repository.candidateTree).toBe(firstReport.repository.candidateTree);
-
-  const candidateDiff = execFileSync('git', ['diff', `${foundationBranch}..${candidateBranch}`, '--', 'src/components/layout/contentbar.tsx', 'src/components/layout/index.tsx', 'src/views/dashboard/index.tsx'], { cwd: externalRepository, encoding: 'utf8', windowsHide: true });
-  expect(candidateDiff).toContain('WorkspaceStatusBanner');
-  expect(candidateDiff).toContain('RevenuePulseBadge');
-  expect(candidateDiff).not.toContain('Experimental density controls enabled');
-  expect(candidateDiff).not.toContain('revenue experiment footer');
-
-  await expect(card(page, 'right')).toContainText(candidateBranch);
-  rightFrame = page.frameLocator('iframe').nth(1);
-  await rightFrame.getByRole('button', { name: 'Login as Demo User' }).click();
-  await expect(rightFrame.getByText('Release workspace ready')).toBeVisible();
-  await expect(rightFrame.getByText('Revenue pulse: healthy')).toBeVisible();
-  await expect(rightFrame.getByText('Experimental density controls enabled')).toHaveCount(0);
-  await expect(rightFrame.getByText(/revenue experiment footer/)).toHaveCount(0);
-  expect(consoleErrors).toEqual([]);
+  const evidencePath = resolve(import.meta.dirname, '../../test-results/ums-external-vite-refusal/refusal.json');
+  await mkdir(dirname(evidencePath), { recursive: true });
+  await writeFile(evidencePath, JSON.stringify({
+    outcome: 'correct-source-analysis-refusal',
+    foundationCommit,
+    validatedSourceBranch: rightBranch,
+    rejectedSourceBranch: leftBranch,
+    component: 'WorkspaceStatusBanner',
+    refusalStage: 'feature-slice-analysis',
+    candidateBranch,
+    candidateCreated: false,
+    refusalReasons: slice.unresolvedDependencies.map(item => ({ path: item.path, reason: item.reason }))
+  }, null, 2) + '\n');
 });
