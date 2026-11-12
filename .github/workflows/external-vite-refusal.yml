@@ -1,4 +1,4 @@
-name: External two-feature safe-refusal evidence
+name: External source-analysis safe-refusal evidence
 
 on:
   pull_request:
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   external-refusal:
-    name: Refuse unsafe two-feature external combination before mutation
+    name: Refuse unsupported external CSS before candidate mutation
     runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.53.1-noble
@@ -64,7 +64,7 @@ jobs:
           git -C "$target" show prompt014-workspace-status:src/components/layout/contentbar.tsx | grep -F 'Experimental density controls enabled'
           git -C "$target" show prompt014-revenue-pulse:src/components/layout/index.tsx | grep -F 'revenue experiment footer'
 
-      - name: Confirm server-owned selection and preflight refusal in real Chromium
+      - name: Confirm trusted rendered selection and CSS source-analysis refusal in Chromium
         run: npm run test:e2e:external
 
       - name: Assert no candidate ref or untracked modification was created
