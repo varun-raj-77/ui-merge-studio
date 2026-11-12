@@ -8,8 +8,22 @@ test.afterEach(async({request})=>{await request.delete('/api/preview').catch(()=
 test('selects RevenuePulseBadge from rendered UI and creates the deterministic external candidate',async({page,request})=>{
   test.setTimeout(600_000);
   await page.goto('/?mode=local');
+  const repositoryResponse = await request.get('/api/repository');
+  expect(repositoryResponse.ok()).toBe(true);
+  const repository = await repositoryResponse.json() as {
+    foundation: { branchRef: string; commitSha: string };
+    branches: string[];
+    clean: boolean;
+  };
+  expect(repository.clean).toBe(true);
+  expect(repository.foundation).toMatchObject({
+    branchRef: 'main', commitSha: '8223897259151c450f954e462c57df3703d5508d'
+  });
+  expect(repository.branches.filter(branch => branch !== repository.foundation.branchRef))
+    .toEqual(expect.arrayContaining(['prompt020-baseline', 'prompt020-revenue-pulse']));
+  await expect(page.getByRole('button',{name:/Continue to comparison/i})).toBeEnabled();
   await page.getByRole('button',{name:/Continue to comparison/i}).click();
-  await expect(card(page,'left')).toContainText('main',{timeout:180_000});
+  await expect(card(page,'left')).toContainText('prompt020-baseline',{timeout:180_000});
   await expect(card(page,'right')).toContainText('prompt020-revenue-pulse',{timeout:180_000});
   const rightFrame=page.frameLocator('[data-preview-id="right"] iframe');
   await rightFrame.getByRole('button',{name:'Login as Demo User'}).click();
