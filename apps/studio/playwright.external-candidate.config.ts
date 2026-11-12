@@ -29,7 +29,7 @@ export default defineConfig({
     env: {
       UI_MERGE_REPOSITORY_PATH: externalRepository,
       UI_MERGE_BASE_REF: 'main',
-      UI_MERGE_LEFT_BRANCH: 'main',
+      UI_MERGE_LEFT_BRANCH: 'prompt020-baseline',
       UI_MERGE_RIGHT_BRANCH: 'prompt020-revenue-pulse',
       UI_MERGE_CANDIDATE_BRANCH: 'combined-result',
       UI_MERGE_PREVIEW_ROUTE: '/auth/login',

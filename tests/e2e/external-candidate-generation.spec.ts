@@ -8,8 +8,22 @@ test.afterEach(async({request})=>{await request.delete('/api/preview').catch(()=
 test('selects RevenuePulseBadge from rendered UI and creates the deterministic external candidate',async({page,request})=>{
   test.setTimeout(600_000);
   await page.goto('/?mode=local');
+  const repositoryResponse = await request.get('/api/repository');
+  expect(repositoryResponse.ok()).toBe(true);
+  const repository = await repositoryResponse.json() as {
+    foundation: { branchRef: string; commitSha: string };
+    branches: string[];
+    clean: boolean;
+  };
+  expect(repository.clean).toBe(true);
+  expect(repository.foundation).toMatchObject({
+    branchRef: 'main', commitSha: '8223897259151c450f954e462c57df3703d5508d'
+  });
+  expect(repository.branches.filter(branch => branch !== repository.foundation.branchRef))
+    .toEqual(expect.arrayContaining(['prompt020-baseline', 'prompt020-revenue-pulse']));
+  await expect(page.getByRole('button',{name:/Continue to comparison/i})).toBeEnabled();
   await page.getByRole('button',{name:/Continue to comparison/i}).click();
-  await expect(card(page,'left')).toContainText('main',{timeout:180_000});
+  await expect(card(page,'left')).toContainText('prompt020-baseline',{timeout:180_000});
   await expect(card(page,'right')).toContainText('prompt020-revenue-pulse',{timeout:180_000});
   const rightFrame=page.frameLocator('[data-preview-id="right"] iframe');
   await rightFrame.getByRole('button',{name:'Login as Demo User'}).click();
@@ -30,18 +44,42 @@ test('selects RevenuePulseBadge from rendered UI and creates the deterministic e
   expect(preflight.plan.status,JSON.stringify(preflight.plan,null,2)).toBe('ready');
   expect(preflight.plan.repository.generationProfile).toBe('external-react-vite');
   expect(preflight.plan.sliceIds).toHaveLength(1);
-  const generationResponse=page.waitForResponse(response=>response.url().endsWith('/api/candidate/generate')&&response.request().method()==='POST',{timeout:300_000});
-  await page.getByRole('button',{name:'Create combined branch'}).click();
-  const first=await generationResponse.then(response=>response.json());
+  // While the selected source preview is still current, the canonical
+  // server-owned plan is valid for a first generation and exact replay.
+  // Clicking the UI's combine action replaces that source with the candidate
+  // preview; replaying the *old* selection after that is correctly forbidden.
+  const generationRequest=(await preflightResponse.request().postDataJSON()) as unknown;
+  const initialResponse=await request.post('/api/candidate/generate',{data:generationRequest,timeout:300_000});
+  expect(initialResponse.ok(),await initialResponse.text()).toBe(true);
+  const first=await initialResponse.json();
   expect(first.status,first.message).toBe('succeeded');
   expect(first.repository).toMatchObject({candidateBranch,idempotent:false});
-  expect(first.verification.map((item:{name:string,status:string})=>[item.name,item.status])).toEqual([['install','passed'],['typecheck','passed'],['production-build','passed']]);
-  const generationRequest=(await preflightResponse.request().postDataJSON()) as unknown;
-  const replayResponse=await request.post('/api/candidate/generate',{data:generationRequest});const replay=await replayResponse.json();
-  expect(replay).toMatchObject({status:'succeeded',repository:{idempotent:true,candidateCommit:first.repository.candidateCommit,candidateTree:first.repository.candidateTree}});
+  expect(first.verification.map((item:{name:string,status:string})=>[item.name,item.status]))
+    .toEqual([['install','passed'],['typecheck','passed'],['production-build','passed']]);
+
+  // The visible combine action must replay the same server-owned plan,
+  // recognize the equivalent branch, and launch the real candidate preview.
+  const uiGeneration=page.waitForResponse(response=>response.url().endsWith('/api/candidate/generate')&&response.request().method()==='POST',{timeout:300_000});
+  await page.getByRole('button',{name:'Create combined branch'}).click();
+  const displayed=await uiGeneration.then(response=>response.json());
+  expect(displayed).toMatchObject({
+    status:'succeeded',
+    repository:{
+      idempotent:true,
+      candidateCommit:first.repository.candidateCommit,
+      candidateTree:first.repository.candidateTree
+    }
+  });
   await expect(card(page,'right')).toContainText(candidateBranch,{timeout:180_000});
   const candidateFrame=page.frameLocator('[data-preview-id="right"] iframe');
   await candidateFrame.getByRole('button',{name:'Login as Demo User'}).click();
   await expect(candidateFrame.getByLabel('Revenue pulse')).toBeVisible({timeout:30_000});
   await expect(candidateFrame.getByText(/revenue experiment footer/)).toHaveCount(0);
+
+  // The original selection may no longer authorize another generation after
+  // the UI replaces Source B with the candidate. This is a critical refusal,
+  // not an idempotence failure of the source-anchored generation engine.
+  const staleResponse=await request.post('/api/candidate/generate',{data:generationRequest});
+  expect(staleResponse.status()).toBe(409);
+  expect((await staleResponse.json()).error).toContain('stale preview session');
 });
