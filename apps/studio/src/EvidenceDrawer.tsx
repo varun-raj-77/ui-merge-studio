@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { PreviewOperation } from '../../../packages/preview-runtime/src/previewOperations';
 import type { RenderedBoundaryReference, SourceIdentity } from '../../../packages/shared/src/sourceIdentity';
 import type { FeatureSliceArtifact } from '../../../packages/source-analysis/src/types';
@@ -103,10 +103,11 @@ function VerificationEvidence({ candidate }: { candidate: CandidateUiState }) {
   </div>;
 }
 
-export function EvidenceDrawer({ open, requestedTab, onClose, state, operations, candidate, onSelectAncestor, onClear }: {
+export function EvidenceDrawer({ open, requestedTab, onClose, fallbackFocusRef, state, operations, candidate, onSelectAncestor, onClear }: {
   open: boolean;
   requestedTab: EvidenceTab;
   onClose: () => void;
+  fallbackFocusRef: RefObject<HTMLButtonElement | null>;
   state: ComparisonState;
   operations: Record<PreviewSlotId, PreviewOperation | null>;
   candidate: CandidateUiState;
@@ -116,15 +117,20 @@ export function EvidenceDrawer({ open, requestedTab, onClose, state, operations,
   const [tab, setTab] = useState<EvidenceTab>(requestedTab);
   const [width, setWidth] = useState(390);
   const closeRef = useRef<HTMLButtonElement | null>(null);
-  const previousFocus = useRef<HTMLElement | null>(null);
 
   useEffect(() => { if (open) setTab(requestedTab); }, [open, requestedTab]);
   useEffect(() => {
     if (!open) return;
-    previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousFocus = document.activeElement;
     closeRef.current?.focus();
-    return () => { previousFocus.current?.focus(); };
-  }, [open]);
+    return () => {
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected && previousFocus !== document.body && previousFocus !== document.documentElement) {
+        previousFocus.focus();
+        if (document.activeElement === previousFocus) return;
+      }
+      fallbackFocusRef.current?.focus();
+    };
+  }, [open, fallbackFocusRef]);
 
   function beginResize(event: React.PointerEvent<HTMLDivElement>) {
     event.preventDefault();

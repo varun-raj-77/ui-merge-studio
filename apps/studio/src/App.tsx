@@ -41,6 +41,7 @@ export function App() {
   const operationControllers = useRef<Partial<Record<PreviewSlotId, AbortController>>>({});
   const activeOperationIds = useRef<Partial<Record<PreviewSlotId, string>>>({});
   const analysisControllers = useRef<Partial<Record<PreviewSlotId, AbortController>>>({});
+  const evidenceControl = useRef<HTMLButtonElement | null>(null);
 
   function invalidateAnalysis(previewId: PreviewSlotId) {
     analysisControllers.current[previewId]?.abort();
@@ -376,7 +377,7 @@ export function App() {
         {!resultReport && <button className={`selection-mode-control ${selectionMode ? 'active' : ''}`} onClick={() => setSelectionMode(!selectionMode)} disabled={readyCount === 0}>{selectionMode ? <><i />Selecting · Esc to finish</> : 'Select parts'}</button>}
         <div className="layout-control" aria-label="Preview layout"><button className={comparisonLayout === 'both' ? 'active' : ''} onClick={() => setComparisonLayout('both')} aria-label="Show previews side by side">Both</button><button className={comparisonLayout === 'left' ? 'active' : ''} onClick={() => setComparisonLayout('left')} aria-label="Focus Source A">A</button><button className={comparisonLayout === 'right' ? 'active' : ''} onClick={() => setComparisonLayout('right')} aria-label={resultReport ? 'Focus combined result' : 'Focus Source B'}>{resultReport ? 'Result' : 'B'}</button></div>
         <label className="viewport-control"><span>Viewport</span><select aria-label="Preview size" value={state.viewport.preset} onChange={event => setViewport(event.target.value as keyof typeof viewportPresets)}><option value="desktop">Desktop</option><option value="tablet">Tablet</option><option value="mobile">Mobile</option></select></label>
-        <button className={`evidence-control ${evidenceOpen ? 'active' : ''}`} onClick={() => evidenceOpen ? closeEvidence() : openEvidence(resultReport ? 'verification' : 'selection')}>Evidence</button>
+        <button ref={evidenceControl} className={`evidence-control ${evidenceOpen ? 'active' : ''}`} onClick={() => evidenceOpen ? closeEvidence() : openEvidence(resultReport ? 'verification' : 'selection')}>Evidence</button>
         <button className="command-control" onClick={() => setCommandOpen(true)} aria-label="Open command menu">⌘ K</button>
       </div>
     </header>
@@ -384,7 +385,7 @@ export function App() {
     {resultReport ? <ResultWorkspace report={resultReport} foundation={foundation} selections={resultSources} onOpen={() => setComparisonLayout('right')} onEvidence={() => openEvidence('verification')} onCopy={() => void navigator.clipboard?.writeText(resultReport.repository.candidateBranch)} onReturn={returnToComparison} candidatePreviewReady={candidatePreviewReady} sourcePins={resultSourcePins} activeSource={resultComparedSource} activeRoute={state.canonicalContext?.route ?? state.previews.left.context?.route ?? state.previews.right.context?.route ?? '/'} sourcePreviewReady={comparedSourcePreviewReady} comparisonActive={comparisonLayout === 'both'} onCompare={compareWithSource} /> : <section className="workspace-heading"><div><p className="eyebrow">Compare running versions</p><h1>Choose the parts worth keeping.</h1></div><p>Interact normally, or enter Select parts to turn a rendered React boundary into verified integration intent.</p><span className={readyCount === 2 ? 'linked' : ''}><i aria-hidden="true" />{readyCount === 2 ? 'Routes linked' : 'Linking previews'}</span></section>}
     <ResizableComparison layout={comparisonLayout} left={leftPane} right={rightPane} />
     {!resultReport && <CandidatePanel inputs={generationInputs} foundation={foundation} candidateBranch={candidateBranch} onRevise={reviseSelections} onEvidence={openEvidence} onStateChange={updateCandidateUi} onLaunch={handleCandidateLaunch} />}
-    <EvidenceDrawer open={evidenceOpen} requestedTab={evidenceTab} onClose={closeEvidence} state={state} operations={operations} candidate={candidateUi} onSelectAncestor={(slot, index) => send(slot, 'select-ancestor', { index })} onClear={clearSelection} />
+    <EvidenceDrawer open={evidenceOpen} requestedTab={evidenceTab} onClose={closeEvidence} fallbackFocusRef={evidenceControl} state={state} operations={operations} candidate={candidateUi} onSelectAncestor={(slot, index) => send(slot, 'select-ancestor', { index })} onClear={clearSelection} />
     <CommandPalette open={commandOpen} commands={commands} onClose={closeCommands} />
     <button className="stop-runtime-action" onClick={() => { void stopWorkspace(); setWorkspaceOpen(false); }}>Stop previews</button>
   </div>;
