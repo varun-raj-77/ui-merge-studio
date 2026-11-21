@@ -74,10 +74,6 @@ export function CommandPalette({ open, commands, onClose }: { open: boolean; com
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     firstRef.current?.focus();
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
       if (event.key !== 'Tab') return;
       const dialog = dialogRef.current;
       const buttons = dialog?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
@@ -92,7 +88,7 @@ export function CommandPalette({ open, commands, onClose }: { open: boolean; com
     };
     addEventListener('keydown', handleKey);
     return () => { removeEventListener('keydown', handleKey); previousFocus.current?.focus(); };
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   return <div className="command-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="command-palette" role="dialog" aria-modal="true" aria-labelledby="command-title"><header><span className="eyebrow">Workspace actions</span><h2 id="command-title">Command menu</h2><kbd>Esc</kbd></header><div>{commands.map((command, index) => <button ref={index === 0 ? firstRef : undefined} key={command.id} onClick={() => { command.action(); onClose(); }}><span>{command.label}</span>{command.shortcut && <kbd>{command.shortcut}</kbd>}</button>)}</div></section></div>;
 }

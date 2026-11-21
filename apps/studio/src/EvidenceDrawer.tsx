@@ -123,10 +123,8 @@ export function EvidenceDrawer({ open, requestedTab, onClose, state, operations,
     if (!open) return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     closeRef.current?.focus();
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    addEventListener('keydown', escape);
-    return () => { removeEventListener('keydown', escape); previousFocus.current?.focus(); };
-  }, [open, onClose]);
+    return () => { previousFocus.current?.focus(); };
+  }, [open]);
 
   function beginResize(event: React.PointerEvent<HTMLDivElement>) {
     event.preventDefault();
