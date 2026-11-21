@@ -380,6 +380,40 @@ test('does not consume or queue the command shortcut before the workspace opens'
   expect(screen.queryByRole('dialog', { name: 'Command menu' })).not.toBeInTheDocument();
 });
 
+test.each(['live opener', 'no focused opener', 'removed opener'] as const)('hands off the command menu to Evidence from %s', async (from) => {
+  appFetch();
+  render(<App />);
+  const frames = await launch();
+  const opener = screen.getByRole('button', { name: 'Open command menu' });
+  const temporaryOpener = document.createElement('button');
+  if (from === 'removed opener') document.body.append(temporaryOpener);
+  const shortcutTarget = from === 'live opener' ? opener : from === 'removed opener' ? temporaryOpener : document.body;
+  try {
+    shortcutTarget.focus();
+    expect(shortcutTarget).toHaveFocus();
+    fireEvent.keyDown(shortcutTarget, { key: 'k', ctrlKey: true });
+    const menu = screen.getByRole('dialog', { name: 'Command menu' });
+    fireEvent.click(within(menu).getByRole('button', { name: 'Toggle evidence' }));
+    expect(menu).not.toBeInTheDocument();
+    const drawer = within(screen.getByRole('dialog', { name: 'Evidence' }));
+    const drawerClose = drawer.getByRole('button', { name: 'Close evidence drawer' });
+    expect(drawerClose).toHaveFocus();
+    temporaryOpener.remove();
+
+    const tab = drawer.getByRole('tab', { name: 'Dependencies' });
+    tab.focus();
+    emit(frames.left, session('left', 'branch-a'), 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+    expect(tab).toHaveFocus();
+    if (from === 'removed opener') fireEvent.click(drawerClose);
+    else fireEvent.keyDown(tab, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Evidence' })).not.toBeInTheDocument();
+    const returnTarget = from === 'live opener' ? opener : screen.getAllByRole('button', { name: 'Evidence' })[0];
+    expect(returnTarget).toHaveFocus();
+  } finally {
+    temporaryOpener.remove();
+  }
+});
+
 test('dismisses only the top workspace overlay per Escape and restores focus in order', async () => {
   appFetch();
   render(<App />);
