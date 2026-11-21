@@ -379,3 +379,43 @@ test('does not consume or queue the command shortcut before the workspace opens'
   await launch();
   expect(screen.queryByRole('dialog', { name: 'Command menu' })).not.toBeInTheDocument();
 });
+
+test('dismisses only the top workspace overlay per Escape and restores focus in order', async () => {
+  appFetch();
+  render(<App />);
+  const frames = await launch();
+  const left = session('left', 'branch-a');
+  const right = session('right', 'branch-b');
+  emit(frames.left, left, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  emit(frames.right, right, 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  fireEvent.click(await screen.findByRole('button', { name: 'Select parts' }));
+  emit(frames.left, left, 'selection-mode-enabled');
+  emit(frames.right, right, 'selection-mode-enabled');
+  const selecting = screen.getByRole('button', { name: /Selecting · Esc to finish/ });
+  const opener = screen.getAllByRole('button', { name: 'Evidence' })[0]!;
+  opener.focus();
+  fireEvent.click(opener);
+  const drawer = screen.getByRole('dialog', { name: 'Evidence' });
+  const dependencyTab = within(drawer).getByRole('tab', { name: 'Dependencies' });
+  dependencyTab.focus();
+  fireEvent.keyDown(dependencyTab, { key: 'k', ctrlKey: true });
+  const menu = screen.getByRole('dialog', { name: 'Command menu' });
+  const firstAction = within(menu).getAllByRole('button')[0]!;
+  expect(firstAction).toHaveFocus();
+
+  fireEvent.keyDown(firstAction, { key: 'Escape' });
+  expect(screen.queryByRole('dialog', { name: 'Command menu' })).not.toBeInTheDocument();
+  expect(drawer).toBeInTheDocument();
+  expect(dependencyTab).toHaveFocus();
+  expect(selecting).toBeVisible();
+
+  fireEvent.keyDown(dependencyTab, { key: 'Escape' });
+  expect(drawer).not.toBeInTheDocument();
+  expect(opener).toHaveFocus();
+  expect(selecting).toBeVisible();
+
+  fireEvent.keyDown(opener, { key: 'Escape' });
+  emit(frames.left, left, 'selection-mode-disabled');
+  emit(frames.right, right, 'selection-mode-disabled');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible());
+});
