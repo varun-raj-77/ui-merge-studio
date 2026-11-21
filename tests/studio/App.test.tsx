@@ -351,3 +351,31 @@ test('opens a contextual real-action command menu with Ctrl+K', async () => {
   expect(within(dialog).getByRole('button', { name: /Restart Source A preview/ })).toBeVisible();
   expect(within(dialog).queryByText(/checkout|commit history|open terminal/i)).not.toBeInTheDocument();
 });
+
+test('keeps keyboard focus in the command menu and restores it on Escape', async () => {
+  appFetch();
+  render(<App />);
+  await launch();
+  const opener = screen.getByRole('button', { name: 'Open command menu' });
+  opener.focus();
+  fireEvent.keyDown(opener, { key: 'k', metaKey: true });
+  const dialog = screen.getByRole('dialog', { name: 'Command menu' });
+  const actions = within(dialog).getAllByRole('button');
+  expect(actions[0]).toHaveFocus();
+  expect(fireEvent.keyDown(actions[0], { key: 'Tab', shiftKey: true })).toBe(false);
+  expect(actions.at(-1)).toHaveFocus();
+  expect(fireEvent.keyDown(actions.at(-1)!, { key: 'Tab' })).toBe(false);
+  expect(actions[0]).toHaveFocus();
+  fireEvent.keyDown(actions[0], { key: 'Escape' });
+  expect(screen.queryByRole('dialog', { name: 'Command menu' })).not.toBeInTheDocument();
+  expect(opener).toHaveFocus();
+});
+
+test('does not consume or queue the command shortcut before the workspace opens', async () => {
+  appFetch();
+  render(<App />);
+  await screen.findByRole('heading', { name: 'test-product-workspace' });
+  expect(fireEvent.keyDown(window, { key: 'k', ctrlKey: true })).toBe(true);
+  await launch();
+  expect(screen.queryByRole('dialog', { name: 'Command menu' })).not.toBeInTheDocument();
+});

@@ -327,13 +327,15 @@ export function App() {
   }
 
   useEffect(() => {
+    if (!workspaceOpen) return;
     const shortcuts = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setCommandOpen(true); }
       if (event.key === 'Escape' && selectionMode && !commandOpen && !evidenceOpen) setSelectionMode(false);
     };
     addEventListener('keydown', shortcuts);
     return () => removeEventListener('keydown', shortcuts);
-  }, [selectionMode, commandOpen, evidenceOpen, state]);
+  }, [workspaceOpen, selectionMode, commandOpen, evidenceOpen, state]);
 
   if (!workspaceOpen) return <ProjectContext repository={repository} status={state.repositoryStatus} onContinue={launchWorkspace} />;
 

@@ -66,18 +66,35 @@ export function BranchContextBar({ foundation, left, right, sourceBranches }: { 
 export type WorkspaceCommand = { id: string; label: string; shortcut?: string; action: () => void };
 
 export function CommandPalette({ open, commands, onClose }: { open: boolean; commands: WorkspaceCommand[]; onClose: () => void }) {
+  const dialogRef = useRef<HTMLElement | null>(null);
   const firstRef = useRef<HTMLButtonElement | null>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     firstRef.current?.focus();
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
-    addEventListener('keydown', escape);
-    return () => { removeEventListener('keydown', escape); previousFocus.current?.focus(); };
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+      if (event.key !== 'Tab') return;
+      const dialog = dialogRef.current;
+      const buttons = dialog?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)');
+      if (!dialog || !buttons?.length) return;
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      const boundary = event.shiftKey ? first : last;
+      if (document.activeElement === boundary || !dialog.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      }
+    };
+    addEventListener('keydown', handleKey);
+    return () => { removeEventListener('keydown', handleKey); previousFocus.current?.focus(); };
   }, [open, onClose]);
   if (!open) return null;
-  return <div className="command-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><section className="command-palette" role="dialog" aria-modal="true" aria-labelledby="command-title"><header><span className="eyebrow">Workspace actions</span><h2 id="command-title">Command menu</h2><kbd>Esc</kbd></header><div>{commands.map((command, index) => <button ref={index === 0 ? firstRef : undefined} key={command.id} onClick={() => { command.action(); onClose(); }}><span>{command.label}</span>{command.shortcut && <kbd>{command.shortcut}</kbd>}</button>)}</div></section></div>;
+  return <div className="command-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="command-palette" role="dialog" aria-modal="true" aria-labelledby="command-title"><header><span className="eyebrow">Workspace actions</span><h2 id="command-title">Command menu</h2><kbd>Esc</kbd></header><div>{commands.map((command, index) => <button ref={index === 0 ? firstRef : undefined} key={command.id} onClick={() => { command.action(); onClose(); }}><span>{command.label}</span>{command.shortcut && <kbd>{command.shortcut}</kbd>}</button>)}</div></section></div>;
 }
 
 function operationLabel(operation: PreviewOperation | null, status: PreviewSlot['status']) {
