@@ -24,6 +24,8 @@ export function App() {
   const [repository, setRepository] = useState<RepositoryResponse | null>(null);
   const [operations, setOperations] = useState<Record<PreviewSlotId, PreviewOperation | null>>({ left: null, right: null });
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [previewStopState, setPreviewStopState] = useState<'idle' | 'stopping' | 'failed'>('idle');
+  const previewStopInFlight = useRef(false);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [evidenceTab, setEvidenceTab] = useState<EvidenceTab>('selection');
   const [commandOpen, setCommandOpen] = useState(false);
@@ -237,16 +239,32 @@ export function App() {
   }
 
   function launchWorkspace() {
+    if (previewStopInFlight.current || previewStopState !== 'idle') return;
     setWorkspaceOpen(true);
     if (!slots.some(slot => state.previews[slot].session || ['starting', 'restarting', 'loading'].includes(state.previews[slot].status))) void startBoth();
   }
 
   async function stopWorkspace() {
+    if (previewStopInFlight.current) return;
+    previewStopInFlight.current = true;
+    setPreviewStopState('stopping');
+    setWorkspaceOpen(false);
+    setSelectionRequested(false);
+    closeEvidence();
+    closeCommands();
     for (const controller of Object.values(operationControllers.current)) controller?.abort();
     operationControllers.current = {};
     for (const slot of slots) invalidateAnalysis(slot);
     activeOperationIds.current = {};
-    await fetch('/api/preview', { method: 'DELETE' }).catch(() => undefined);
+    try {
+      const response = await fetch('/api/preview', { method: 'DELETE' });
+      if (!response.ok) throw new Error('Preview cleanup failed.');
+    } catch {
+      setPreviewStopState('failed');
+      return;
+    } finally {
+      previewStopInFlight.current = false;
+    }
     setOperations({ left: null, right: null });
     setResultReport(null);
     setResultSources([]);
@@ -256,6 +274,7 @@ export function App() {
     setPlanSelections({ left: null, right: null });
     setCandidateUi(emptyCandidateUiState);
     dispatch({ type: 'reset-previews' });
+    setPreviewStopState('idle');
   }
 
   const sourceBranches: [string, string] = [state.branches[0] ?? '', state.branches.find(branch => branch !== state.branches[0]) ?? state.branches[0] ?? ''];
@@ -345,7 +364,14 @@ export function App() {
     return () => removeEventListener('keydown', shortcuts);
   }, [workspaceOpen, selectionMode, commandOpen, evidenceOpen, closeCommands, closeEvidence]);
 
-  if (!workspaceOpen) return <ProjectContext repository={repository} status={state.repositoryStatus} onContinue={launchWorkspace} />;
+  if (!workspaceOpen) return <ProjectContext
+    repository={repository}
+    status={state.repositoryStatus}
+    onContinue={launchWorkspace}
+    previewStop={previewStopState === 'stopping' ? { status: 'stopping' }
+      : previewStopState === 'failed' ? { status: 'failed', retry: () => void stopWorkspace() }
+        : undefined}
+  />;
 
   const commands: WorkspaceCommand[] = resultReport ? [
     { id: 'result', label: 'Open combined preview', action: () => setComparisonLayout('right') },
@@ -387,7 +413,7 @@ export function App() {
     {!resultReport && <CandidatePanel inputs={generationInputs} foundation={foundation} candidateBranch={candidateBranch} onRevise={reviseSelections} onEvidence={openEvidence} onStateChange={updateCandidateUi} onLaunch={handleCandidateLaunch} />}
     <EvidenceDrawer open={evidenceOpen} requestedTab={evidenceTab} onClose={closeEvidence} fallbackFocusRef={evidenceControl} state={state} operations={operations} candidate={candidateUi} onSelectAncestor={(slot, index) => send(slot, 'select-ancestor', { index })} onClear={clearSelection} />
     <CommandPalette open={commandOpen} commands={commands} onClose={closeCommands} />
-    <button className="stop-runtime-action" onClick={() => { void stopWorkspace(); setWorkspaceOpen(false); }}>Stop previews</button>
+    <button className="stop-runtime-action" onClick={() => void stopWorkspace()}>Stop previews</button>
   </div>;
 }
 
