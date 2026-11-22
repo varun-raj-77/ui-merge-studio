@@ -79,6 +79,31 @@ test('waits for local preview cleanup and then starts two fresh sessions', async
   }
 });
 
+test('a preview that starts later joins active Select parts mode', async ({ page }) => {
+  test.setTimeout(240_000);
+  let releaseRight!: () => void;
+  const pauseRight = new Promise<void>(resolve => { releaseRight = resolve; });
+  await page.route('**/api/previews/right', async route => {
+    if (route.request().method() === 'POST') await pauseRight;
+    await route.continue();
+  });
+
+  const left = page.locator('[data-preview-id="left"]');
+  const right = page.locator('[data-preview-id="right"]');
+  try {
+    await page.goto('/?mode=local');
+    await page.getByRole('button', { name: /Continue to comparison/i }).click();
+    const select = page.getByRole('button', { name: 'Select parts' });
+    await expect(select).toBeEnabled({ timeout: 120_000 });
+    await select.click();
+    await expect(left.locator('.selection-mode-banner')).toBeVisible();
+    await expect(right.locator('iframe')).toHaveCount(0);
+  } finally {
+    releaseRight();
+  }
+  await expect(right.locator('.selection-mode-banner')).toBeVisible({ timeout: 120_000 });
+});
+
 test('a rendered two-branch decision causes one canonical plan and a verified real candidate preview', async ({ page, request }) => {
   test.setTimeout(600_000);
   await page.goto('/?mode=local');

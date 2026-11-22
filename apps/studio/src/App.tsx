@@ -99,7 +99,7 @@ export function App() {
     };
     addEventListener('message', listener);
     return () => removeEventListener('message', listener);
-  }, [state]);
+  }, [state, selectionRequested]);
 
   function send(previewId: PreviewSlotId, type: StudioCommandType, payload?: unknown) {
     const session = state.previews[previewId].session;
@@ -115,6 +115,8 @@ export function App() {
     }
     if (message.type === 'preview-ready') {
       const payload = message.payload as { capabilities: PreviewCapabilities; context: ComparisonContext };
+      // A preview that finishes starting after Select parts must join the same workspace mode.
+      if (selectionRequested) send(previewId, 'enable-selection');
       const otherId: PreviewSlotId = previewId === 'left' ? 'right' : 'left';
       const compatibility = compareCapabilities(payload.capabilities, state.previews[otherId].capabilities);
       dispatch({ type: 'sync-status', status: compatibility.reason, error: compatibility.compatible ? null : compatibility.reason });

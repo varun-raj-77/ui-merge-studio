@@ -313,6 +313,32 @@ test('clearing an in-flight visual selection invalidates its late analysis', asy
   expect(vi.mocked(globalThis.fetch).mock.calls.some(call => String(call[0]) === '/api/candidate/preflight')).toBe(false);
 });
 
+test.each(['keep selecting', 'exit before ready'] as const)('syncs selection intent to a late preview: %s', async action => {
+  appFetch();
+  render(<App />);
+  const { left, right } = await launch();
+  const leftSession = session('left', 'branch-a');
+  const rightSession = session('right', 'branch-b');
+  const leftCommands = vi.spyOn(left.contentWindow!, 'postMessage');
+  const rightCommands = vi.spyOn(right.contentWindow!, 'postMessage');
+  const context = { route: '/catalogue', entity: null };
+  emit(left, leftSession, 'preview-ready', { capabilities, context });
+  const select = screen.getByRole('button', { name: 'Select parts' });
+  await waitFor(() => expect(select).toBeEnabled());
+
+  fireEvent.click(select);
+  expect(leftCommands).toHaveBeenCalledWith(expect.objectContaining({ type: 'enable-selection' }), leftSession.origin);
+  expect(rightCommands).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'enable-selection' }), rightSession.origin);
+  if (action === 'exit before ready') fireEvent.click(screen.getByRole('button', { name: /Selecting/ }));
+
+  await act(async () => emit(right, rightSession, 'preview-ready', { capabilities, context }));
+  if (action === 'keep selecting') {
+    expect(rightCommands).toHaveBeenCalledWith(expect.objectContaining({ type: 'enable-selection' }), rightSession.origin);
+  } else {
+    expect(rightCommands).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'enable-selection' }), rightSession.origin);
+  }
+});
+
 test('waits for cleanup before opening a fresh comparison and drops the previous selection mode', async () => {
   const fetchMock = appFetch();
   const fallback = fetchMock.getMockImplementation()!;
