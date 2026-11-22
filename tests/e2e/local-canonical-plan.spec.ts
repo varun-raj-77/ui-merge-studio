@@ -31,6 +31,54 @@ test.afterEach(async ({ request }) => {
   await removeCandidate();
 });
 
+test('waits for local preview cleanup and then starts two fresh sessions', async ({ page, request }) => {
+  test.setTimeout(360_000);
+  await page.goto('/?mode=local');
+  const continueButton = page.getByRole('button', { name: /Continue to comparison/i });
+  const left = page.locator('[data-preview-id="left"]');
+  const right = page.locator('[data-preview-id="right"]');
+  await continueButton.click();
+  await expect(left).toContainText('Running', { timeout: 120_000 });
+  await expect(right).toContainText('Running', { timeout: 120_000 });
+
+  const previewSessions = async () => {
+    const response = await request.get('/api/repository');
+    expect(response.ok()).toBe(true);
+    const repository = await response.json() as { sessions: Array<{ previewId: string; sessionId: string; status: string }> };
+    return repository.sessions;
+  };
+  const firstSessions = await previewSessions();
+  expect(firstSessions).toHaveLength(2);
+  let releaseCleanup!: () => void;
+  const pauseCleanup = new Promise<void>(resolve => { releaseCleanup = resolve; });
+  await page.route('**/api/preview', async route => {
+    if (route.request().method() === 'DELETE') await pauseCleanup;
+    await route.continue();
+  });
+
+  try {
+    await page.getByRole('button', { name: 'Stop previews' }).click();
+    await expect(page.getByRole('status')).toContainText('Stopping previews');
+    await expect(continueButton).toBeDisabled();
+  } finally {
+    releaseCleanup();
+  }
+  await expect(continueButton).toBeEnabled({ timeout: 120_000 });
+  const stoppedSessions = await previewSessions();
+  expect(stoppedSessions).toHaveLength(2);
+  expect(stoppedSessions.every(session => session.status === 'stopped')).toBe(true);
+
+  await continueButton.click();
+  await expect(left).toContainText('Running', { timeout: 120_000 });
+  await expect(right).toContainText('Running', { timeout: 120_000 });
+  const freshSessions = await previewSessions();
+  expect(freshSessions).toHaveLength(2);
+  for (const session of freshSessions) {
+    expect(session.status).toBe('running');
+    expect(session.sessionId).not.toBe(firstSessions.find(first => first.previewId === session.previewId)?.sessionId);
+  }
+});
+
 test('a rendered two-branch decision causes one canonical plan and a verified real candidate preview', async ({ page, request }) => {
   test.setTimeout(600_000);
   await page.goto('/?mode=local');

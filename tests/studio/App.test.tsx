@@ -313,6 +313,70 @@ test('clearing an in-flight visual selection invalidates its late analysis', asy
   expect(vi.mocked(globalThis.fetch).mock.calls.some(call => String(call[0]) === '/api/candidate/preflight')).toBe(false);
 });
 
+test('waits for cleanup before opening a fresh comparison and drops the previous selection mode', async () => {
+  const fetchMock = appFetch();
+  const fallback = fetchMock.getMockImplementation()!;
+  let finishCleanup: ((value: Response) => void) | undefined;
+  fetchMock.mockImplementation((input, init) => {
+    if (String(input) === '/api/preview' && init?.method === 'DELETE') {
+      return new Promise(resolve => { finishCleanup = resolve; });
+    }
+    return fallback(input, init);
+  });
+  render(<App />);
+  const frames = await launch();
+  emit(frames.left, session('left', 'branch-a'), 'preview-ready', { capabilities, context: { route: '/catalogue', entity: null } });
+  const select = screen.getByRole('button', { name: 'Select parts' });
+  await waitFor(() => expect(select).toBeEnabled());
+  fireEvent.click(select);
+  expect(screen.getByRole('button', { name: /Selecting/ })).toBeVisible();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Stop previews' }));
+  const continueButton = screen.getByRole('button', { name: /Continue to comparison/ });
+  expect(screen.getByRole('status')).toHaveTextContent('Stopping previews');
+  expect(continueButton).toBeDisabled();
+  fireEvent.click(continueButton);
+  const starts = () => fetchMock.mock.calls.filter(([url, init]) => String(url).startsWith('/api/previews/') && init?.method === 'POST');
+  expect(starts()).toHaveLength(2);
+
+  await act(async () => finishCleanup?.(await response({ stopped: true })));
+  expect(continueButton).toBeEnabled();
+  await launch();
+  expect(starts()).toHaveLength(4);
+  expect(screen.getByRole('button', { name: 'Select parts' })).toBeVisible();
+});
+
+test('keeps reopening blocked after a cleanup error until a retry succeeds', async () => {
+  const fetchMock = appFetch();
+  const fallback = fetchMock.getMockImplementation()!;
+  let cleanups = 0;
+  let finishRetry: ((value: Response) => void) | undefined;
+  fetchMock.mockImplementation((input, init) => {
+    if (String(input) === '/api/preview' && init?.method === 'DELETE') {
+      if (++cleanups === 1) return response({ error: 'Cleanup is unavailable.' }, 500);
+      return new Promise(resolve => { finishRetry = resolve; });
+    }
+    return fallback(input, init);
+  });
+  render(<App />);
+  await launch();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Stop previews' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not confirm previews stopped');
+  const continueButton = screen.getByRole('button', { name: /Continue to comparison/ });
+  expect(continueButton).toBeDisabled();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Retry stopping previews' }));
+  expect(cleanups).toBe(2);
+  expect(screen.queryByRole('button', { name: 'Retry stopping previews' })).not.toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent('Stopping previews');
+  expect(continueButton).toBeDisabled();
+  await act(async () => finishRetry?.(await response({ stopped: true })));
+
+  expect(continueButton).toBeEnabled();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
 test('a late preview acknowledgement cannot replace the newer restarted operation', async () => {
   const fallback = appFetch().getMockImplementation()!;
   let finishOldLaunch: ((value: Response) => void) | undefined;
