@@ -63,6 +63,21 @@ describe('public landing', () => {
 });
 
 describe('three-act presentation', () => {
+  it('restores a directly opened Pick link from its URL on history traversal', () => {
+    const comparisonUrl = '?mode=showcase&view=compare&select=parts';
+    history.replaceState(null, '', comparisonUrl);
+    render(<CatalogueShowcase />);
+    expect(screen.getByRole('button', { name: 'Return to Try mode' })).toBeVisible();
+
+    fireEvent.click(screen.getByRole('button', { name: 'UI Merge Studio home' }));
+    expect(screen.getByRole('button', { name: 'Try interactive demo' })).toBeVisible();
+
+    history.replaceState(null, '', comparisonUrl);
+    fireEvent(window, new PopStateEvent('popstate', { state: null }));
+    expect(screen.getByRole('region', { name: 'Compare versions' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Return to Try mode' })).toBeVisible();
+  });
+
   it('opens in Compare with side-by-side canvases, explicit selection, and no premature evidence or island', () => {
     render(<CatalogueShowcase />); open();
     expect(screen.getByRole('region', { name: 'Compare versions' })).toBeVisible();
