@@ -160,31 +160,46 @@ export function PreviewPane({ sourceLabel, preview, operation, viewportWidth, if
   </article>;
 }
 
+const minPaneRatio = 28;
+const maxPaneRatio = 72;
+
 export function ResizableComparison({ layout, left, right }: { layout: 'both' | 'left' | 'right'; left: ReactNode; right: ReactNode }) {
   const containerRef = useRef<HTMLElement | null>(null);
   const ratioRef = useRef(50);
   const [ratio, setRatio] = useState(50);
-  function updateRatio(next: number, render = true) {
-    ratioRef.current = Math.max(28, Math.min(72, next));
-    containerRef.current?.style.setProperty('--left-pane', `${ratioRef.current}%`);
-    if (render) setRatio(ratioRef.current);
+  function updateRatio(next: number) {
+    const bounded = Math.max(minPaneRatio, Math.min(maxPaneRatio, next));
+    if (ratioRef.current === bounded) return;
+    ratioRef.current = bounded;
+    containerRef.current?.style.setProperty('--left-pane', `${bounded}%`);
+    setRatio(bounded);
   }
   function beginResize(event: React.PointerEvent<HTMLDivElement>) {
+    if (!event.isPrimary || event.button !== 0) return;
     event.preventDefault();
-    const move = (pointer: PointerEvent) => {
-      const bounds = containerRef.current?.getBoundingClientRect();
-      if (bounds) updateRatio(((pointer.clientX - bounds.left) / bounds.width) * 100, false);
-    };
-    const stop = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', stop); removeEventListener('pointercancel', stop); setRatio(ratioRef.current); };
-    addEventListener('pointermove', move);
-    addEventListener('pointerup', stop);
-    addEventListener('pointercancel', stop);
+    event.currentTarget.focus({ preventScroll: true });
+    // Keep dragging across iframe content, with capture released by the browser
+    // on pointer up, cancellation, or removal of this separator.
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function moveResize(event: React.PointerEvent<HTMLDivElement>) {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+    const bounds = containerRef.current?.getBoundingClientRect();
+    if (bounds?.width) updateRatio(((event.clientX - bounds.left) / bounds.width) * 100);
   }
   return <main ref={containerRef} className={`preview-comparison layout-${layout}`} aria-label="Version comparison">
     <div className="preview-column left-column">{left}</div>
-    {layout === 'both' && <div className="comparison-resizer" role="separator" tabIndex={0} aria-label="Resize source previews" aria-orientation="vertical" aria-valuemin={28} aria-valuemax={72} aria-valuenow={Math.round(ratio)} onPointerDown={beginResize} onKeyDown={event => {
-      if (event.key === 'ArrowLeft') { event.preventDefault(); updateRatio(ratioRef.current - 3); }
-      if (event.key === 'ArrowRight') { event.preventDefault(); updateRatio(ratioRef.current + 3); }
+    {layout === 'both' && <div className="comparison-resizer" role="separator" tabIndex={0} aria-label="Resize source previews" aria-orientation="vertical" aria-valuemin={minPaneRatio} aria-valuemax={maxPaneRatio} aria-valuenow={Math.round(ratio)} onPointerDown={beginResize} onPointerMove={moveResize} onKeyDown={event => {
+      let next: number;
+      switch (event.key) {
+        case 'ArrowLeft': next = ratioRef.current - 3; break;
+        case 'ArrowRight': next = ratioRef.current + 3; break;
+        case 'Home': next = minPaneRatio; break;
+        case 'End': next = maxPaneRatio; break;
+        default: return;
+      }
+      event.preventDefault();
+      updateRatio(next);
     }}><span /></div>}
     <div className="preview-column right-column">{right}</div>
   </main>;

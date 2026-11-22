@@ -187,6 +187,11 @@ test('updates comparison separator aria value after keyboard resizing without re
   fireEvent.keyDown(separator, { key: 'ArrowRight' });
   expect(separator).toHaveAttribute('aria-valuenow', '53');
   expect(document.querySelector('.preview-comparison')).toHaveStyle({ '--left-pane': '53%' });
+  fireEvent.keyDown(separator, { key: 'Home' });
+  expect(separator).toHaveAttribute('aria-valuenow', '28');
+  fireEvent.keyDown(separator, { key: 'End' });
+  expect(separator).toHaveAttribute('aria-valuenow', '72');
+  expect(document.querySelector('.preview-comparison')).toHaveStyle({ '--left-pane': '72%' });
   expect(screen.getByTitle('left preview')).toBe(leftFrame);
 });
 
