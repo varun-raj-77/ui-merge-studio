@@ -12,6 +12,27 @@ test('clearly distinguishes the hosted configured preview from real local Git de
   await expect(page.getByRole('heading', { name: 'Compare versions' })).toHaveCount(0);
 });
 
+test('restores a shared Pick link with browser Back and Forward', async ({ page }) => {
+  await page.goto('/?mode=showcase&view=compare&select=parts');
+  const compare = page.getByRole('region', { name: 'Compare versions' });
+  const pick = page.getByRole('button', { name: 'Return to Try mode' });
+  const landing = page.getByRole('button', { name: 'Try interactive demo' });
+  await expect(compare).toBeVisible();
+  await expect(pick).toBeVisible();
+
+  await page.getByRole('button', { name: 'UI Merge Studio home' }).click();
+  await expect(landing).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL(/view=compare&select=parts$/);
+  await expect(compare).toBeVisible();
+  await expect(pick).toBeVisible();
+
+  await page.goForward();
+  await expect(landing).toBeVisible();
+  await expect(compare).toHaveCount(0);
+});
+
 test('is keyboard operable and structurally labelled in landing and comparison states', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/?mode=showcase');

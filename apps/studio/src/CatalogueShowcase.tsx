@@ -1695,14 +1695,19 @@ function Comparison({ exit }: { exit: () => void }) {
   </MotionConfig>;
 }
 
+function viewFromLocation(): View {
+  return new URLSearchParams(window.location.search).get('view') === 'compare' ? 'compare' : 'landing';
+}
+
 export function CatalogueShowcase() {
-  const [view, setView] = useState<View>(() => new URLSearchParams(location.search).get('view') === 'compare' ? 'compare' : 'landing');
+  const [view, setView] = useState<View>(viewFromLocation);
   const navigate = (next: View) => {
-    history.pushState({ catalogueView: next }, '', next === 'compare' ? '?mode=showcase&view=compare' : '?mode=showcase');
+    history.pushState(null, '', next === 'compare' ? '?mode=showcase&view=compare' : '?mode=showcase');
     setView(next);
   };
   useEffect(() => {
-    const listener = (event: PopStateEvent) => setView(event.state?.catalogueView === 'compare' ? 'compare' : 'landing');
+    // A shared URL has no app-created history state. The address defines the view.
+    const listener = () => setView(viewFromLocation());
     addEventListener('popstate', listener);
     return () => removeEventListener('popstate', listener);
   }, []);
