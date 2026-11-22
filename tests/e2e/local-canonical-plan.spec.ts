@@ -104,6 +104,36 @@ test('a preview that starts later joins active Select parts mode', async ({ page
   await expect(right.locator('.selection-mode-banner')).toBeVisible({ timeout: 120_000 });
 });
 
+test('resizes local previews while the pointer crosses a live iframe', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/?mode=local');
+  await page.getByRole('button', { name: /Continue to comparison/i }).click();
+  const divider = page.getByRole('separator', { name: 'Resize source previews' });
+  const right = page.locator('[data-preview-id="right"] iframe');
+  await expect(right).toBeVisible({ timeout: 120_000 });
+  const handle = await divider.boundingBox();
+  const frame = await right.boundingBox();
+  if (!handle || !frame) throw new Error('Expected visible resize handle and preview frame');
+  const y = frame.y + Math.min(40, frame.height / 2);
+  const handleX = handle.x + handle.width / 2;
+  const targetX = frame.x + Math.min(170, frame.width / 3);
+
+  await expect(divider).toHaveAttribute('aria-valuenow', '50');
+  await page.mouse.move(handleX, y);
+  await page.mouse.down();
+  try {
+    await page.mouse.move(targetX, y);
+  } finally {
+    await page.mouse.up();
+  }
+  await expect.poll(async () => Number(await divider.getAttribute('aria-valuenow'))).toBeGreaterThan(55);
+  const resized = await divider.getAttribute('aria-valuenow');
+  await page.mouse.move(handleX, y);
+  await expect(divider).toHaveAttribute('aria-valuenow', resized!);
+  await expect(right).toBeVisible();
+});
+
 test('a rendered two-branch decision causes one canonical plan and a verified real candidate preview', async ({ page, request }) => {
   test.setTimeout(600_000);
   await page.goto('/?mode=local');
